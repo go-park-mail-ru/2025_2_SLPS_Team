@@ -1,10 +1,12 @@
 version: "2"
+
 run:
   timeout: 5m
+
 linters:
-  disable-all: true
+  default: none
   enable:
-    - govt
+    - govet
     - staticcheck
     - bodyclose
     - contextcheck
@@ -23,10 +25,15 @@ linters:
     - nakedret
     - errorlint
     - err113
+
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+
 output:
-  format: colored-line-number
-  print-issued-lines: true
-  print-linter-name: true
+  formats:
+    text:
+      path: stdout
+      colors: true
+      print-issued-lines: false
+      print-linter-name: false
