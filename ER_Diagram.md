@@ -1,9 +1,6 @@
 
 ```mermaid
----
-config:
-  layout: elk
----
+%%{init: {'flowchart': {'defaultRenderer': 'elk'}}}%%
 erDiagram
     PROFILE {
         profile_id bigserial
