@@ -1,6 +1,9 @@
-```mermaid
-%%{init: {'layout': 'elk', 'theme':'', 'flowchart': {'curve':'monotonex'}}}%%
 
+```mermaid
+---
+config:
+  layout: elk
+---
 erDiagram
     PROFILE {
         profile_id bigserial
