@@ -5,27 +5,27 @@
 
 erDiagram
     PROFILE {
-        profile_id bigserial
+        id PrimaryKey
         first_name text
         second_name text
         email text
         avatar_path text
         about_myself text
-        password_hash text
+        password_hashed_with_salt text
         created_at datetime
         updated_at datetime
     }
 
     FRIEND_RELATIONSHIP {
-        first_friend_id bigserial
-        second_friend_id bigserial
+        first_friend_id ForeignKey
+        second_friend_id ForeignKey
         status text
         created_at datetime
         updated_at datetime
     }
 
     COMMUNITY {
-        community_id bigserial
+        id PrimaryKey
         name text
         status text
         description text
@@ -35,39 +35,39 @@ erDiagram
     }
 
     COMMUNITY_AUTHOR {
-        community_id bigserial
-        author_id bigserial
+        community_id ForeignKey
+        author_id ForeignKey
         role text
         created_at datetime
     }
 
     COMMUNITY_SUBSCRIBER {
-        community_id bigserial
-        subscriber_id bigserial
+        community_id ForeignKey
+        subscriber_id ForeignKey
         created_at datetime
     }
 
-    POST {
-        post_id bigserial
-        community_id bigserial
-        author_id bigserial
+    POST { 
+        id PrimaryKey
+        community_id ForeignKey
+        author_id ForeignKey
         text text
         created_at datetime
         updated_at datetime
     }
 
     COMMENT {
-        comment_id bigserial
-        author_id bigserial
-        post_id bigserial
-        parent_comment_id bigserial
+        id PrimaryKey
+        author_id ForeignKey
+        post_id ForeignKey
+        parent_comment_id ForeignKey
         text text
         created_at datetime
         updated_at datetime
     }
 
     CHAT {
-        chat_id bigserial
+        id PrimaryKey
         avatar_path text
         description text
         is_group_chat boolean
@@ -75,35 +75,40 @@ erDiagram
     }
 
     CHAT_MEMBER {
-        chat_id bigserial
-        member_id bigserial
+        chat_id ForeignKey
+        member_id ForeignKey
         role text
         joined_at datetime
     }
 
     MESSAGE {
-        message_id bigserial
-        author_id bigserial
-        chat_id bigserial
-        replied_message_id bigserial
+        id PrimaryKey
+        author_id ForeignKey
+        chat_id ForeignKey
+        replied_message_id ForeignKey
         text text
         created_at datetime
         updated_at datetime
     }
-
+        
+    FORWARD_MESSAGE {
+        main_message_id ForeignKey
+        minor_message_id ForeignKey
+    }
+        
     ATTACHMENT {
-        attachment_id bigserial
+        id PrimaryKey
         file_path text
         file_type text
-        obj_id bigserial
+        obj_id ForeignKey
         obj_type enum
         created_at datetime
     }
 
     REACTION {
-        reaction_id bigserial
-        author_id bigserial
-        obj_id bigserial
+        id PrimaryKey
+        author_id ForeignKey
+        obj_id ForeignKey
         obj_type enum
         type text
         created_at datetime
@@ -131,6 +136,8 @@ erDiagram
     CHAT ||--o{ MESSAGE : "contains"
     PROFILE ||--o{ MESSAGE : "sends"
     MESSAGE ||--o{ MESSAGE : "replies_to"
+    
+    MESSAGE ||--o{ FORWARD_MESSAGE: "forward_to"
 
     MESSAGE ||--o{ ATTACHMENT : "has"
     POST ||--o{ ATTACHMENT : "has"
@@ -141,3 +148,4 @@ erDiagram
     COMMENT ||--o{ REACTION : "receives"
     PROFILE ||--o{ REACTION : "adds"
 ```
+https://dbdocs.io/mr.loshkariov/db_dz1?view=relationships
