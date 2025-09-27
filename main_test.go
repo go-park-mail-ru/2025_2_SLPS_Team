@@ -16,6 +16,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const sessionID = "session_id"
+
 func TestRegister_OK(t *testing.T) {
 	api := handlers.NewAuthHandler()
 	body := handlers.RegisterRequest{
@@ -41,7 +43,7 @@ func TestRegister_OK(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range w.Result().Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 			sessionCookie = c
 			break
 		}
@@ -234,7 +236,7 @@ func TestLogout_OK(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range w1.Result().Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 			sessionCookie = c
 			break
 		}
@@ -250,7 +252,7 @@ func TestLogout_OK(t *testing.T) {
 
 	var expiredSessionCookie *http.Cookie
 	for _, c := range w2.Result().Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 
 			expiredSessionCookie = c
 			break
@@ -301,7 +303,7 @@ func TestLogin_OK(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range w1.Result().Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 			sessionCookie = c
 			break
 		}
@@ -322,7 +324,7 @@ func TestLogin_OK(t *testing.T) {
 
 	var loginSessionCookie *http.Cookie
 	for _, c := range w2.Result().Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 
 			loginSessionCookie = c
 			break
@@ -372,7 +374,7 @@ func TestLogin_Fail_InvalidJSON(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range w1.Result().Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 			sessionCookie = c
 			break
 		}
@@ -424,7 +426,7 @@ func TestLogin_Fail_UserDoesnotExist(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range w1.Result().Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 			sessionCookie = c
 			break
 		}
@@ -476,7 +478,7 @@ func TestLogin_Fail_IncorrectPassword(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range w1.Result().Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 			sessionCookie = c
 			break
 		}
@@ -556,7 +558,7 @@ func TestMiddleWare_WithAuth(t *testing.T) {
 
 	var sessionCookie *http.Cookie
 	for _, c := range resp.Cookies() {
-		if c.Name == "session_id" {
+		if c.Name == sessionID {
 			sessionCookie = c
 			break
 		}
@@ -632,14 +634,14 @@ func TestMiddleWare_WithoutAuth(t *testing.T) {
 }
 
 var forkPostsForTests = []store.Post{
-	{1, "Пост 1", 12, "/static/images/123.jpg"},
-	{2, "Пост 2", 12, "/static/images/123.jpg"},
-	{3, "Пост 3", 12, "/static/images/123.jpg"},
-	{4, "Пост 4", 12, "/static/images/123.jpg"},
-	{5, "Пост 5", 12, "/static/images/123.jpg"},
-	{6, "Пост 6", 12, "/static/images/123.jpg"},
-	{7, "Пост 7", 12, "/static/images/123.jpg"},
-	{8, "Пост 8", 12, "/static/images/123.jpg"},
+	{ID: 1, Text: "Пост 1", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+	{ID: 2, Text: "Пост 2", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+	{ID: 3, Text: "Пост 3", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+	{ID: 4, Text: "Пост 4", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+	{ID: 5, Text: "Пост 5", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+	{ID: 6, Text: "Пост 6", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+	{ID: 7, Text: "Пост 7", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+	{ID: 8, Text: "Пост 8", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
 }
 
 func TestPostsPaginate_OK(t *testing.T) {
@@ -651,9 +653,9 @@ func TestPostsPaginate_OK(t *testing.T) {
 		expectedPosts []store.Post
 	}{
 		{"Test last page", 5, 2, []store.Post{
-			{6, "Пост 6", 12, "/static/images/123.jpg"},
-			{7, "Пост 7", 12, "/static/images/123.jpg"},
-			{8, "Пост 8", 12, "/static/images/123.jpg"},
+			{ID: 6, Text: "Пост 6", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+			{ID: 7, Text: "Пост 7", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+			{ID: 8, Text: "Пост 8", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
 		}},
 		{"Test empty page", 1000, 2, []store.Post{}},
 	}
@@ -710,8 +712,8 @@ func TestPostsPaginate_Fail_InvalidParams(t *testing.T) {
 	api := handlers.NewPostsHandler(forkPostsForTests)
 
 	q := url.Values{}
-	q.Add("limit", fmt.Sprintf("%s", "1.1"))
-	q.Add("page", fmt.Sprintf("%s", "////sdfs"))
+	q.Add("limit", "1.1")
+	q.Add("page", "////sdfs")
 	fullURL := fmt.Sprintf("%s?%s", "/api/posts/", q.Encode())
 	registerReq := httptest.NewRequest(http.MethodGet, fullURL, nil)
 

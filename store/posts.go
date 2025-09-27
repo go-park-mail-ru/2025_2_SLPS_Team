@@ -49,9 +49,9 @@ var ForkPosts = []Post{
 	{8, "Пост 8", 12, "/static/images/123.jpg"},
 }
 
-func NewPostStore(Posts []Post) *PostsStore {
+func NewPostStore(posts []Post) *PostsStore {
 	return &PostsStore{
-		Posts: Posts,
+		Posts: posts,
 		mu:    sync.RWMutex{},
 	}
 }

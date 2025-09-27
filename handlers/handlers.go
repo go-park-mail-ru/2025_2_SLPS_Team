@@ -52,9 +52,9 @@ type PostsHandler struct {
 	postsStore *store.PostsStore
 }
 
-func NewPostsHandler(Posts []store.Post) *PostsHandler {
+func NewPostsHandler(posts []store.Post) *PostsHandler {
 	return &PostsHandler{
-		postsStore: store.NewPostStore(Posts),
+		postsStore: store.NewPostStore(posts),
 	}
 }
 
@@ -160,7 +160,7 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ok, err := govalidator.ValidateStruct(req)
-	if !ok {
+	if !ok || err != nil {
 		sendJSONError(w, "Invalid data", http.StatusBadRequest)
 		return
 	}
