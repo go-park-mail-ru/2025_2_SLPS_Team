@@ -1,16 +1,19 @@
 package main
 
 import (
-	"main/handlers"
+	"log"
+	"project/handlers"
+	"project/store"
+
 	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
-func main() {
+func NewMuxRouter() *mux.Router {
 	r := mux.NewRouter()
 	auth := handlers.NewAuthHandler()
-	posts := handlers.NewPostsHandler()
+	posts := handlers.NewPostsHandler(store.ForkPosts)
 	apiRouter := r.PathPrefix("/api").Subrouter()
 
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
@@ -29,6 +32,13 @@ func main() {
 	staticRouter.PathPrefix("/").Handler(handlers.StaticHandler(staticDir, "/static/")).Methods("GET")
 
 	r.PathPrefix("/").HandlerFunc(handlers.SPAHandler)
+	return r
+}
 
-	http.ListenAndServe(":8080", r)
+func main() {
+	r := NewMuxRouter()
+	if err := http.ListenAndServe(":8080", r); err != nil {
+		log.Fatalf("Server failed start: %v", err)
+	}
+
 }

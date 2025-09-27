@@ -3,11 +3,11 @@ package handlers
 import (
 	"encoding/json"
 	"log"
-	"main/auth"
-	"main/store"
 	"net/http"
 	"os"
 	"path/filepath"
+	"project/auth"
+	"project/store"
 	"strings"
 	"time"
 
@@ -26,31 +26,35 @@ func sendJSONError(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
-	json.NewEncoder(w).Encode(SuccessResponse{
+	if err := json.NewEncoder(w).Encode(SuccessResponse{
 		Success: false,
 		Message: message,
 		Code:    statusCode,
-	})
+	}); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
 }
 
 func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 
-	json.NewEncoder(w).Encode(SuccessResponse{
+	if err := json.NewEncoder(w).Encode(SuccessResponse{
 		Success: true,
 		Message: message,
 		Code:    statusCode,
-	})
+	}); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
 }
 
 type PostsHandler struct {
 	postsStore *store.PostsStore
 }
 
-func NewPostsHandler() *PostsHandler {
+func NewPostsHandler(Posts []store.Post) *PostsHandler {
 	return &PostsHandler{
-		postsStore: store.NewPostStore(),
+		postsStore: store.NewPostStore(Posts),
 	}
 }
 
@@ -75,14 +79,19 @@ func (api *AuthHandler) IsLoggedIn(r *http.Request) bool {
 	return authorized
 }
 
+type IsLoggedInResponse struct {
+	IsLoggedIn bool
+}
+
 func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var res = struct {
-		IsLoggedIn bool
-	}{
+	var res = IsLoggedInResponse{
 		IsLoggedIn: api.IsLoggedIn(r),
 	}
-	json.NewEncoder(w).Encode(res)
+
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
 }
 
 type LoginRequest struct {
@@ -102,7 +111,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, "User doesn't exist", http.StatusBadRequest)
 		return
 	}
-	log.Printf(req.Password, user.HashedPassword)
+
 	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(req.Password)); err != nil {
 		sendJSONError(w, "Incorrect password", http.StatusBadRequest)
 		return
@@ -121,7 +130,8 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: true,
 	}
 	http.SetCookie(w, cookie)
-	sendJSONSuccess(w, "User logged in ", http.StatusOK)
+
+	sendJSONSuccess(w, "User logged in", http.StatusOK)
 }
 
 func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
@@ -143,11 +153,6 @@ type RegisterRequest struct {
 }
 
 func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	if api.IsLoggedIn(r) {
-		sendJSONError(w, "Session already exist", http.StatusBadRequest)
-		return
-	}
-
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendJSONError(w, "Invalid JSON", http.StatusBadRequest)
@@ -157,6 +162,12 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok {
 		sendJSONError(w, "Invalid data", http.StatusBadRequest)
+		return
+	}
+
+	_, ok = api.userStore.GetUserByUsername(req.Username)
+	if ok {
+		sendJSONError(w, "User already exist", http.StatusBadRequest)
 		return
 	}
 
@@ -176,7 +187,7 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	SID, err := api.sessionStore.AddSession(user.ID)
 	if err != nil {
-		sendJSONError(w, "Server error", http.StatusInternalServerError)
+		sendJSONError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -189,7 +200,7 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 
 	log.Println(user)
-	sendJSONSuccess(w, "UserCreated", http.StatusOK)
+	sendJSONSuccess(w, "User created", http.StatusOK)
 }
 
 type PostsRequest struct {
@@ -220,7 +231,9 @@ func (api *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 		PagesCount: pagesCount,
 	}
 
-	json.NewEncoder(w).Encode(res)
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
 }
 
 func SPAHandler(w http.ResponseWriter, r *http.Request) {

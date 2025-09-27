@@ -39,10 +39,16 @@ func generateSessionID() (string, error) {
 func (store *SessionStore) AddSession(userID uint) (string, error) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
+	var sessionID string
+	for {
+		sessionID, err := generateSessionID()
+		if err != nil {
+			return "", err
+		}
 
-	sessionID, err := generateSessionID()
-	if err != nil {
-		return "", err
+		if _, exists := store.Sessions[sessionID]; !exists {
+			break
+		}
 	}
 
 	session := Session{
@@ -57,7 +63,7 @@ func (store *SessionStore) AddSession(userID uint) (string, error) {
 
 func (store *SessionStore) GetSessionByID(sessionID string) (Session, bool) {
 	store.mu.RLock()
-	defer store.mu.Unlock()
+	defer store.mu.RUnlock()
 
 	session, ok := store.Sessions[sessionID]
 	if !ok {
