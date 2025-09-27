@@ -592,13 +592,14 @@ func TestMiddleWare_WithAuth(t *testing.T) {
 func TestMiddleWare_WithoutAuth(t *testing.T) {
 	cases := []struct {
 		name           string
+		method         string
 		url            string
 		expectedStatus int
 	}{
-		{"Test register without auth", "/api/auth/register", http.StatusBadRequest},
-		{"Test login without auth", "/api/auth/login", http.StatusBadRequest},
-		{"Test logout without auth", "/api/auth/logout", http.StatusForbidden},
-		{"Test isloggedin without auth", "/api/auth/isloggedin", http.StatusOK},
+		{"Test register without auth", "POST", "/api/auth/register", http.StatusBadRequest},
+		{"Test login without auth", "POST", "/api/auth/login", http.StatusBadRequest},
+		{"Test logout without auth", "POST", "/api/auth/logout", http.StatusForbidden},
+		{"Test isloggedin without auth", "GET", "/api/auth/isloggedin", http.StatusOK},
 	}
 
 	r := NewMuxRouter()
@@ -610,7 +611,7 @@ func TestMiddleWare_WithoutAuth(t *testing.T) {
 
 	for _, test := range cases {
 		t.Run(test.name, func(t *testing.T) {
-			forbiddenReq, err := http.NewRequest(http.MethodPost, ts.URL+test.url, nil)
+			forbiddenReq, err := http.NewRequest(test.method, ts.URL+test.url, nil)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -643,7 +644,6 @@ var forkPostsForTests = []store.Post{
 
 func TestPostsPaginate_OK(t *testing.T) {
 	api := handlers.NewPostsHandler(forkPostsForTests)
-
 	cases := []struct {
 		name          string
 		limit         int
