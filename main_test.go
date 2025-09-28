@@ -25,6 +25,8 @@ func TestRegister_OK(t *testing.T) {
 		Email:           "misha@email.ru",
 		ConfirmPassword: "qwerty123",
 		Password:        "qwerty123",
+		Age:             12,
+		Gender:          "man",
 	}
 	bodyJSON, _ := json.Marshal(body)
 
@@ -516,7 +518,7 @@ func TestMiddleWare_WithAuth(t *testing.T) {
 		{"Test logout with auth", "/api/auth/logout", http.StatusOK},
 	}
 
-	r := NewMuxRouter()
+	r := NewApiRouter()
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -604,7 +606,7 @@ func TestMiddleWare_WithoutAuth(t *testing.T) {
 		{"Test isloggedin without auth", "GET", "/api/auth/isloggedin", http.StatusOK},
 	}
 
-	r := NewMuxRouter()
+	r := NewApiRouter()
 
 	ts := httptest.NewServer(r)
 	defer ts.Close()
@@ -634,14 +636,14 @@ func TestMiddleWare_WithoutAuth(t *testing.T) {
 }
 
 var forkPostsForTests = []store.Post{
-	{ID: 1, Text: "Пост 1", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-	{ID: 2, Text: "Пост 2", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-	{ID: 3, Text: "Пост 3", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-	{ID: 4, Text: "Пост 4", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-	{ID: 5, Text: "Пост 5", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-	{ID: 6, Text: "Пост 6", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-	{ID: 7, Text: "Пост 7", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-	{ID: 8, Text: "Пост 8", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+	{1, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{2, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{3, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{4, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{5, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{6, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{7, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{8, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
 }
 
 func TestPostsPaginate_OK(t *testing.T) {
@@ -653,9 +655,9 @@ func TestPostsPaginate_OK(t *testing.T) {
 		expectedPosts []store.Post
 	}{
 		{"Test last page", 5, 2, []store.Post{
-			{ID: 6, Text: "Пост 6", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-			{ID: 7, Text: "Пост 7", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
-			{ID: 8, Text: "Пост 8", LikeCount: 12, ImagePath: "/static/images/123.jpg"},
+			{6, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+			{7, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+			{8, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
 		}},
 		{"Test empty page", 1000, 2, []store.Post{}},
 	}

@@ -84,6 +84,8 @@ type User struct {
 	Username       string `json:"username"`
 	Email          string `json:"email"`
 	HashedPassword string `json:"password"`
+	Age            int    `json:"age"`
+	Gender         string `json:"gender"`
 }
 
 type UserStore struct {
@@ -100,13 +102,15 @@ func NewUserStore() *UserStore {
 	}
 }
 
-func (store *UserStore) AddUser(username, email, hashedPassword string) string {
+func (store *UserStore) AddUser(username, email, gender, hashedPassword string, age int) string {
 	store.mu.Lock()
 	user := User{
 		ID:             store.NextID,
 		Username:       username,
 		Email:          email,
 		HashedPassword: hashedPassword,
+		Gender:         gender,
+		Age:            age,
 	}
 
 	store.Users[user.Username] = &user

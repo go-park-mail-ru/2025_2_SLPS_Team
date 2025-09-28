@@ -3,10 +3,14 @@ package store
 import "sync"
 
 type Post struct {
-	ID        uint   `json:"id"`
-	Text      string `json:"username"`
-	LikeCount uint   `json:"like_count"`
-	ImagePath string `json:"imagePath"`
+	ID              uint     `json:"id"`
+	Text            string   `json:"text"`
+	LikeCount       uint     `json:"likes"`
+	RepostsCount    uint     `json:"reposts"`
+	CommentCount    uint     `json:"comments"`
+	GroupName       string   `json:"groupName"`
+	CommunityAvatar string   `json:"communityAvatar"`
+	PhotosPath      []string `json:"photos"`
 }
 
 type PostsStore struct {
@@ -39,14 +43,15 @@ func (store *PostsStore) PostsPaginatedList(page, limit int) ([]Post, int) {
 }
 
 var ForkPosts = []Post{
-	{1, "Пост 1", 12, "/static/images/123.jpg"},
-	{2, "Пост 2", 12, "/static/images/123.jpg"},
-	{3, "Пост 3", 12, "/static/images/123.jpg"},
-	{4, "Пост 4", 12, "/static/images/123.jpg"},
-	{5, "Пост 5", 12, "/static/images/123.jpg"},
-	{6, "Пост 6", 12, "/static/images/123.jpg"},
-	{7, "Пост 7", 12, "/static/images/123.jpg"},
-	{8, "Пост 8", 12, "/static/images/123.jpg"},
+	{},
+	{1, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{2, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{3, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{4, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{5, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{6, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{7, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{8, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
 }
 
 func NewPostStore(posts []Post) *PostsStore {

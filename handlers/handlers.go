@@ -48,6 +48,10 @@ func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
 	}
 }
 
+var NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
+	sendJSONError(w, "Not found", http.StatusNotFound)
+}
+
 type PostsHandler struct {
 	postsStore *store.PostsStore
 }
@@ -80,7 +84,7 @@ func (api *AuthHandler) IsLoggedIn(r *http.Request) bool {
 }
 
 type IsLoggedInResponse struct {
-	IsLoggedIn bool
+	IsLoggedIn bool `json:"isloggedin"`
 }
 
 func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request) {
@@ -148,8 +152,10 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 type RegisterRequest struct {
 	Username        string `json:"username" valid:"required"`
 	Email           string `json:"email" valid:"email, required"`
-	Password        string `json:"password" valid:"required, stringlength(6|20)"`
-	ConfirmPassword string `json:"confirm_password" valid:"required, stringlength(6|20)"`
+	Password        string `json:"password" valid:"required, stringlength(5|20)"`
+	ConfirmPassword string `json:"confirm_password" valid:"required, stringlength(5|20)"`
+	Age             int    `json:"age" valid:"-"`
+	Gender          string `json:"gender" valid:"-"`
 }
 
 func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
@@ -182,7 +188,7 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	username := api.userStore.AddUser(req.Username, req.Email, string(hashedPassword))
+	username := api.userStore.AddUser(req.Username, req.Email, req.Gender, string(hashedPassword), req.Age)
 	user, _ := api.userStore.GetUserByUsername(username)
 
 	SID, err := api.sessionStore.AddSession(user.ID)
@@ -252,6 +258,10 @@ var AllowedPathsWithOutAuth = map[string]bool{
 
 func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodOptions {
+			next.ServeHTTP(w, r)
+			return
+		}
 		path := r.URL.Path
 		if api.IsLoggedIn(r) {
 			if ForbiddenPathsWithAuth[path] {
@@ -268,6 +278,21 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+func CorsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_ORIGIN"))
+		w.Header().Set("Access-Control-Allow-Credentials", "true")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
 func StaticHandler(staticDir http.Dir, prefix string) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
