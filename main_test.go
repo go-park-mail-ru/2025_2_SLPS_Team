@@ -636,14 +636,14 @@ func TestMiddleWare_WithoutAuth(t *testing.T) {
 }
 
 var forkPostsForTests = []store.Post{
-	{1, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-	{2, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-	{3, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-	{4, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-	{5, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-	{6, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-	{7, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-	{8, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{ID: 1, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{ID: 2, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{ID: 3, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{ID: 4, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{ID: 5, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{ID: 6, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{ID: 7, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+	{ID: 8, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
 }
 
 func TestPostsPaginate_OK(t *testing.T) {
@@ -655,9 +655,9 @@ func TestPostsPaginate_OK(t *testing.T) {
 		expectedPosts []store.Post
 	}{
 		{"Test last page", 5, 2, []store.Post{
-			{6, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-			{7, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
-			{8, "Пост 1", 12, 12, 12, "Группа", "/static/images/123.jpg", []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+			{ID: 6, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+			{ID: 7, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
+			{ID: 8, Text: "Пост 1", LikeCount: 12, RepostsCount: 12, CommentCount: 12, GroupName: "Группа", CommunityAvatar: "/static/images/123.jpg", PhotosPath: []string{"/static/images/123.jpg", "/static/images/123.jpg"}},
 		}},
 		{"Test empty page", 1000, 2, []store.Post{}},
 	}
