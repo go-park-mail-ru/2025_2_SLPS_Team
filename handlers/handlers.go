@@ -110,7 +110,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, ok := api.userStore.GetUserByUsername(req.Username)
+	user, ok := api.userStore.GetUserByEmail(req.Username)
 	if !ok {
 		sendJSONError(w, "User doesn't exist", http.StatusBadRequest)
 		return
@@ -171,7 +171,7 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, ok = api.userStore.GetUserByUsername(req.Username)
+	_, ok = api.userStore.GetUserByEmail(req.Email)
 	if ok {
 		sendJSONError(w, "User already exist", http.StatusBadRequest)
 		return
@@ -189,14 +189,14 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	username := api.userStore.AddUser(req.Username, req.Email, req.Gender, string(hashedPassword), req.Age)
-	user, _ := api.userStore.GetUserByUsername(username)
+	user, _ := api.userStore.GetUserByEmail(username)
 
 	SID, err := api.sessionStore.AddSession(user.ID)
 	if err != nil {
 		sendJSONError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
+	log.Println(SID)
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    SID,
@@ -289,6 +289,18 @@ func CorsMiddleware(next http.Handler) http.Handler {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+func SecureMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "DENY")
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=()")
+		w.Header().Set("Content-Security-Policy-Report-Only", "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none';")
 
 		next.ServeHTTP(w, r)
 	})

@@ -17,6 +17,7 @@ func NewApiRouter() *mux.Router {
 	r := mux.NewRouter()
 
 	apiRouter := r.PathPrefix("/api").Subrouter()
+	apiRouter.Use(handlers.SecureMiddleware)
 	apiRouter.Use(handlers.CorsMiddleware)
 
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
@@ -36,6 +37,7 @@ func NewApiRouter() *mux.Router {
 }
 func NewStaticRouter() *mux.Router {
 	r := mux.NewRouter()
+	r.Use(handlers.SecureMiddleware)
 	staticRouter := r.PathPrefix("/static/").Subrouter()
 	staticDir := http.Dir("static/")
 	staticRouter.PathPrefix("/").Handler(handlers.StaticHandler(staticDir, "/static/")).Methods("GET")
@@ -50,16 +52,8 @@ func main() {
 	if err != nil {
 		log.Fatal("ошибка загрузки .env файла")
 	}
-	go func() {
-		apiRouter := NewApiRouter()
-		if err := http.ListenAndServe(":8080", apiRouter); err != nil {
-			log.Fatalf("Server failed start: %v", err)
-		}
-
-	}()
-
-	staticRouter := NewStaticRouter()
-	if err := http.ListenAndServe(":3000", staticRouter); err != nil {
+	apiRouter := NewApiRouter()
+	if err := http.ListenAndServe(":8080", apiRouter); err != nil {
 		log.Fatalf("Server failed start: %v", err)
 	}
 

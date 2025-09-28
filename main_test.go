@@ -313,7 +313,7 @@ func TestLogin_OK(t *testing.T) {
 	assert.NotNil(t, sessionCookie)
 
 	bodyLogin := handlers.LoginRequest{
-		Username: "misha",
+		Username: "misha@email.ru",
 		Password: "qwerty123",
 	}
 	bodyLoginJSON, _ := json.Marshal(bodyLogin)
@@ -488,7 +488,7 @@ func TestLogin_Fail_IncorrectPassword(t *testing.T) {
 	assert.NotNil(t, sessionCookie)
 
 	bodyLogin := handlers.LoginRequest{
-		Username: "misha",
+		Username: "misha@email.ru",
 		Password: "123456",
 	}
 	bodyLoginJSON, _ := json.Marshal(bodyLogin)

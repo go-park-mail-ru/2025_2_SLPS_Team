@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -39,26 +40,27 @@ func generateSessionID() (string, error) {
 func (store *SessionStore) AddSession(userID uint) (string, error) {
 	store.mu.Lock()
 	defer store.mu.Unlock()
-	var sessionID string
 	for {
 		sessionID, err := generateSessionID()
+		log.Println(sessionID)
 		if err != nil {
 			return "", err
 		}
 
 		if _, exists := store.Sessions[sessionID]; !exists {
-			break
+
+			session := Session{
+				ID:     sessionID,
+				UserId: userID,
+			}
+
+			store.Sessions[sessionID] = &session
+
+			return sessionID, nil
+
 		}
 	}
 
-	session := Session{
-		ID:     sessionID,
-		UserId: userID,
-	}
-
-	store.Sessions[sessionID] = &session
-
-	return sessionID, nil
 }
 
 func (store *SessionStore) GetSessionByID(sessionID string) (Session, bool) {
@@ -113,18 +115,18 @@ func (store *UserStore) AddUser(username, email, gender, hashedPassword string, 
 		Age:            age,
 	}
 
-	store.Users[user.Username] = &user
+	store.Users[user.Email] = &user
 	store.NextID++
 	store.mu.Unlock()
 
-	return user.Username
+	return user.Email
 }
 
-func (store *UserStore) GetUserByUsername(username string) (User, bool) {
+func (store *UserStore) GetUserByEmail(email string) (User, bool) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
-	user, ok := store.Users[username]
+	user, ok := store.Users[email]
 	if !ok {
 		return User{}, false
 	}
