@@ -34,12 +34,10 @@ func FakeHttpAuth[T any](handler func(w http.ResponseWriter, r *http.Request), b
 
 	cookies := w.Result().Cookies()
 	var sessionCookie *http.Cookie
-	if cookies != nil {
-		for _, c := range cookies {
-			if c.Name == sessionID {
-				sessionCookie = c
-				break
-			}
+	for _, c := range cookies {
+		if c.Name == sessionID {
+			sessionCookie = c
+			break
 		}
 	}
 
@@ -262,6 +260,7 @@ func TestIsloggedinFalse(t *testing.T) {
 func TestLogin_OK(t *testing.T) {
 	password := "qwerty123"
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	assert.NoError(t, err)
 
 	users := map[string]repository.User{
 		"misha@email.ru": {
@@ -334,6 +333,7 @@ func TestLogin_Fail_UserDoesnotExist(t *testing.T) {
 func TestLogin_Fail_IncorrectPassword(t *testing.T) {
 	password := "qwerty123"
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	assert.NoError(t, err)
 
 	users := map[string]repository.User{
 		"misha@email.ru": {
@@ -364,6 +364,8 @@ func TestLogin_Fail_IncorrectPassword(t *testing.T) {
 	assert.Nil(t, SID)
 }
 
+var SIDTest = "dfajdfakdjsfklasd"
+
 func TestMiddleWare_WithAuth(t *testing.T) {
 	cases := []struct {
 		name           string
@@ -374,10 +376,9 @@ func TestMiddleWare_WithAuth(t *testing.T) {
 		{"Test login with auth", "/api/auth/login", http.StatusForbidden},
 		{"Test logout with auth", "/api/auth/logout", http.StatusOK},
 	}
-	SID := "dfajdfakdjsfklasd"
 	sessions := map[string]repository.Session{
-		SID: {
-			ID:     SID,
+		SIDTest: {
+			ID:     SIDTest,
 			UserId: 1,
 		},
 	}
@@ -386,7 +387,7 @@ func TestMiddleWare_WithAuth(t *testing.T) {
 
 	cookie := &http.Cookie{
 		Name:     sessionID,
-		Value:    SID,
+		Value:    SIDTest,
 		Expires:  time.Now().Add(10 * time.Hour),
 		HttpOnly: true,
 	}
