@@ -1,151 +1,137 @@
-
-```mermaid
-
-%%{ init: { "flowchart": { "defaultRenderer": "elk" } } }%%
-
 erDiagram
     PROFILE {
-        id PrimaryKey
-        first_name text
-        second_name text
-        email text
-        avatar_path text
-        about_myself text
-        password_hashed_with_salt text
-        created_at datetime
-        updated_at datetime
+        int id PK
+        text full_name
+        text email
+        text avatar
+        text about_myself
+        text password_hashed_with_salt
+        timestamp created_at
+        timestamp updated_at
     }
 
     FRIEND_RELATIONSHIP {
-        first_friend_id ForeignKey
-        second_friend_id ForeignKey
-        status text
-        created_at datetime
-        updated_at datetime
+        int first_profile_id FK
+        int second_profile_id FK
+        friendship_status_enum status
+        timestamp created_at
+        timestamp updated_at
     }
 
     COMMUNITY {
-        id PrimaryKey
-        name text
-        status text
-        description text
-        avatar_path text
-        created_at datetime
-        updated_at datetime
+        int id PK
+        text name
+        community_status_enum status
+        text avatar
+        text description
+        timestamp created_at
+        timestamp updated_at
     }
 
     COMMUNITY_AUTHOR {
-        community_id ForeignKey
-        author_id ForeignKey
-        role text
-        created_at datetime
+        int community_id FK
+        int author_id FK
+        role_enum role
+        timestamp created_at
+        timestamp updated_at
     }
 
     COMMUNITY_SUBSCRIBER {
-        community_id ForeignKey
-        subscriber_id ForeignKey
-        created_at datetime
+        int community_id FK
+        int subscriber_id FK
+        timestamp created_at
     }
 
-    POST { 
-        id PrimaryKey
-        community_id ForeignKey
-        author_id ForeignKey
+    POST {
+        int id PK
+        int community_id FK
+        int author_id FK
         text text
-        created_at datetime
-        updated_at datetime
+        timestamp created_at
+        timestamp updated_at
     }
 
     COMMENT {
-        id PrimaryKey
-        author_id ForeignKey
-        post_id ForeignKey
-        parent_comment_id ForeignKey
+        int id PK
+        int author_id FK
+        int obj_id
+        comment_obj_type_enum obj_type
         text text
-        created_at datetime
-        updated_at datetime
+        timestamp created_at
+        timestamp updated_at
     }
 
     CHAT {
-        id PrimaryKey
-        avatar_path text
-        description text
-        is_group_chat boolean
-        created_at datetime
+        int id PK
+        text name
+        text avatar
+        timestamp created_at
+        timestamp updated_at
     }
 
     CHAT_MEMBER {
-        chat_id ForeignKey
-        member_id ForeignKey
-        role text
-        joined_at datetime
+        int chat_id FK
+        int member_id FK
+        role_enum role
+        timestamp joined_at
     }
 
     MESSAGE {
-        id PrimaryKey
-        author_id ForeignKey
-        chat_id ForeignKey
-        replied_message_id ForeignKey
+        int id PK
+        int author_id FK
+        int chat_id FK
+        int replayed_message_id FK
         text text
-        created_at datetime
-        updated_at datetime
+        timestamp created_at
+        timestamp updated_at
     }
-        
+
     FORWARD_MESSAGE {
-        main_message_id ForeignKey
-        minor_message_id ForeignKey
+        int main_message_id FK
+        int minor_message_id FK
+        timestamp created_at
+        timestamp updated_at
     }
-        
+
     ATTACHMENT {
-        id PrimaryKey
-        file_path text
-        file_type text
-        obj_id ForeignKey
-        obj_type enum
-        created_at datetime
+        int id PK
+        int obj_id
+        attachment_obj_type_enum obj_type
+        text file_path
+        timestamp created_at
+        timestamp updated_at
     }
 
     REACTION {
-        id PrimaryKey
-        author_id ForeignKey
-        obj_id ForeignKey
-        obj_type enum
-        type text
-        created_at datetime
+        int author_id FK
+        int obj_id
+        reaction_obj_type_enum obj_type
+        timestamp created_at
+        timestamp updated_at
     }
 
-    PROFILE ||--o{ FRIEND_RELATIONSHIP : "has"
-    FRIEND_RELATIONSHIP }o--|| PROFILE : "with"
-
-    PROFILE ||--o{ COMMUNITY_AUTHOR : "authors"
-    COMMUNITY_AUTHOR }o--|| COMMUNITY : "authored_by"
-
-    PROFILE ||--o{ COMMUNITY_SUBSCRIBER : "subscribes"
-    COMMUNITY_SUBSCRIBER }o--|| COMMUNITY : "subscribed_by"
-
-    COMMUNITY ||--o{ POST : "contains"
-    PROFILE ||--o{ POST : "writes"
-
-    POST ||--o{ COMMENT : "has"
-    PROFILE ||--o{ COMMENT : "writes"
-    COMMENT ||--o{ COMMENT : "replies_to"
-
-    CHAT ||--o{ CHAT_MEMBER : "includes"
-    PROFILE ||--o{ CHAT_MEMBER : "is_member_of"
-
-    CHAT ||--o{ MESSAGE : "contains"
-    PROFILE ||--o{ MESSAGE : "sends"
-    MESSAGE ||--o{ MESSAGE : "replies_to"
+    PROFILE ||--o{ FRIEND_RELATIONSHIP : "first_profile"
+    PROFILE ||--o{ FRIEND_RELATIONSHIP : "second_profile"
+    PROFILE ||--o{ COMMUNITY_AUTHOR : "author"
+    PROFILE ||--o{ COMMUNITY_SUBSCRIBER : "subscriber"
+    PROFILE ||--o{ POST : "author"
+    PROFILE ||--o{ COMMENT : "author"
+    PROFILE ||--o{ CHAT_MEMBER : "member"
+    PROFILE ||--o{ MESSAGE : "author"
+    PROFILE ||--o{ REACTION : "author"
     
-    MESSAGE ||--o{ FORWARD_MESSAGE: "forward_to"
+    COMMUNITY ||--o{ COMMUNITY_AUTHOR : "authors"
+    COMMUNITY ||--o{ COMMUNITY_SUBSCRIBER : "subscribers"
+    COMMUNITY ||--o{ POST : "posts"
+    
+    CHAT ||--o{ CHAT_MEMBER : "members"
+    CHAT ||--o{ MESSAGE : "messages"
+    
+    MESSAGE ||--o{ MESSAGE : "replies"
+    MESSAGE ||--o{ FORWARD_MESSAGE : "main_forward"
+    MESSAGE ||--o{ FORWARD_MESSAGE : "minor_forward"
 
     MESSAGE ||--o{ ATTACHMENT : "has"
     POST ||--o{ ATTACHMENT : "has"
     COMMENT ||--o{ ATTACHMENT : "has"
-
-    MESSAGE ||--o{ REACTION : "receives"
-    POST ||--o{ REACTION : "receives"
-    COMMENT ||--o{ REACTION : "receives"
-    PROFILE ||--o{ REACTION : "adds"
-```
-https://dbdocs.io/mr.loshkariov/db_dz1?view=relationships
+    COMMUNITY ||--o{ ATTACHMENT : "has" 
