@@ -1,4 +1,4 @@
-package store
+package repository
 
 import "sync"
 
@@ -14,8 +14,15 @@ type Post struct {
 }
 
 type PostsStore struct {
-	Posts []Post
+	posts []Post
 	mu    sync.RWMutex
+}
+
+func NewPostStore(posts []Post) *PostsStore {
+	return &PostsStore{
+		posts: posts,
+		mu:    sync.RWMutex{},
+	}
 }
 
 func (store *PostsStore) PostsPaginatedList(page, limit int) ([]Post, int) {
@@ -24,7 +31,7 @@ func (store *PostsStore) PostsPaginatedList(page, limit int) ([]Post, int) {
 
 	start := (page - 1) * limit
 	end := start + limit
-	length := len(store.Posts)
+	length := len(store.posts)
 	pagesCount := (length + limit - 1) / limit
 
 	if start > length {
@@ -35,7 +42,7 @@ func (store *PostsStore) PostsPaginatedList(page, limit int) ([]Post, int) {
 		end = length
 	}
 
-	sliced := store.Posts[start:end]
+	sliced := store.posts[start:end]
 	copySlice := make([]Post, len(sliced))
 	copy(copySlice, sliced)
 
@@ -51,11 +58,4 @@ var ForkPosts = []Post{
 	{6, "Yung Lean & Bladee — «Evil World»\n\nСудя по всему, близкие друзья и давние коллеги в лице Yung Lean и Bladee ведут работу над новым совместным альбомом. На прошлой неделе шведские артисты представили запоминающуюся работу «Inferno», а теперь вернулись с ещё одной композицией.\n\n«Evil World» продолжает развивать многослойное звучание на стыке клауд-рэпа, рейджа и электроники, заданное предыдущим синглом.", 97, 72, 1, "Fast Food Music", "/asserts/groupim.jpg", []string{"/asserts/5.jpg"}},
 	{7, "Peezy — «STILL GHETTTO»\nGenre: Hip-Hop\nLabel: «#Boyz Entertainment», «EMPIRE»\nApple Music: vk.cc/cPQlBc / Spotify: vk.cc/cPRKKE\n\nУроженец Детройта Peezy по праву считается крёстным отцом современной мичиганской сцены, породившей множество трэп-артистов. В своём творчестве он часто использует элементы сторителлинга, погружая слушателей в суровые реалии родных районов и рассказывая истории местных жителей.\n\nВ 2023-м Peezy выпустил один из своих самых крупных альбомов «GHETTO». Сегодня же он возвращается с его идейным продолжением, которое также отражает непоколебимую связь автора с улицами, сформировавшими его личность.\n\nСписок гостей достоин отдельного упоминания: в создании релиза приняли участие Rick Ross, 2 Chainz, Big Sean, Larry June, French Montana, G Herbo, 42 Dugg, Jeremih, Babyface Ray, Icewear Vezzo и другие.", 75, 29, 3, "Fast Food Music", "/asserts/groupim.jpg", []string{"/asserts/6.jpg"}},
 	{8, "Marino Infantry — «M:4»\nGenre: Hip-Hop\nLabel: «Marino Infantry Records»\nApple Music: vk.cc/cPRJyz / Spotify: vk.cc/cPRJzf\n\nA$AP Ant по-прежнему остаётся самым продуктивным артистом, связанным с творческим объединением A$AP Mob. В этом году он уже успел отметиться сольным альбомом «Addie Pitino 2», однако это далеко не весь материал, который он приготовил для поклонников своего творчества.\n\nТеперь исполнитель решил обратить внимание аудитории на других участников своего коллектива Marino Infantry путём выпуска компиляции «M:4». Впрочем, это скорее напоминает очередной микстейп Энта — просто с большим количеством гостевых участий.", 46, 24, 4, "Fast Food Music", "/asserts/groupim.jpg", []string{"/asserts/7.jpg"}},
-}
-
-func NewPostStore(posts []Post) *PostsStore {
-	return &PostsStore{
-		Posts: posts,
-		mu:    sync.RWMutex{},
-	}
 }
