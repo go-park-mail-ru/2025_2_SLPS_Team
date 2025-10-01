@@ -1,0 +1,251 @@
+openapi: 3.0.3
+info:
+  title: Auth & Posts API
+  version: 1.0.0
+  description: API для регистрации, логина, проверки авторизации и постов с пагинацией.
+
+servers:
+  - url: http://185.86.146.77:8080
+    description: api server
+
+paths:
+  /api/auth/register:
+    post:
+      summary: Регистрация нового пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: Пользователь создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          headers:
+            Set-Cookie:
+              description: >
+                Сессионная кука `session_id`. HttpOnly. Действует 1 день.
+              schema:
+                type: string
+        '400':
+          description: Ошибка валидации или пользователь уже существует
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Если авторизованный пользователь пытается зарегестрироваться
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+  /api/auth/login:
+    post:
+      summary: Авторизация пользователя
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Успешный вход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          headers:
+            Set-Cookie:
+              description: >
+                Сессионная кука `session_id`. HttpOnly. Действует 1 день.
+              schema:
+                type: string
+        '400':
+          description: Ошибочные данные
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          description: Если авторизованный пользователь пытается авторизоваться
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /api/auth/logout:
+    post:
+      summary: Выход пользователя
+      responses:
+        '200':
+          description: Успешный выход
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+          headers:
+            Set-Cookie:
+              description: >
+                Делает куку просроченной
+              schema:
+                type: string
+        '403':
+          description: Если неавторизованный пользователь пытается выйти
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+
+  /api/auth/is-loggedin:
+    get:
+      summary: Проверка, авторизован ли пользователь
+      responses:
+        '200':
+          description: Статус авторизации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IsLoggedInResponse'
+
+  /api/posts:
+    get:
+      summary: Получить список постов с пагинацией
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: Номер страницы
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            minimum: 1
+          required: true
+          description: Кол-во постов на страницу
+      responses:
+        '200':
+          description: Список постов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostsResponse'
+        '400':
+          description: Неверные параметры
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+components:
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: integer
+
+    IsLoggedInResponse:
+      type: object
+      properties:
+        isloggedin:
+          type: boolean
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password, confirm_password]
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 5
+          maxLength: 20
+        confirm_password:
+          type: string
+          minLength: 5
+          maxLength: 20
+        age:
+          type: integer
+        gender:
+          type: string
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+          maxLength: 20
+
+    PostsResponse:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+        pages:
+          type: integer
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: uint64
+          example: 1
+        text:
+          type: string
+          example: "Hello world! Это первый пост."
+        likes:
+          type: integer
+          example: 15
+        reposts:
+          type: integer
+          example: 3
+        comments:
+          type: integer
+          example: 4
+        groupName:
+          type: string
+          example: "Go Developers"
+        communityAvatar:
+          type: string
+          format: uri
+          example: "https://example.com/avatars/godevs.png"
+        photos:
+          type: array
+          items:
+            type: string
+            format: uri
+            example: "https://example.com/photos/1.jpg"
+      required:
+        - id
+        - text
+        - likes
+        - reposts
+        - comments
+        - groupName
+        - communityAvatar
+        - photos
+
+
+
