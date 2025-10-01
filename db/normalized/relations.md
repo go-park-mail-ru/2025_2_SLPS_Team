@@ -88,10 +88,11 @@ CHAT_MEMBER:
 chat_id ForeignKey
 member_id ForeignKey
 role
-joined_at
+created_at
+updated_at
 
 CHAT_MEMBER:
-{chat_id, member_id} -> {role, joined_at}
+{chat_id, member_id} -> {role, created_at, updated_at}
 
 MESSAGE:
 id PrimaryKey

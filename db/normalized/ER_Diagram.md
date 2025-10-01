@@ -73,7 +73,8 @@ erDiagram
         int chat_id FK
         int member_id FK
         role_enum role
-        timestamp joined_at
+        timestamp created_at
+        timestamp updated_at
     }
 
     MESSAGE {

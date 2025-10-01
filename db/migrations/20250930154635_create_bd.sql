@@ -1,174 +1,191 @@
+-- Создание ENUM типов
+CREATE TYPE friendship_status_enum AS ENUM ('pending', 'accepted', 'rejected', 'blocked');
+CREATE TYPE community_status_enum AS ENUM ('public', 'private', 'closed');
+CREATE TYPE role_enum AS ENUM ('admin', 'moderator', 'member', 'owner');
+CREATE TYPE comment_obj_type_enum AS ENUM ('post', 'message', 'comment');
+CREATE TYPE attachment_obj_type_enum AS ENUM ('post', 'message', 'comment', 'profile', 'community');
+CREATE TYPE reaction_obj_type_enum AS ENUM ('post', 'message', 'comment');
+CREATE TYPE reaction_type_enum AS ENUM ('like', 'dislike', 'love', 'laugh', 'angry', 'wow', 'sad');
+
 -- Таблица пользователей
 CREATE TABLE PROFILE
 (
-    id                        INT PRIMARY KEY,
-    username                  TEXT        NOT NULL,
-    CONSTRAINT username_length CHECK (LENGTH(username) <= 64),
-    email                     TEXT UNIQUE NOT NULL,
-    CONSTRAINT email_length CHECK (LENGTH(email) <= 64),
-    password_hashed_with_salt TEXT        NOT NULL,
-    avatar_path               TEXT NULL,
-    CONSTRAINT avatar_path_length CHECK ( LENGTH(avatar_path) <= 512),
-    about_myself              TEXT,
-    CONSTRAINT about_myself_length CHECK ( LENGTH(about_myself) <= 256),
-    created_at                DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at                DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id                          INT         PRIMARY KEY,
+    full_name                   TEXT        NOT NULL,
+                                CONSTRAINT full_name_length CHECK (LENGTH(full_name) <= 64),
+    email                       TEXT        UNIQUE NOT NULL,
+                                CONSTRAINT email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+                                CONSTRAINT email_length CHECK (LENGTH(email) <= 64),                            
+    avatar                      TEXT        NULL,
+                                CONSTRAINT avatar_length CHECK (LENGTH(avatar) <= 512),
+    about_myself                TEXT,
+                                CONSTRAINT about_myself_length CHECK (LENGTH(about_myself) <= 256),                                                        
+    password_hashed_with_salt   TEXT        NOT NULL,
+                                CONSTRAINT password_length CHECK (LENGTH(password_hashed_with_salt) >= 8),
+    created_at                  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Дружба между пользователями
 CREATE TABLE FRIEND_RELATIONSHIP
 (
-    first_friend_id  INT,
-    second_friend_id INT,
-    status           TEXT,
-    CONSTRAINT status_length CHECK ( LENGTH(status) <= 64),
-    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (first_friend_id, second_friend_id),
-    FOREIGN KEY (first_friend_id) REFERENCES PROFILE (id),
-    FOREIGN KEY (second_friend_id) REFERENCES PROFILE (id)
+    first_profile_id            INT         NOT NULL,
+    second_profile_id           INT         NOT NULL,
+    status friendship_status_enum NOT NULL DEFAULT 'pending',
+                                CONSTRAINT status_length CHECK ( LENGTH(status) <= 64),
+    created_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (first_profile_id, second_profile_id),
+    FOREIGN KEY (first_profile_id) REFERENCES PROFILE (id) ON DELETE CASCADE,
+    FOREIGN KEY (second_profile_id) REFERENCES PROFILE (id) ON DELETE CASCADE,
+    CONSTRAINT no_self_friendship CHECK (first_profile_id != second_profile_id),
+    CONSTRAINT ordered_friendship CHECK (first_profile_id < second_profile_id)
 );
 
 -- Сообщества
 CREATE TABLE COMMUNITY
 (
-    id          INT PRIMARY KEY,
-    name        TEXT,
-    status      TEXT,
-    description TEXT,
-    avatar_path TEXT,
-    created_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id                          INT             PRIMARY KEY,
+    name                        TEXT            NOT NULL,
+                                CONSTRAINT name_length CHECK (LENGTH(name) BETWEEN 1 AND 64),
+    status community_status_enum                NOT NULL DEFAULT 'public',
+    avatar                      TEXT,
+                                CONSTRAINT avatar_length CHECK (LENGTH(avatar) <= 512),
+    description                 TEXT,
+                                CONSTRAINT description_length CHECK (LENGTH(description) <= 512),
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Авторы/админы сообщества
 CREATE TABLE COMMUNITY_AUTHOR
 (
-    community_id INT,
-    author_id    INT,
-    role         TEXT,
-    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    community_id                INT             NOT NULL,
+    author_id                   INT             NOT NULL,
+    role         role_enum                      NOT NULL DEFAULT 'member',
+    created_at                                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (community_id, author_id),
-    FOREIGN KEY (community_id) REFERENCES COMMUNITY (id),
-    FOREIGN KEY (author_id) REFERENCES PROFILE (id)
+    FOREIGN KEY (community_id) REFERENCES COMMUNITY (id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES PROFILE (id) ON DELETE CASCADE
 );
 
 -- Подписчики сообщества
 CREATE TABLE COMMUNITY_SUBSCRIBER
 (
-    community_id  INT,
-    subscriber_id INT,
-    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    community_id                INT             NOT NULL,
+    subscriber_id               INT             NOT NULL,
+    created_at                                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (community_id, subscriber_id),
-    FOREIGN KEY (community_id) REFERENCES COMMUNITY (id),
-    FOREIGN KEY (subscriber_id) REFERENCES PROFILE (id)
+    FOREIGN KEY (community_id) REFERENCES COMMUNITY (id) ON DELETE CASCADE,
+    FOREIGN KEY (subscriber_id) REFERENCES PROFILE (id) ON DELETE CASCADE
 );
 
 -- Посты в сообществах
 CREATE TABLE POST
 (
-    id           INT PRIMARY KEY,
-    community_id INT,
-    author_id    INT,
-    text         TEXT,
-    created_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (community_id) REFERENCES COMMUNITY (id),
-    FOREIGN KEY (author_id) REFERENCES PROFILE (id)
+    id                          INT             PRIMARY KEY,
+    community_id                INT             NOT NULL,
+    author_id                   INT             NOT NULL,
+    text                        TEXT            NOT NULL,
+                                CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 1 AND 4096),
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (community_id) REFERENCES COMMUNITY (id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES PROFILE (id) ON DELETE CASCADE
 );
 
 -- Комментарии (вложенные поддерживаются)
 CREATE TABLE COMMENT
 (
-    id                INT PRIMARY KEY,
-    author_id         INT,
-    post_id           INT,
-    parent_comment_id INT,
-    text              TEXT,
-    created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                          INT             PRIMARY KEY,
+    author_id                   INT             NOT NULL,
+    obj_id                      INT             NOT NULL,
+    obj_type comment_obj_type_enum              NOT NULL,
+    text                        TEXT            NOT NULL,
+                                CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 1 AND 1024),
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES PROFILE (id),
     FOREIGN KEY (post_id) REFERENCES POST (id),
-    FOREIGN KEY (parent_comment_id) REFERENCES COMMENT (id)
+    FOREIGN KEY (author_id) REFERENCES PROFILE (id) ON DELETE CASCADE
 );
 
 -- Чаты
 CREATE TABLE CHAT
 (
-    id            INT PRIMARY KEY,
-    avatar_path   TEXT,
-    description   TEXT,
-    created_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at    DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    id                          INT             PRIMARY KEY,
+    name                        TEXT            NOT NULL,
+                                CONSTRAINT name_length CHECK (LENGTH(name) BETWEEN 1 AND 64),
+    avatar                      TEXT,
+                                CONSTRAINT avatar_length CHECK (LENGTH(avatar) <= 512),
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Участники чатов
 CREATE TABLE CHAT_MEMBER
 (
-    chat_id    INT,
-    member_id  INT,
-    role       TEXT,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    chat_id                     INT             NOT NULL,
+    member_id                   INT             NOT NULL,
+    role role_enum                              NOT NULL DEFAULT 'member',
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (chat_id, member_id),
-    FOREIGN KEY (chat_id) REFERENCES CHAT (id),
-    FOREIGN KEY (member_id) REFERENCES PROFILE (id)
+    FOREIGN KEY (chat_id) REFERENCES CHAT (id) ON DELETE CASCADE,
+    FOREIGN KEY (member_id) REFERENCES PROFILE (id) ON DELETE CASCADE
 );
 
 -- Сообщения в чатах
 CREATE TABLE MESSAGE
 (
-    id                 INT PRIMARY KEY,
-    author_id          INT,
-    chat_id            INT,
-    replied_message_id INT,
-    text               TEXT,
+    id                          INT             PRIMARY KEY,
+    author_id                   INT             NOT NULL,
+    chat_id                     INT             NOT NULL,
+    replayed_message_id         INT,
+    text                        TEXT            NOT NULL,
+                                CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 1 AND 4096),
     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (author_id) REFERENCES PROFILE (id),
-    FOREIGN KEY (chat_id) REFERENCES CHAT (id),
-    FOREIGN KEY (replied_message_id) REFERENCES MESSAGE (id)
+    FOREIGN KEY (author_id) REFERENCES PROFILE (id) ON DELETE CASCADE,
+    FOREIGN KEY (chat_id) REFERENCES CHAT (id) ON DELETE CASCADE,
+    FOREIGN KEY (replayed_message_id) REFERENCES MESSAGE (id) ON DELETE SET NULL
 );
 
 -- Пересланные сообщения
 CREATE TABLE FORWARD_MESSAGE
 (
-    main_message_id  INT,
-    minor_message_id INT,
-    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    main_message_id             INT             NOT NULL,
+    minor_message_id            INT             NOT NULL,
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (main_message_id, minor_message_id),
-    FOREIGN KEY (main_message_id) REFERENCES MESSAGE (id),
-    FOREIGN KEY (minor_message_id) REFERENCES MESSAGE (id)
+    FOREIGN KEY (main_message_id) REFERENCES MESSAGE (id) ON DELETE CASCADE,
+    FOREIGN KEY (minor_message_id) REFERENCES MESSAGE (id) ON DELETE CASCADE,
+    CONSTRAINT no_self_forward CHECK (main_message_id != minor_message_id)
 );
-
-CREATE TYPE obj_type_enum AS ENUM ('POST', 'COMMENT', 'MESSAGE');
 
 -- Вложения
 CREATE TABLE ATTACHMENT
 (
-    id         INT PRIMARY KEY,
-    file_path  TEXT,
-    file_type  TEXT,
-    obj_id     INT,
-    obj_type   obj_type_enum,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    id                          INT             PRIMARY KEY,
+    obj_id                      INT             NOT NULL,
+    obj_type   attachment_obj_type_enum         NOT NULL,
+    file_path                   TEXT            NOT NULL,
+                                CONSTRAINT file_path_length CHECK (LENGTH(file_path) <= 512),
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 );
-
-CREATE TYPE reaction_type AS ENUM ('LIKE', 'DISLIKE', 'LOVE', 'LAUGH', 'ANGRY');
 
 -- Реакции (лайки и пр.)
 CREATE TABLE REACTION
 (
-    id         INT PRIMARY KEY,
-    author_id  INT,
-    obj_id     INT,
-    obj_type   obj_type_enum,
-    type       reaction_type NOT NULL,
-    created_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (author_id) REFERENCES PROFILE (id)
+    author_id                   INT             NOT NULL,
+    obj_id                      INT             NOT NULL,
+    obj_type   reaction_obj_type_enum NOT NULL,
+    created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (author_id, obj_id, obj_type),
+    FOREIGN KEY (author_id) REFERENCES PROFILE (id) ON DELETE CASCADE
 );
