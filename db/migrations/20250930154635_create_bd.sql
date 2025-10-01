@@ -12,10 +12,11 @@ CREATE TABLE PROFILE
 (
     id                          INT         PRIMARY KEY,
     full_name                   TEXT        NOT NULL,
-                                CONSTRAINT full_name_length CHECK (LENGTH(full_name) <= 64),
-    email                       TEXT        UNIQUE NOT NULL,
-                                CONSTRAINT email_format CHECK (email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
-                                CONSTRAINT email_length CHECK (LENGTH(email) <= 64),                            
+                                CONSTRAINT full_name_length CHECK (LENGTH(full_name) BETWEEN 1 AND 64),
+    email                       TEXT        UNIQUE,
+                                CONSTRAINT email_length CHECK (LENGTH(email) <= 254),
+    phone                       TEXT        UNIQUE,
+                                CONSTRAINT phone_length CHECK (LENGTH(phone) <= 20),
     avatar                      TEXT        NULL,
                                 CONSTRAINT avatar_length CHECK (LENGTH(avatar) <= 512),
     about_myself                TEXT,
@@ -23,7 +24,8 @@ CREATE TABLE PROFILE
     password_hashed_with_salt   TEXT        NOT NULL,
                                 CONSTRAINT password_length CHECK (LENGTH(password_hashed_with_salt) >= 8),
     created_at                  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at                  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at                  DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT email_or_phone_required CHECK (email IS NOT NULL OR phone IS NOT NULL)
 );
 
 -- Дружба между пользователями
@@ -32,7 +34,7 @@ CREATE TABLE FRIEND_RELATIONSHIP
     first_profile_id            INT         NOT NULL,
     second_profile_id           INT         NOT NULL,
     status friendship_status_enum NOT NULL DEFAULT 'pending',
-                                CONSTRAINT status_length CHECK ( LENGTH(status) <= 64),
+                                CONSTRAINT status_length CHECK ( LENGTH(status::text) <= 64),
     created_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at                  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (first_profile_id, second_profile_id),
@@ -47,7 +49,7 @@ CREATE TABLE COMMUNITY
 (
     id                          INT             PRIMARY KEY,
     name                        TEXT            NOT NULL,
-                                CONSTRAINT name_length CHECK (LENGTH(name) BETWEEN 1 AND 64),
+                                CONSTRAINT name_length CHECK (LENGTH(name) BETWEEN 5 AND 64),
     status community_status_enum                NOT NULL DEFAULT 'public',
     avatar                      TEXT,
                                 CONSTRAINT avatar_length CHECK (LENGTH(avatar) <= 512),
@@ -89,7 +91,7 @@ CREATE TABLE POST
     community_id                INT             NOT NULL,
     author_id                   INT             NOT NULL,
     text                        TEXT            NOT NULL,
-                                CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 1 AND 4096),
+                                CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 24 AND 4096),
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (community_id) REFERENCES COMMUNITY (id) ON DELETE CASCADE,
@@ -101,6 +103,7 @@ CREATE TABLE COMMENT
 (
     id                          INT             PRIMARY KEY,
     author_id                   INT             NOT NULL,
+    post_id                     INT             NOT NULL,
     obj_id                      INT             NOT NULL,
     obj_type comment_obj_type_enum              NOT NULL,
     text                        TEXT            NOT NULL,
@@ -108,8 +111,7 @@ CREATE TABLE COMMENT
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES PROFILE (id),
-    FOREIGN KEY (post_id) REFERENCES POST (id),
-    FOREIGN KEY (author_id) REFERENCES PROFILE (id) ON DELETE CASCADE
+    FOREIGN KEY (post_id) REFERENCES POST (id) ON DELETE CASCADE
 );
 
 -- Чаты
@@ -117,7 +119,7 @@ CREATE TABLE CHAT
 (
     id                          INT             PRIMARY KEY,
     name                        TEXT            NOT NULL,
-                                CONSTRAINT name_length CHECK (LENGTH(name) BETWEEN 1 AND 64),
+                                CONSTRAINT name_length CHECK (LENGTH(name) BETWEEN 5 AND 64),
     avatar                      TEXT,
                                 CONSTRAINT avatar_length CHECK (LENGTH(avatar) <= 512),
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -148,10 +150,11 @@ CREATE TABLE MESSAGE
                                 CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 1 AND 4096),
     created_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at         DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (author_id) REFERENCES PROFILE (id) ON DELETE CASCADE,
+    FOREIGN KEY (author_id) REFERENCES PROFILE (id),
     FOREIGN KEY (chat_id) REFERENCES CHAT (id) ON DELETE CASCADE,
     FOREIGN KEY (replayed_message_id) REFERENCES MESSAGE (id) ON DELETE SET NULL
 );
+
 
 -- Пересланные сообщения
 CREATE TABLE FORWARD_MESSAGE
@@ -173,9 +176,9 @@ CREATE TABLE ATTACHMENT
     obj_id                      INT             NOT NULL,
     obj_type   attachment_obj_type_enum         NOT NULL,
     file_path                   TEXT            NOT NULL,
-                                CONSTRAINT file_path_length CHECK (LENGTH(file_path) <= 512),
+                                CONSTRAINT file_path_length CHECK (LENGTH(file_path) BETWEEN 24 AND 512),
     created_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Реакции (лайки и пр.)
@@ -189,3 +192,27 @@ CREATE TABLE REACTION
     PRIMARY KEY (author_id, obj_id, obj_type),
     FOREIGN KEY (author_id) REFERENCES PROFILE (id) ON DELETE CASCADE
 );
+
+-- Триггеры для автоматического обновления updated_at
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Создание триггеров для всех таблиц
+CREATE TRIGGER update_profile_updated_at BEFORE UPDATE ON PROFILE FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_friend_relationship_updated_at BEFORE UPDATE ON FRIEND_RELATIONSHIP FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_community_updated_at BEFORE UPDATE ON COMMUNITY FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_community_author_updated_at BEFORE UPDATE ON COMMUNITY_AUTHOR FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_community_subscriber_updated_at BEFORE UPDATE ON COMMUNITY_SUBSCRIBER FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_post_updated_at BEFORE UPDATE ON POST FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_comment_updated_at BEFORE UPDATE ON COMMENT FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_chat_updated_at BEFORE UPDATE ON CHAT FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_chat_member_updated_at BEFORE UPDATE ON CHAT_MEMBER FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_message_updated_at BEFORE UPDATE ON MESSAGE FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_forward_message_updated_at BEFORE UPDATE ON FORWARD_MESSAGE FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_attachment_updated_at BEFORE UPDATE ON ATTACHMENT FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+CREATE TRIGGER update_reaction_updated_at BEFORE UPDATE ON REACTION FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
