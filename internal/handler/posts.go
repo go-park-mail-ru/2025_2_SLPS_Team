@@ -31,12 +31,12 @@ type PostsResponse struct {
 func (api *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 	var req PostsRequest
 	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
-		sendJSONError(w, "Invalid params", http.StatusBadRequest)
+		sendJSONSuccess(w, "Invalid params", http.StatusBadRequest)
 		return
 	}
 
 	if req.Page <= 0 || req.Limit <= 0 {
-		sendJSONError(w, "Invalid params", http.StatusBadRequest)
+		sendJSONSuccess(w, "Invalid params", http.StatusBadRequest)
 		return
 	}
 

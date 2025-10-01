@@ -15,22 +15,8 @@ import (
 )
 
 type SuccessResponse struct {
-	Success bool   `json:"success"`
 	Message string `json:"message"`
 	Code    int    `json:"code"`
-}
-
-func sendJSONError(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	if err := json.NewEncoder(w).Encode(SuccessResponse{
-		Success: false,
-		Message: message,
-		Code:    statusCode,
-	}); err != nil {
-		log.Printf("failed to write JSON response: %v", err)
-	}
 }
 
 func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
@@ -38,7 +24,6 @@ func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
 	w.WriteHeader(statusCode)
 
 	if err := json.NewEncoder(w).Encode(SuccessResponse{
-		Success: true,
 		Message: message,
 		Code:    statusCode,
 	}); err != nil {
@@ -47,7 +32,7 @@ func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
 }
 
 var NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
-	sendJSONError(w, "Not found", http.StatusNotFound)
+	sendJSONSuccess(w, "Not found", http.StatusNotFound)
 }
 
 type AuthHandler struct {
@@ -106,24 +91,24 @@ type LoginRequest struct {
 func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONError(w, "Invalid JSON", http.StatusBadRequest)
+		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	user, ok := api.userStore.GetUserByEmail(req.Email)
 	if !ok {
-		sendJSONError(w, "User doesn't exist", http.StatusBadRequest)
+		sendJSONSuccess(w, "User doesn't exist", http.StatusBadRequest)
 		return
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(req.Password)); err != nil {
-		sendJSONError(w, "Incorrect password", http.StatusBadRequest)
+		sendJSONSuccess(w, "Incorrect password", http.StatusBadRequest)
 		return
 	}
 
 	SID, err := generateSessionID()
 	if err != nil {
-		sendJSONError(w, "Server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -163,30 +148,30 @@ type RegisterRequest struct {
 func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONError(w, "Invalid JSON", http.StatusBadRequest)
+		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
 
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
-		sendJSONError(w, "Invalid data", http.StatusBadRequest)
+		sendJSONSuccess(w, "Invalid data", http.StatusBadRequest)
 		return
 	}
 
 	_, ok = api.userStore.GetUserByEmail(req.Email)
 	if ok {
-		sendJSONError(w, "User already exist", http.StatusBadRequest)
+		sendJSONSuccess(w, "User already exist", http.StatusBadRequest)
 		return
 	}
 
 	if req.Password != req.ConfirmPassword {
-		sendJSONError(w, "Password field doesn't match", http.StatusBadRequest)
+		sendJSONSuccess(w, "Password field doesn't match", http.StatusBadRequest)
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		sendJSONError(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
@@ -195,13 +180,13 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	SID, err := generateSessionID()
 	if err != nil {
-		sendJSONError(w, "Server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, "Server error", http.StatusInternalServerError)
 		return
 	}
 
 	api.sessionStore.AddSession(user.ID, SID)
 	if err != nil {
-		sendJSONError(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 

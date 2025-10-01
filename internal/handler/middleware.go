@@ -53,12 +53,12 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 		path := r.URL.Path
 		if api.IsLoggedIn(r) {
 			if ForbiddenPathsWithAuth[path] {
-				sendJSONError(w, "Forbidden", http.StatusForbidden)
+				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
 				return
 			}
 		} else {
 			if !AllowedPathsWithOutAuth[path] {
-				sendJSONError(w, "Forbidden", http.StatusForbidden)
+				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
 				return
 			}
 		}
