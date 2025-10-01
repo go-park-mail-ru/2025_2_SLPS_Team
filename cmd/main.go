@@ -2,23 +2,22 @@ package main
 
 import (
 	"log"
-	"project/handlers"
-	"project/store"
-
 	"net/http"
+	"project/internal/handler"
+	"project/repository"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 )
 
 func NewApiRouter() *mux.Router {
-	auth := handlers.NewAuthHandler()
-	posts := handlers.NewPostsHandler(store.ForkPosts)
+	auth := handler.NewAuthHandler(make(map[string]repository.User), make(map[string]repository.Session))
+	posts := handler.NewPostsHandler(repository.ForkPosts)
 	r := mux.NewRouter()
 
 	apiRouter := r.PathPrefix("/api").Subrouter()
-	apiRouter.Use(handlers.SecureMiddleware)
-	apiRouter.Use(handlers.CorsMiddleware)
+	apiRouter.Use(handler.SecureMiddleware)
+	apiRouter.Use(handler.CorsMiddleware)
 
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
 
@@ -31,18 +30,7 @@ func NewApiRouter() *mux.Router {
 
 	apiRouter.HandleFunc("/posts", posts.PostsPaginate).Methods("GET")
 
-	r.NotFoundHandler = http.HandlerFunc(handlers.NotFoundHandler)
-
-	return r
-}
-func NewStaticRouter() *mux.Router {
-	r := mux.NewRouter()
-	r.Use(handlers.SecureMiddleware)
-	staticRouter := r.PathPrefix("/static/").Subrouter()
-	staticDir := http.Dir("static/")
-	staticRouter.PathPrefix("/").Handler(handlers.StaticHandler(staticDir, "/static/")).Methods("GET")
-
-	r.PathPrefix("/").HandlerFunc(handlers.SPAHandler)
+	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 
 	return r
 }

@@ -1,18 +1,16 @@
-package handlers
+package handler
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"path/filepath"
-	"project/auth"
-	"project/store"
-	"strings"
+	"project/repository"
 	"time"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/gorilla/schema"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -52,25 +50,15 @@ var NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
 	sendJSONError(w, "Not found", http.StatusNotFound)
 }
 
-type PostsHandler struct {
-	postsStore *store.PostsStore
-}
-
-func NewPostsHandler(posts []store.Post) *PostsHandler {
-	return &PostsHandler{
-		postsStore: store.NewPostStore(posts),
-	}
-}
-
 type AuthHandler struct {
-	sessionStore *auth.SessionStore
-	userStore    *auth.UserStore
+	sessionStore *repository.SessionStore
+	userStore    *repository.UserStore
 }
 
-func NewAuthHandler() *AuthHandler {
+func NewAuthHandler(users map[string]repository.User, sessions map[string]repository.Session) *AuthHandler {
 	return &AuthHandler{
-		sessionStore: auth.NewSessionStore(),
-		userStore:    auth.NewUserStore(),
+		sessionStore: repository.NewSessionStore(sessions),
+		userStore:    repository.NewUserStore(users),
 	}
 }
 
@@ -98,8 +86,20 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	}
 }
 
+func generateSessionID() (string, error) {
+	bytes := make([]byte, 31)
+
+	cryptoReader := rand.Reader
+	_, err := cryptoReader.Read(bytes)
+	if err != nil {
+		return "", fmt.Errorf("failed to read random bytes: %w", err)
+	}
+
+	return hex.EncodeToString(bytes), nil
+}
+
 type LoginRequest struct {
-	Username string `json:"username" valid:"required"`
+	Email    string `json:"email" valid:"required"`
 	Password string `json:"password" valid:"required, stringlength(6|20)"`
 }
 
@@ -110,7 +110,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, ok := api.userStore.GetUserByEmail(req.Username)
+	user, ok := api.userStore.GetUserByEmail(req.Email)
 	if !ok {
 		sendJSONError(w, "User doesn't exist", http.StatusBadRequest)
 		return
@@ -121,11 +121,13 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	SID, err := api.sessionStore.AddSession(user.ID)
+	SID, err := generateSessionID()
 	if err != nil {
 		sendJSONError(w, "Server error", http.StatusInternalServerError)
 		return
 	}
+
+	api.sessionStore.AddSession(user.ID, SID)
 
 	cookie := &http.Cookie{
 		Name:     "session_id",
@@ -191,12 +193,18 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	username := api.userStore.AddUser(req.Username, req.Email, req.Gender, string(hashedPassword), req.Age)
 	user, _ := api.userStore.GetUserByEmail(username)
 
-	SID, err := api.sessionStore.AddSession(user.ID)
+	SID, err := generateSessionID()
+	if err != nil {
+		sendJSONError(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	api.sessionStore.AddSession(user.ID, SID)
 	if err != nil {
 		sendJSONError(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-	log.Println(SID)
+
 	cookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    SID,
@@ -207,130 +215,4 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	log.Println(user)
 	sendJSONSuccess(w, "User created", http.StatusOK)
-}
-
-type PostsRequest struct {
-	Page  int `schema:"page"`
-	Limit int `schema:"limit"`
-}
-type PostsResponse struct {
-	Posts      []store.Post `json:"posts"`
-	PagesCount int          `json:"pages"`
-}
-
-func (api *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
-	var req PostsRequest
-	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
-		sendJSONError(w, "Invalid params", http.StatusBadRequest)
-		return
-	}
-
-	if req.Page <= 0 || req.Limit <= 0 {
-		sendJSONError(w, "Invalid params", http.StatusBadRequest)
-		return
-	}
-
-	paginatedPostList, pagesCount := api.postsStore.PostsPaginatedList(req.Page, req.Limit)
-
-	res := PostsResponse{
-		Posts:      paginatedPostList,
-		PagesCount: pagesCount,
-	}
-
-	if err := json.NewEncoder(w).Encode(res); err != nil {
-		log.Printf("failed to write JSON response: %v", err)
-	}
-}
-
-func SPAHandler(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "./static/index.html")
-}
-
-var ForbiddenPathsWithAuth = map[string]bool{
-	"/api/auth/login":    true,
-	"/api/auth/register": true,
-}
-var AllowedPathsWithOutAuth = map[string]bool{
-	"/api/auth/login":      true,
-	"/api/auth/register":   true,
-	"/api/auth/isloggedin": true,
-}
-
-func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodOptions {
-			next.ServeHTTP(w, r)
-			return
-		}
-		path := r.URL.Path
-		if api.IsLoggedIn(r) {
-			if ForbiddenPathsWithAuth[path] {
-				sendJSONError(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-		} else {
-			if !AllowedPathsWithOutAuth[path] {
-				sendJSONError(w, "Forbidden", http.StatusForbidden)
-				return
-			}
-		}
-		next.ServeHTTP(w, r)
-	})
-}
-
-func CorsMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_ORIGIN"))
-		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-
-		if r.Method == "OPTIONS" {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
-
-		next.ServeHTTP(w, r)
-	})
-}
-func SecureMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "DENY")
-		w.Header().Set("X-XSS-Protection", "1; mode=block")
-		w.Header().Set("Referrer-Policy", "no-referrer")
-		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=()")
-		w.Header().Set("Content-Security-Policy-Report-Only", "default-src 'self'; script-src 'self'; style-src 'self'; object-src 'none';")
-
-		next.ServeHTTP(w, r)
-	})
-}
-func StaticHandler(staticDir http.Dir, prefix string) http.Handler {
-
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestPath := strings.TrimPrefix(r.URL.Path, prefix)
-		cleanPath := filepath.Clean("/" + requestPath)
-		cleanPath = strings.TrimPrefix(cleanPath, "/")
-		fullPath := filepath.Join(string(staticDir), cleanPath)
-		absStaticDir, err := filepath.Abs(string(staticDir))
-		if err != nil {
-			sendJSONError(w, "Internal server error", http.StatusInternalServerError)
-			return
-		}
-
-		absFilePath, err := filepath.Abs(fullPath)
-		if err != nil || !strings.HasPrefix(absFilePath, absStaticDir) {
-			sendJSONError(w, "Forbidden", http.StatusForbidden)
-			return
-		}
-
-		info, err := os.Stat(absFilePath)
-		if err != nil || info.IsDir() {
-			sendJSONError(w, "Not found", http.StatusNotFound)
-			return
-		}
-
-		fs := http.FileServer(staticDir)
-		http.StripPrefix(prefix, fs).ServeHTTP(w, r)
-	})
 }
