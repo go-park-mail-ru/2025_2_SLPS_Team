@@ -98,9 +98,13 @@ CREATE TABLE messages
 CREATE TABLE posts
 (
     id         INT PRIMARY KEY,
-    author_id  INT       NOT NULL,
+    author_id  INT       NOT NULL,  
     text       TEXT      NOT NULL,
-    CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 24 AND 4096),
+    like_count INT NOT NULL DEFAULT 0,
+    repost_count INT NOT NULL DEFAULT 0,
+    comment_count INT NOT NULL DEFAULT 0,
+    group_name TEXT,
+    community_avatar TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE
@@ -136,13 +140,13 @@ $$
             SELECT table_schema, table_name
             FROM information_schema.columns
             WHERE column_name = 'updated_at'
-              AND table_schema = 'public'
+            AND table_schema = 'public'
             LOOP
                 SELECT COUNT(*)
                 INTO trig_exists
                 FROM pg_trigger
                 WHERE tgname = 'set_updated_at'
-                  AND tgrelid = (r.table_schema || '.' || r.table_name)::regclass;
+                AND tgrelid = (r.table_schema || '.' || r.table_name)::regclass;
 
                 IF trig_exists = 0 THEN
                     EXECUTE format('

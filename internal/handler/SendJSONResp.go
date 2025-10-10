@@ -11,6 +11,7 @@ type JSONResponse struct {
 	Code    int    `json:"code"`
 }
 
+// Для успешных ответов
 func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -23,6 +24,19 @@ func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
 	}
 }
 
+// Для ошибок по аналогии с успешными ответами
+func sendJSONError(w http.ResponseWriter, message string, statusCode int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
+
+	if err := json.NewEncoder(w).Encode(JSONResponse{
+		Message: message,
+		Code:    statusCode,
+	}); err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
+}
+
 var NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
-	sendJSONSuccess(w, "Not found", http.StatusNotFound)
+	sendJSONError(w, "Not found", http.StatusNotFound)
 }
