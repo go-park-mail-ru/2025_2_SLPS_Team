@@ -1,20 +1,21 @@
-package repository
+package fork
 
 import (
+	"project/domain"
 	"sync"
 )
 
-type Session struct {
-	ID     string
-	UserId uint
-}
-
 type SessionStore struct {
-	sessions map[string]Session
+	sessions map[string]domain.Session
 	mu       sync.RWMutex
 }
+type Session struct {
+	ID        int
+	SessionId string
+	UserId    int
+}
 
-func NewSessionStore(sessions map[string]Session) *SessionStore {
+func NewSessionStore(sessions map[string]domain.Session) *SessionStore {
 	return &SessionStore{
 		sessions: sessions,
 		mu:       sync.RWMutex{},
@@ -27,7 +28,7 @@ func (store *SessionStore) AddSession(userID uint, sessionID string) string {
 	for {
 		if _, exists := store.sessions[sessionID]; !exists {
 
-			session := Session{
+			session := domain.Session{
 				ID:     sessionID,
 				UserId: userID,
 			}
@@ -40,13 +41,13 @@ func (store *SessionStore) AddSession(userID uint, sessionID string) string {
 
 }
 
-func (store *SessionStore) GetSessionByID(sessionID string) (Session, bool) {
+func (store *SessionStore) GetSessionByID(sessionID string) (domain.Session, bool) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
 	session, ok := store.sessions[sessionID]
 	if !ok {
-		return Session{}, false
+		return domain.Session{}, false
 	}
 
 	return session, ok

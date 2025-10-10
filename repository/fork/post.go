@@ -1,31 +1,23 @@
-package repository
+package fork
 
-import "sync"
-
-type Post struct {
-	ID              uint     `json:"id"`
-	Text            string   `json:"text"`
-	LikeCount       uint     `json:"likes"`
-	RepostsCount    uint     `json:"reposts"`
-	CommentCount    uint     `json:"comments"`
-	GroupName       string   `json:"groupName"`
-	CommunityAvatar string   `json:"communityAvatar"`
-	PhotosPath      []string `json:"photos"`
-}
+import (
+	"project/domain"
+	"sync"
+)
 
 type PostsStore struct {
-	posts []Post
+	posts []domain.Post
 	mu    sync.RWMutex
 }
 
-func NewPostStore(posts []Post) *PostsStore {
+func NewPostStore(posts []domain.Post) *PostsStore {
 	return &PostsStore{
 		posts: posts,
 		mu:    sync.RWMutex{},
 	}
 }
 
-func (store *PostsStore) PostsPaginatedList(page, limit int) ([]Post, int) {
+func (store *PostsStore) PostsPaginatedList(page, limit int) ([]domain.Post, int) {
 	store.mu.RLock()
 	defer store.mu.RUnlock()
 
@@ -43,13 +35,13 @@ func (store *PostsStore) PostsPaginatedList(page, limit int) ([]Post, int) {
 	}
 
 	sliced := store.posts[start:end]
-	copySlice := make([]Post, len(sliced))
+	copySlice := make([]domain.Post, len(sliced))
 	copy(copySlice, sliced)
 
 	return copySlice, pagesCount
 }
 
-var ForkPosts = []Post{
+var ForkPosts = []domain.Post{
 	{1, "С днём рождения, Boulevard Depo!\nТалантливому рэп-артисту, стоявшему у истоков творческого объединения YungRussia и продолжающему развивать успешную сольную карьеру, сегодня исполнилось 34 года.\n#ffmbirthdays", 12, 12, 12, "Fast Food Music", "/asserts/groupim.jpg", []string{"/asserts/postImage.jpg"}},
 	{2, "В интернет слили 17 фристайлов Kanye West, записанных для альбома Travis Scott «UTOPIA»\n\nНи для кого не секрет, что при работе над своими треками Трэвис собирает большую команду, помогающую ему в тех или иных аспектах.\n\nТак, последний на данный момент сольный альбом артиста «UTOPIA» сильно напоминает творчество Kanye West, в частности — «Yeezus». Это неслучайно, ведь Йе выступил одним из главных вдохновителей Трэва при создании релиза и даже записал для него 17 референсов, которые сегодня и были слиты в интернет.", 35, 24, 1, "Fast Food Music", "/asserts/groupim.jpg", []string{"/asserts/8.jpg"}},
 	{3, "Nacho Picasso & Televangel — «Séance Musique»\nGenre: Hip-Hop\nLabel: «Last Epoch Recordings»\nApple Music: vk.cc/cPS5do / Spotify: vk.cc/cPS6qG\n\nВидный деятель андерграундной сцены Сиэтла Nacho Picasso в строю более четырнадцати лет. Он покорил слушателей рядом достойных «сольников», на которых сумел найти грамотный баланс между психоделической эстетикой клауд-рэпа и настырным трэп-звучанием, сопровождающим его мрачные тексты, также нередко построенные на вульгарном и чёрном юморе.", 24, 16, 1, "Fast Food Music", "/asserts/groupim.jpg", []string{"/asserts/2.jpg"}},

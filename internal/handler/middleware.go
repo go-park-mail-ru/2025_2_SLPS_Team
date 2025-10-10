@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 	"os"
 )
@@ -44,17 +45,28 @@ var AllowedPathsWithOutAuth = map[string]bool{
 	"/api/auth/isloggedin": true,
 }
 
+type contextKey string
+
+const userIDKey = contextKey("userID")
+
 func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
 			next.ServeHTTP(w, r)
 			return
 		}
+
 		path := r.URL.Path
-		if api.IsLoggedIn(r) {
+		userID, isloggedin := api.IsLoggedIn(r)
+
+		if isloggedin {
 			if ForbiddenPathsWithAuth[path] {
 				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
 				return
+			} else {
+				ctx := context.WithValue(r.Context(), userIDKey, userID)
+				next.ServeHTTP(w, r.WithContext(ctx))
+				//userID, ok := r.Context().Value(userIDKey).(int)
 			}
 		} else {
 			if !AllowedPathsWithOutAuth[path] {

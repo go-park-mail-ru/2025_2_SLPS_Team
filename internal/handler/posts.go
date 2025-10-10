@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"project/repository"
+	"project/repository/fork"
 
 	"github.com/gorilla/schema"
 )
 
 type PostsHandler struct {
-	postsStore *repository.PostsStore
+	postsStore *fork.PostsStore
 }
 
-func NewPostsHandler(posts []repository.Post) *PostsHandler {
+func NewPostsHandler(posts []fork.Post) *PostsHandler {
 	return &PostsHandler{
-		postsStore: repository.NewPostStore(posts),
+		postsStore: fork.NewPostStore(posts),
 	}
 }
 
@@ -24,8 +24,8 @@ type PostsRequest struct {
 	Limit int `schema:"limit"`
 }
 type PostsResponse struct {
-	Posts      []repository.Post `json:"posts"`
-	PagesCount int               `json:"pages"`
+	Posts      []fork.Post `json:"posts"`
+	PagesCount int         `json:"pages"`
 }
 
 func (api *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {

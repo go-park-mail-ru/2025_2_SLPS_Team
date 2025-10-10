@@ -7,53 +7,35 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"project/repository"
+	"project/domain"
 	"time"
 
 	"github.com/asaskevich/govalidator"
 	"golang.org/x/crypto/bcrypt"
 )
 
-type SuccessResponse struct {
-	Message string `json:"message"`
-	Code    int    `json:"code"`
-}
-
-func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	if err := json.NewEncoder(w).Encode(SuccessResponse{
-		Message: message,
-		Code:    statusCode,
-	}); err != nil {
-		log.Printf("failed to write JSON response: %v", err)
-	}
-}
-
-var NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
-	sendJSONSuccess(w, "Not found", http.StatusNotFound)
-}
-
 type AuthHandler struct {
-	sessionStore *repository.SessionStore
-	userStore    *repository.UserStore
+	sessionStore domain.SessionStore
+	userStore    domain.UserStore
 }
 
-func NewAuthHandler(users map[string]repository.User, sessions map[string]repository.Session) *AuthHandler {
+func NewAuthHandler(userStore domain.UserStore, sessionStore domain.SessionStore) *AuthHandler {
 	return &AuthHandler{
-		sessionStore: repository.NewSessionStore(sessions),
-		userStore:    repository.NewUserStore(users),
+		sessionStore: sessionStore,
+		userStore:    userStore,
 	}
 }
 
-func (api *AuthHandler) IsLoggedIn(r *http.Request) bool {
+func (api *AuthHandler) IsLoggedIn(r *http.Request) (int, bool) {
 	authorized := false
-	session, err := r.Cookie("session_id")
-	if err == nil && session != nil {
-		_, authorized = api.sessionStore.GetSessionByID(session.Value)
+	sessionCookie, err := r.Cookie("session_id")
+	var session domain.Session
+
+	if err == nil && sessionCookie != nil {
+		session, authorized = api.sessionStore.GetSessionBySessionID(sessionCookie.Value)
 	}
-	return authorized
+
+	return session.UserID, authorized
 }
 
 type IsLoggedInResponse struct {
@@ -62,8 +44,9 @@ type IsLoggedInResponse struct {
 
 func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	_, isloggedin := api.IsLoggedIn(r)
 	var res = IsLoggedInResponse{
-		IsLoggedIn: api.IsLoggedIn(r),
+		IsLoggedIn: isloggedin,
 	}
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
@@ -129,7 +112,6 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	session, _ := r.Cookie("session_id")
 	api.sessionStore.DeleteSession(session.Value)
-
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
 

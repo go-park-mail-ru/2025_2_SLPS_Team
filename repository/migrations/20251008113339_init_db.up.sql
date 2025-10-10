@@ -1,0 +1,157 @@
+CREATE TYPE friendship_status_enum AS ENUM ('pending', 'accepted', 'rejected', 'blocked');
+CREATE TYPE role_enum AS ENUM ('admin', 'moderator', 'member', 'owner');
+CREATE TYPE attachment_obj_type_enum AS ENUM ('post', 'message', 'comment', 'profile', 'community');
+
+
+CREATE TABLE users
+(
+    id         SERIAL PRIMARY KEY,
+    email      TEXT UNIQUE,
+    phone      TEXT UNIQUE,
+    password   TEXT      NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT email_or_phone_required CHECK (email IS NOT NULL OR phone IS NOT NULL),
+    CONSTRAINT password_length CHECK (LENGTH(password) >= 8),
+    CONSTRAINT email_length CHECK (LENGTH(email) <= 254),
+    CONSTRAINT phone_length CHECK (LENGTH(phone) <= 20)
+);
+
+CREATE TABLE profiles
+(
+    user_id      INT PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+    first_name   TEXT      NOT NULL CHECK (LENGTH(first_name) BETWEEN 1 AND 64),
+    last_name    TEXT      NOT NULL CHECK (LENGTH(last_name) BETWEEN 1 AND 64),
+    avatar_path  TEXT,
+    header_path  TEXT,
+    about_myself TEXT CHECK (LENGTH(about_myself) <= 256),
+    gender       TEXT,
+    dob          TIMESTAMP,
+
+    created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT avatar_length CHECK (LENGTH(avatar_path) <= 512),
+    CONSTRAINT header_length CHECK (LENGTH(header_path) <= 512)
+);
+
+CREATE TABLE sessions
+(
+    id         INT PRIMARY KEY,
+    session_id TEXT NOT NULL,
+    user_id    INT  NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE friend_relationships
+(
+    first_user_id  INT                    NOT NULL,
+    second_user_id INT                    NOT NULL,
+    status         friendship_status_enum NOT NULL DEFAULT 'pending',
+    CONSTRAINT status_length CHECK ( LENGTH(status::text) <= 64),
+    created_at     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (first_user_id, second_user_id),
+    FOREIGN KEY (first_user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (second_user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT no_self_friendship CHECK (first_user_id != second_user_id),
+    CONSTRAINT ordered_friendship CHECK (first_user_id < second_user_id)
+);
+
+CREATE TABLE chats
+(
+    id         INT PRIMARY KEY,
+    name       TEXT      NOT NULL,
+    CONSTRAINT name_length CHECK (LENGTH(name) BETWEEN 5 AND 64),
+    avatar     TEXT,
+    CONSTRAINT avatar_length CHECK (LENGTH(avatar) <= 512),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE chat_members
+(
+    chat_id    INT       NOT NULL,
+    member_id  INT       NOT NULL,
+    role       role_enum NOT NULL DEFAULT 'member',
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (chat_id, member_id),
+    FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE,
+    FOREIGN KEY (member_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE messages
+(
+    id                  INT PRIMARY KEY,
+    author_id           INT       NOT NULL,
+    chat_id             INT       NOT NULL,
+    replayed_message_id INT,
+    text                TEXT      NOT NULL,
+    CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 1 AND 4096),
+    created_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at          TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES users (id),
+    FOREIGN KEY (chat_id) REFERENCES chats (id) ON DELETE CASCADE
+);
+
+CREATE TABLE posts
+(
+    id         INT PRIMARY KEY,
+    author_id  INT       NOT NULL,
+    text       TEXT      NOT NULL,
+    CONSTRAINT text_length CHECK (LENGTH(text) BETWEEN 24 AND 4096),
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE attachments
+(
+    id         INT PRIMARY KEY,
+    obj_id     INT                      NOT NULL,
+    obj_type   attachment_obj_type_enum NOT NULL,
+    file_path  TEXT                     NOT NULL,
+    CONSTRAINT file_path_length CHECK (LENGTH(file_path) BETWEEN 24 AND 512),
+    created_at TIMESTAMP                NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP                NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE OR REPLACE FUNCTION update_timestamp()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+
+$$ LANGUAGE plpgsql;
+DO
+$$
+    DECLARE
+        r           RECORD;
+        trig_exists INT;
+    BEGIN
+        FOR r IN
+            SELECT table_schema, table_name
+            FROM information_schema.columns
+            WHERE column_name = 'updated_at'
+              AND table_schema = 'public'
+            LOOP
+                SELECT COUNT(*)
+                INTO trig_exists
+                FROM pg_trigger
+                WHERE tgname = 'set_updated_at'
+                  AND tgrelid = (r.table_schema || '.' || r.table_name)::regclass;
+
+                IF trig_exists = 0 THEN
+                    EXECUTE format('
+                CREATE TRIGGER set_updated_at
+                BEFORE UPDATE ON %I.%I
+                FOR EACH ROW
+                EXECUTE FUNCTION update_timestamp();
+            ', r.table_schema, r.table_name);
+                END IF;
+            END LOOP;
+    END
+$$;
