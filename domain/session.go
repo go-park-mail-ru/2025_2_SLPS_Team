@@ -6,7 +6,7 @@ type Session struct {
 	UserID    int
 }
 type SessionStore interface {
-	AddSession(userID int, sessionID string) (string, error)
+	AddSession(userID int, sessionID string) error
 	GetSessionBySessionID(sessionID string) (Session, error)
 	DeleteSession(sessionID string) error
 }

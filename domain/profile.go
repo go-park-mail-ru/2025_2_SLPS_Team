@@ -14,6 +14,10 @@ type Profile struct {
 }
 
 type ProfileStore interface {
-	GetUserByEmail(email string) (User, bool)
-	AddUser(firstname, lastname, email, gender, hashedPassword string, age int) string
+	UpdateProfile(profile Profile, userID int) error
+	UpdateAvatar(avatarPath string, userID int) error
+	UpdateHeader(avatarPath string, UserID int) error
+	GetProfileByUserID(userID int) (Profile, error)
+	//DeleteAvatar
+	//DeleteHeader
 }
