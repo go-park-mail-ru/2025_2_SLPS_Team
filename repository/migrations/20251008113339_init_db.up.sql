@@ -25,8 +25,8 @@ CREATE TABLE profiles
     avatar_path  TEXT,
     header_path  TEXT,
     about_myself TEXT CHECK (LENGTH(about_myself) <= 256),
-    gender       TEXT,
-    dob          TIMESTAMP,
+    gender       TEXT NOT NULL,
+    dob          TIMESTAMP NOT NULL,
 
     created_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at   TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,

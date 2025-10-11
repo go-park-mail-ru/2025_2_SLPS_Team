@@ -2,8 +2,11 @@ package handler
 
 import (
 	"context"
+	"errors"
+	"log"
 	"net/http"
 	"os"
+	"project/domain"
 )
 
 func CorsMiddleware(next http.Handler) http.Handler {
@@ -57,15 +60,27 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		path := r.URL.Path
-		userID, isloggedin := api.IsLoggedIn(r)
-
-		if isloggedin {
+		userID, err := api.IsLoggedIn(r)
+		isLoggedIn := true
+		if err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				isLoggedIn = false
+			} else {
+				sendJSONSuccess(w, "Server error", http.StatusInternalServerError)
+				return
+			}
+		}
+		log.Println(isLoggedIn)
+		if isLoggedIn {
 			if ForbiddenPathsWithAuth[path] {
 				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
 				return
 			} else {
 				ctx := context.WithValue(r.Context(), userIDKey, userID)
+				log.Println(userID)
+				log.Println("userid мидваря")
 				next.ServeHTTP(w, r.WithContext(ctx))
+				return
 				//userID, ok := r.Context().Value(userIDKey).(int)
 			}
 		} else {

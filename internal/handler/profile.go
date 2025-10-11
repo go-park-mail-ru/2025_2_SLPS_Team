@@ -6,7 +6,9 @@ import (
 	"log"
 	"net/http"
 	"project/domain"
+	"project/internal/service"
 	"strconv"
+	"strings"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/gorilla/mux"
@@ -25,8 +27,20 @@ func NewProfileHandler(profileStore domain.ProfileStore, userStore domain.UserSt
 }
 
 func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseMultipartForm(50 << 20) // 50MB
+	if err != nil {
+		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
+		return
+	}
+
+	jsonProfile := r.FormValue("profile")
+	if jsonProfile == "" {
+		sendJSONSuccess(w, "Missing profile field", http.StatusBadRequest)
+		return
+	}
+
 	var req domain.Profile
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(strings.NewReader(jsonProfile)).Decode(&req); err != nil {
 		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
@@ -37,6 +51,35 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 	if !ok || err != nil {
 		sendJSONSuccess(w, "Invalid data", http.StatusBadRequest)
 		return
+	}
+
+	user, err := api.profileStore.GetProfileByUserID(userID)
+	if err != nil {
+		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+		return
+	}
+	oldFileName := user.AvatarPath
+
+	files := r.MultipartForm.File["avatar"]
+	if len(files) != 0 {
+		file := files[0]
+		if oldFileName != nil {
+			err = service.DeleteFile(*oldFileName)
+			if err != nil {
+				sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+				return
+			}
+		}
+
+		fileName, err := service.UploadFile(file)
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		req.AvatarPath = &fileName
+	} else {
+		req.AvatarPath = oldFileName
 	}
 
 	err = api.profileStore.UpdateProfile(req, userID)
