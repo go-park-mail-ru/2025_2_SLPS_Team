@@ -45,41 +45,46 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userID, _ := r.Context().Value(userIDKey).(int)
-	log.Println(userID)
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
 		sendJSONSuccess(w, "Invalid data", http.StatusBadRequest)
 		return
 	}
 
-	user, err := api.profileStore.GetProfileByUserID(userID)
-	if err != nil {
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-	oldFileName := user.AvatarPath
+	userID, _ := r.Context().Value(userIDKey).(int)
+	// для надежности можно проверять что пользователь существует, но по идее если есть сессия с id пользвателем он точно должен существовать
+	//isUserExist, err := api.userStore.IsUserExists(userID)
+	//if err != nil {
+	//    sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+	//    return
+	//}
+	//if !isUserExist {
+	//    sendJSONSuccess(w, "User does not exist", http.StatusBadRequest)
+	//    return
+	//}
 
 	files := r.MultipartForm.File["avatar"]
-	if len(files) != 0 {
-		file := files[0]
-		if oldFileName != nil {
-			err = service.DeleteFile(*oldFileName)
-			if err != nil {
-				sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
-				return
-			}
-		}
-
-		fileName, err := service.UploadFile(file)
+	if len(files) == 1 {
+		avatarOldPath, err := api.profileStore.GetAvatarByUserID(userID)
 		if err != nil {
 			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
 			return
 		}
 
-		req.AvatarPath = &fileName
+		newfilePath, err := service.HandleFileUpload(files, []*string{avatarOldPath})
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		err = api.profileStore.UpdateAvatar(newfilePath[0], userID)
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
 	} else {
-		req.AvatarPath = oldFileName
+		log.Println("Missing avatar field")
 	}
 
 	err = api.profileStore.UpdateProfile(req, userID)
@@ -91,47 +96,81 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 	sendJSONSuccess(w, "Profile updated", http.StatusOK)
 }
 
-type UpdateAvatarRequest struct {
-	AvatarPath string `json:"avatarPath"`
-}
-
 func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) {
-	var req UpdateAvatarRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
+
+	err := r.ParseMultipartForm(50 << 20) // 50MB
+	if err != nil {
+		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
 		return
 	}
 
 	userID, _ := r.Context().Value(userIDKey).(int)
-	err := api.profileStore.UpdateAvatar(req.AvatarPath, userID)
-	if err != nil {
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+
+	files := r.MultipartForm.File["avatar"]
+	if len(files) == 1 {
+		avatarOldPath, err := api.profileStore.GetAvatarByUserID(userID)
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		newfilePath, err := service.HandleFileUpload(files, []*string{avatarOldPath})
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		err = api.profileStore.UpdateAvatar(newfilePath[0], userID)
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+	} else {
+		sendJSONSuccess(w, "Missing avatar field", http.StatusBadRequest)
+		log.Println("Missing avatar field")
 		return
 	}
 
 	sendJSONSuccess(w, "Avatar updated", http.StatusOK)
 }
 
-type UpdateHeaderRequest struct {
-	HeaderPath string `json:"headerPath"`
-}
-
 func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) {
-	var req UpdateHeaderRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
+	err := r.ParseMultipartForm(50 << 20) // 50MB
+	if err != nil {
+		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
 		return
 	}
 
 	userID, _ := r.Context().Value(userIDKey).(int)
-	err := api.profileStore.UpdateHeader(req.HeaderPath, userID)
-	if err != nil {
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+
+	files := r.MultipartForm.File["header"]
+	if len(files) == 1 {
+		headerOldPath, err := api.profileStore.GetHeaderByUserID(userID)
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		newfilePath, err := service.HandleFileUpload(files, []*string{headerOldPath})
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		err = api.profileStore.UpdateHeader(newfilePath[0], userID)
+		if err != nil {
+			sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+	} else {
+		sendJSONSuccess(w, "Missing header field", http.StatusBadRequest)
+		log.Println("Missing header field")
 		return
 	}
 
 	sendJSONSuccess(w, "Header updated", http.StatusOK)
-
 }
 
 func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Request) {

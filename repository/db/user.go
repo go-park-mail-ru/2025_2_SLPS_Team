@@ -75,3 +75,14 @@ func (store *DBUserStore) GetUserByID(userID int) (domain.User, error) {
 
 	return user, nil
 }
+
+func (store *DBUserStore) IsUserExists(userID int) (bool, error) {
+	var exists bool
+	query := "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"
+	err := store.db.QueryRow(query, userID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+
+	return exists, nil
+}

@@ -50,7 +50,6 @@ func NewApiRouter() *mux.Router {
 	apiRouter.HandleFunc("/profile", profile.UpdateProfile).Methods("PUT")
 	apiRouter.HandleFunc("/profile/avatar", profile.UpdateAvatar).Methods("PATCH")
 	apiRouter.HandleFunc("/profile/header", profile.UpdateHeader).Methods("PATCH")
-	authRouter.HandleFunc("/isloggedin", auth.IsLoggedInHandler).Methods("GET", "OPTIONS")
 
 	// GET    /api/posts                    - список постов с пагинацией
 	// GET    /api/posts/{id}               - получение конкретного поста

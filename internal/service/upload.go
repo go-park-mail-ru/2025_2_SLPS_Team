@@ -65,11 +65,32 @@ func DeleteFile(fileName string) error {
 	return nil
 }
 
-func DeleteFiles(fileNames []string) error {
+func DeleteFiles(fileNames []*string) error {
 	for _, fileName := range fileNames {
-		if err := DeleteFile(fileName); err != nil {
-			return err
+		if fileName != nil {
+			if err := DeleteFile(*fileName); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
+}
+
+func HandleFileUpload(
+	files []*multipart.FileHeader,
+	oldPaths []*string,
+) ([]string, error) {
+	var newPaths []string
+
+	err := DeleteFiles(oldPaths)
+	if err != nil {
+		return nil, err
+	}
+
+	newPaths, err = UploadFiles(files)
+	if err != nil {
+		return nil, err
+	}
+
+	return newPaths, nil
 }

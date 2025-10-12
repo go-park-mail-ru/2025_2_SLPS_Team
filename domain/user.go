@@ -10,6 +10,7 @@ type UserStore interface {
 	GetUserByEmail(email string) (User, error)
 	CreateUser(user User, profile Profile) (int, error)
 	GetUserByID(userID int) (User, error)
+	IsUserExists(userID int) (bool, error)
 	//UpdatePassword()
 	//UpdateEmail()
 	//DeleteUser()
