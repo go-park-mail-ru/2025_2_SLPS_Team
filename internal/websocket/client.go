@@ -82,47 +82,21 @@ const pongWait = 60 * time.Second
 const pingPeriod = 54 * time.Second
 const writeWait = 10 * time.Second
 
-func (c *Client) readPump(hub *Hub, router *Router) {
-	defer func() {
-		hub.removeClient(c.userID)
-	}()
-
-	c.conn.SetReadLimit(512)
-	c.conn.SetReadDeadline(time.Now().Add(pongWait))
-	c.conn.SetPongHandler(func(string) error {
-		c.conn.SetReadDeadline(time.Now().Add(pongWait))
-		return nil
-	})
-
-	for {
-		_, message, err := c.conn.ReadMessage()
-		if err != nil {
-			break
-		}
-
-		var envelope Envelope
-		if err := json.Unmarshal(message, &envelope); err != nil {
-			continue
-		}
-
-		ctx := &WSContext{
-			Conn:   c.conn,
-			UserID: c.userID,
-			Hub:    hub,
-			Data:   envelope.Data,
-		}
-
-		if err := router.Route(envelope.Type, ctx); err != nil {
-			log.Println("Route error:", err)
-		}
-	}
-}
-
-func (c *Client) writePump() {
+//	func (c *Client) writePump() {
+//		defer c.conn.Close()
+//
+//		for message := range c.send {
+//			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
+//			if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+//				return
+//			}
+//		}
+//	} без пинпонга
+func (c *Client) writePump(hub *Hub) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		c.conn.Close()
+		hub.removeClient(c.userID)
 	}()
 
 	for {
@@ -148,7 +122,7 @@ func (c *Client) writePump() {
 	}
 }
 
-func ServeWs(hub *Hub, router *Router, w http.ResponseWriter, r *http.Request) {
+func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("upgrade error:", err)
@@ -166,7 +140,5 @@ func ServeWs(hub *Hub, router *Router, w http.ResponseWriter, r *http.Request) {
 	hub.mu.Lock()
 	hub.clients[userID] = client
 	hub.mu.Unlock()
-
-	go client.writePump()
-	go client.readPump(hub, router)
+	go client.writePump(hub)
 }
