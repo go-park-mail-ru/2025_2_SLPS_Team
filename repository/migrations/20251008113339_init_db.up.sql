@@ -74,6 +74,7 @@ CREATE TABLE chat_members
     chat_id    INT       NOT NULL,
     member_id  INT       NOT NULL,
     role       role_enum NOT NULL DEFAULT 'member',
+    last_read_message_id INT,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (chat_id, member_id),
