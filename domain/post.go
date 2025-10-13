@@ -3,22 +3,24 @@ package domain
 import "time"
 
 type Post struct {
-	ID        uint      `json:"id"`
-	AuthorID  uint      `json:"authorID"`
-	Text      string    `json:"text"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID        uint      `json:"id"`             //в БД табличка posts называется
+	AuthorID  uint      `json:"authorID"`       //в БД табличка posts называется
+	Text      string    `json:"text"`           //в БД табличка posts называется
+	CreatedAt time.Time `json:"created_at"`     //в БД табличка posts называется
+	UpdatedAt time.Time `json:"updated_at"`     //в БД табличка posts называется
 
-	Attachments []string `json:"attachments"`
+	Attachments []string `json:"attachments"`   //в БД табличка attachments называется
 	PhotosPath  []string `json:"photos"`
 
-	GroupName       string `json:"groupName"`
-	CommunityAvatar string `json:"communityAvatar"`
+	// GroupName       string `json:"groupName"`        //Это с заделом на будущее
+	// CommunityAvatar string `json:"communityAvatar"`
 
-	LikeCount    uint `json:"likes"`
-	RepostsCount uint `json:"reposts"`
-	CommentCount uint `json:"comments"`
+	// LikeCount    uint `json:"likes"`
+	// RepostsCount uint `json:"reposts"`
+	// CommentCount uint `json:"comments"`
 }
+
+
 
 type PostStore interface {
 	// Получение постов с пагинацией

@@ -149,13 +149,9 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	post := &domain.Post{
 		AuthorID:        uint(userID),
 		Text:            req.Text,
+
 		Attachments:     req.Attachments,
 		PhotosPath:      req.Photos,
-		GroupName:       req.GroupName,
-		CommunityAvatar: req.CommunityAvatar,
-		LikeCount:       0,
-		RepostsCount:    0,
-		CommentCount:    0,
 	}
 
 	// Сохраняем пост в хранилище
@@ -223,14 +219,18 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		ID:              uint(postID),
 		AuthorID:        uint(userID),
 		Text:            req.Text,
+		CreatedAt:       existingPost.CreatedAt,
+
 		Attachments:     req.Attachments,
 		PhotosPath:      req.Photos,
-		GroupName:       req.GroupName,
-		CommunityAvatar: req.CommunityAvatar,
-		LikeCount:       existingPost.LikeCount,
-		RepostsCount:    existingPost.RepostsCount,
-		CommentCount:    existingPost.CommentCount,
-		CreatedAt:       existingPost.CreatedAt,
+
+		// GroupName:       req.GroupName,        //Это с заделом на будущее
+		// CommunityAvatar: req.CommunityAvatar,
+
+		// LikeCount:       existingPost.LikeCount,
+		// RepostsCount:    existingPost.RepostsCount,
+		// CommentCount:    existingPost.CommentCount,
+		
 	}
 
 	if err := h.postStore.UpdatePost(updatedPost); err != nil {

@@ -2,6 +2,7 @@ package db
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"project/domain"
 	"time"
@@ -18,42 +19,51 @@ func NewDBPostStore(db *sql.DB) domain.PostStore {
 func (store *DBPostStore) PostsPaginatedList(page, limit int) ([]domain.Post, int, error) {
 	offset := (page - 1) * limit
 
-	// Получаем посты с пагинацией
 	query := `
-        SELECT p.id, p.author_id, p.text, p.created_at, p.updated_at,
-               p.like_count, p.repost_count, p.comment_count,
-               p.group_name, p.community_avatar
+        SELECT p.id, p.author_id, p.text, p.created_at, p.updated_at
         FROM posts p
         ORDER BY p.created_at DESC
         LIMIT $1 OFFSET $2
     `
 
-	rows, err := store.db.Query(query, limit, offset)
+	rows, err := store.db.Query(query, limit, offset) // Получаем посты с пагинацией
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to query posts: %w", err)
 	}
 	defer rows.Close()
 
-	var posts []domain.Post
-	for rows.Next() {
-		var post domain.Post
-		err := rows.Scan(
-			&post.ID, &post.AuthorID, &post.Text, &post.CreatedAt, &post.UpdatedAt,
-			&post.LikeCount, &post.RepostsCount, &post.CommentCount,
-			&post.GroupName, &post.CommunityAvatar,
+	var posts []domain.Post //Слайс типа domain.Post, сюда мы будем добавлять считанные из rows посты post. Наша функция возвращает этот слайс
+
+	for rows.Next() { //Начинаем считывать строки из sql запроса ПОСТРОЧНО!
+
+		var post domain.Post //Структура нашего поста
+
+		err := rows.Scan( //Scan записывает столбцы из sql запроса rows в поля нашей структуры post ПО УКАЗАТЕЛЮ. Возвращает ошибку
+			&post.ID,
+			&post.AuthorID,
+			&post.Text,
+			&post.CreatedAt,
+			&post.UpdatedAt,
 		)
+
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan post: %w", err)
 		}
 
 		// Загружаем attachments и photos
-		attachments, photos, err := store.getPostAttachments(post.ID)
+		attachments, err := store.getPostAttachments(post.ID)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		photos, err := store.getPostPhotos(post.ID)
 		if err != nil {
 			return nil, 0, err
 		}
 
 		post.Attachments = attachments
 		post.PhotosPath = photos
+
 		posts = append(posts, post)
 	}
 
@@ -71,29 +81,35 @@ func (store *DBPostStore) PostsPaginatedList(page, limit int) ([]domain.Post, in
 
 func (store *DBPostStore) GetPostByID(id uint) (*domain.Post, error) {
 	query := `
-        SELECT id, author_id, text, created_at, updated_at,
-               like_count, repost_count, comment_count,
-               group_name, community_avatar
-        FROM posts 
+        SELECT p.id, p.author_id, p.text, p.created_at, p.updated_at
+        FROM posts p
         WHERE id = $1
     `
 
 	var post domain.Post
 	err := store.db.QueryRow(query, id).Scan(
-		&post.ID, &post.AuthorID, &post.Text, &post.CreatedAt, &post.UpdatedAt,
-		&post.LikeCount, &post.RepostsCount, &post.CommentCount,
-		&post.GroupName, &post.CommunityAvatar,
+		&post.ID,
+		&post.AuthorID,
+		&post.Text,
+		&post.CreatedAt,
+		&post.UpdatedAt,
 	)
 
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("post not found")
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, fmt.Errorf("post not found: %w", err)
 	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get post: %w", err)
 	}
 
 	// Загружаем attachments и photos
-	attachments, photos, err := store.getPostAttachments(id)
+	attachments, err := store.getPostAttachments(id)
+	if err != nil {
+		return nil, err
+	}
+
+	photos, err := store.getPostPhotos(id)
 	if err != nil {
 		return nil, err
 	}
@@ -106,16 +122,16 @@ func (store *DBPostStore) GetPostByID(id uint) (*domain.Post, error) {
 
 func (store *DBPostStore) CreatePost(post *domain.Post) error {
 	query := `
-        INSERT INTO posts (author_id, text, like_count, repost_count, comment_count, group_name, community_avatar)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO posts (author_id, text)
+        VALUES ($1, $2)
         RETURNING id, created_at, updated_at
     `
 
-	err := store.db.QueryRow(
-		query,
-		post.AuthorID, post.Text, post.LikeCount, post.RepostsCount, post.CommentCount,
-		post.GroupName, post.CommunityAvatar,
-	).Scan(&post.ID, &post.CreatedAt, &post.UpdatedAt)
+	err := store.db.QueryRow(query, post.AuthorID, post.Text).Scan(
+		&post.ID,
+		&post.CreatedAt,
+		&post.UpdatedAt,
+	)
 
 	if err != nil {
 		return fmt.Errorf("failed to create post: %w", err)
@@ -129,57 +145,79 @@ func (store *DBPostStore) CreatePost(post *domain.Post) error {
 	return nil
 }
 
-func (store *DBPostStore) getPostAttachments(postID uint) ([]string, []string, error) {
+func (store *DBPostStore) getPostAttachments(postID uint) ([]string, error) {
 	query := `
-        SELECT file_path, obj_type 
+        SELECT file_path,  
         FROM attachments 
-        WHERE obj_id = $1 AND obj_type IN ('post_attachment', 'post_photo')
+        WHERE obj_id = $1 AND obj_type = 'post'
+		ORDER BY id
     `
 
 	rows, err := store.db.Query(query, postID)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to query attachments: %w", err)
+		return nil, fmt.Errorf("failed to query attachments: %w", err)
 	}
 	defer rows.Close()
 
 	var attachments []string
-	var photos []string
 
 	for rows.Next() {
-		var filePath, objType string
-		if err := rows.Scan(&filePath, &objType); err != nil {
-			return nil, nil, fmt.Errorf("failed to scan attachment: %w", err)
+		var filePath string
+		if err := rows.Scan(&filePath); err != nil {
+			return nil, fmt.Errorf("failed to scan attachment: %w", err)
 		}
-
-		if objType == "post_attachment" {
-			attachments = append(attachments, filePath)
-		} else if objType == "post_photo" {
-			photos = append(photos, filePath)
-		}
+		attachments = append(attachments, filePath)
 	}
 
-	return attachments, photos, nil
+	return attachments, nil
 }
 
-func (store *DBPostStore) savePostAttachments(postID uint, attachments []string, photos []string) error {
-	// В реальном приложении здесь была бы транзакция
+func (store *DBPostStore) savePostAttachments(postID uint, attachments []string) error {
+	if len(attachments) == 0 {
+		return nil
+	}
+
 	for _, attachment := range attachments {
-		query := `INSERT INTO attachments (obj_id, obj_type, file_path) VALUES ($1, 'post_attachment', $2)`
+
+		query := `
+			INSERT INTO attachments (obj_id, obj_type, file_path) 
+			VALUES ($1, 'post', $2)
+		`
+
 		_, err := store.db.Exec(query, postID, attachment)
 		if err != nil {
 			return fmt.Errorf("failed to save attachment: %w", err)
 		}
 	}
 
-	for _, photo := range photos {
-		query := `INSERT INTO attachments (obj_id, obj_type, file_path) VALUES ($1, 'post_photo', $2)`
-		_, err := store.db.Exec(query, postID, photo)
-		if err != nil {
-			return fmt.Errorf("failed to save photo: %w", err)
+	return nil
+}
+
+func (store *DBPostStore) getPostPhotos(postID uint) ([]string, error) {
+	query := `
+        SELECT file_path,  
+        FROM post_photos 
+        WHERE post_id = $1
+		ORDER BY id
+    `
+
+	rows, err := store.db.Query(query, postID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query post photos: %w", err)
+	}
+	defer rows.Close()
+
+	var photos []string
+
+	for rows.Next() {
+		var filePath string
+		if err := rows.Scan(&filePath); err != nil {
+			return nil, fmt.Errorf("failed to scan photo: %w", err)
 		}
+		photos = append(photos, filePath)
 	}
 
-	return nil
+	return photos, nil
 }
 
 // Остальные методы (UpdatePost, DeletePost, GetPostsByUser) реализуются аналогично
@@ -194,8 +232,7 @@ func (store *DBPostStore) UpdatePost(post *domain.Post) error {
 
 	err := store.db.QueryRow(
 		query,
-		post.Text, time.Now(), post.LikeCount, post.RepostsCount, post.CommentCount,
-		post.GroupName, post.CommunityAvatar, post.ID, post.AuthorID,
+		post.Text, time.Now(), post.ID, post.AuthorID,
 	).Scan(&post.UpdatedAt)
 
 	if err == sql.ErrNoRows {
@@ -230,8 +267,8 @@ func (store *DBPostStore) GetPostsByUser(userID uint, page, limit int) ([]domain
 
 	query := `
         SELECT id, author_id, text, created_at, updated_at,
-               like_count, repost_count, comment_count,
-               group_name, community_avatar
+            like_count, repost_count, comment_count,
+            group_name, community_avatar
         FROM posts 
         WHERE author_id = $1
         ORDER BY created_at DESC
@@ -249,8 +286,6 @@ func (store *DBPostStore) GetPostsByUser(userID uint, page, limit int) ([]domain
 		var post domain.Post
 		err := rows.Scan(
 			&post.ID, &post.AuthorID, &post.Text, &post.CreatedAt, &post.UpdatedAt,
-			&post.LikeCount, &post.RepostsCount, &post.CommentCount,
-			&post.GroupName, &post.CommunityAvatar,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan post: %w", err)
