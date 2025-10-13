@@ -13,6 +13,12 @@ type Profile struct {
 	Dob         time.Time `json:"dob"`
 }
 
+type ShortProfile struct {
+	UserID     int     `json:"userID"`
+	FirstName  string  `json:"firstName"`
+	LastName   string  `json:"lastName"`
+	AvatarPath *string `json:"avatarPath"`
+}
 type ProfileStore interface {
 	UpdateProfile(profile Profile, userID int) error
 	UpdateAvatar(avatarPath string, userID int) error

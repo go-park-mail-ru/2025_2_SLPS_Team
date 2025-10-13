@@ -33,6 +33,11 @@ func NewApiRouter() *mux.Router {
 	profileStore := db.NewDBProfileStore(dbConn)
 	auth := handler.NewAuthHandler(userStore, sessionStore)
 	profile := handler.NewProfileHandler(profileStore, userStore)
+
+	//hub := websocket.NewHub()
+	//wsr := websocket.NewRouter()
+	//message := websocket.NewWebSocketHandler(userStore)
+	//wsr.Handle("send_message", )
 	r := mux.NewRouter()
 	r.PathPrefix("/uploads/").Handler(handler.UploadsHandler("./uploads", "/uploads/"))
 	apiRouter := r.PathPrefix("/api").Subrouter()
