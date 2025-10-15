@@ -117,6 +117,11 @@ CREATE TABLE attachments
     CONSTRAINT file_path_length CHECK (LENGTH(file_path) BETWEEN 1 AND 512),
     created_at TIMESTAMP                NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP                NOT NULL DEFAULT CURRENT_TIMESTAMP
+    CONSTRAINT fk_attachments_post 
+    FOREIGN KEY (obj_id) 
+    REFERENCES posts(id) 
+    ON DELETE CASCADE 
+    CHECK (obj_type = 'post')
 );
 
 -- ТАБЛИЦА ДЛЯ ФОТОГРАФИЙ ПОСТОВ
