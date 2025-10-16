@@ -73,7 +73,10 @@ func (store *DBPostStore) PostsPaginatedList(page, limit int) ([]domain.Post, in
 
 	// Получаем общее количество для пагинации
 	var total int
-	countQuery := `SELECT COUNT(*) FROM posts`
+	countQuery := `
+	SELECT COUNT(*) 
+	FROM posts
+	`
 	err = store.db.QueryRow(countQuery).Scan(&total)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to count posts: %w", err)
@@ -88,7 +91,7 @@ func (store *DBPostStore) GetPostByID(id uint) (*domain.Post, error) {
 	query := `
         SELECT p.id, p.author_id, p.text, p.created_at, p.updated_at
         FROM posts p
-        WHERE id = $1
+        WHERE p.id = $1
     `
 
 	var post domain.Post
@@ -311,7 +314,10 @@ func (store *DBPostStore) GetPostsByUser(userID uint, page, limit int) ([]domain
 
 	// Count для пагинации
 	var total int
-	countQuery := `SELECT COUNT(*) FROM posts WHERE author_id = $1`
+	countQuery := `
+	SELECT COUNT(*) 
+	FROM posts WHERE author_id = $1
+	`
 	err = store.db.QueryRow(countQuery, userID).Scan(
 		&total,
 	)
@@ -362,9 +368,9 @@ func (store *DBPostStore) getPostMedia(postID uint) ([]string, []string, error) 
 // Получение слайса путей вложений
 func (store *DBPostStore) getPostAttachments(postID uint) ([]string, error) {
 	query := `
-        SELECT file_path,  
-        FROM attachments 
-        WHERE obj_id = $1 AND obj_type = 'post'
+        SELECT file_path
+        FROM post_attachments 
+        WHERE post_id = $1
 		ORDER BY id
     `
 
@@ -389,7 +395,7 @@ func (store *DBPostStore) getPostAttachments(postID uint) ([]string, error) {
 // Получение слайса путей фотографий
 func (store *DBPostStore) getPostPhotos(postID uint) ([]string, error) {
 	query := `
-        SELECT file_path,  
+        SELECT file_path
         FROM post_photos 
         WHERE post_id = $1
 		ORDER BY id
@@ -428,8 +434,8 @@ func (store *DBPostStore) savePostAttachmentsTx(tx *sql.Tx, postID uint, attachm
 			return fmt.Errorf("attachment path length must be between 1 and 512 characters")
 		}
 		query := `
-			INSERT INTO attachments (obj_id, obj_type, file_path) 
-			VALUES ($1, 'post', $2)
+			INSERT INTO post_attachments (post_id, file_path) 
+			VALUES ($1, $2)
 		`
 		_, err := tx.Exec(query, postID, attachment)
 		if err != nil {
@@ -454,7 +460,7 @@ func (store *DBPostStore) savePostPhotosTx(tx *sql.Tx, postID uint, photos []str
 		}
 
 		query := `
-			INSERT INTO photos (post_id, file_path)
+			INSERT INTO post_photos (post_id, file_path)
 			VALUES ($1, $2)
 		`
 		_, err := tx.Exec(query, postID, photo)
@@ -470,8 +476,8 @@ func (store *DBPostStore) savePostPhotosTx(tx *sql.Tx, postID uint, photos []str
 func (store *DBPostStore) updatePostAttachmentsTx(tx *sql.Tx, postID uint, attachments []string) error {
 	//Удаляем старые ВЛОЖЕНИЯ (Потом можно будет запихнуть в отдельную функцию удаления)
 	query := `
-		DELETE FROM attachments
-		WHERE obj_id = $1 AND obj_type = 'post'
+		DELETE FROM post_attachments
+		WHERE post_id = $1
 	`
 	_, err := tx.Exec(query, postID)
 	if err != nil {
@@ -482,7 +488,7 @@ func (store *DBPostStore) updatePostAttachmentsTx(tx *sql.Tx, postID uint, attac
 }
 
 // Обновление ФОТОГРАФИЙ поста через транзакции
-func (store *DBPostStore) updatePostPhotosTx(tx *sql.Tx, postID uint, attachments []string) error {
+func (store *DBPostStore) updatePostPhotosTx(tx *sql.Tx, postID uint, photos []string) error {
 	//Удаляем старые ФОТОГРАФИИ (Потом можно будет запихнуть в отдельную функцию удаления)
 	query := `
 		DELETE FROM post_photos
@@ -490,8 +496,8 @@ func (store *DBPostStore) updatePostPhotosTx(tx *sql.Tx, postID uint, attachment
 	`
 	_, err := tx.Exec(query, postID)
 	if err != nil {
-		return fmt.Errorf("failed to delete old attachments: %w", err)
+		return fmt.Errorf("failed to delete old photos: %w", err)
 	}
 	// Вставляем новые ВЛОЖЕНИЯ
-	return store.savePostPhotosTx(tx, postID, attachments)
+	return store.savePostPhotosTx(tx, postID, photos)
 }
