@@ -24,6 +24,7 @@ type ProfileStore interface {
 	UpdateAvatar(avatarPath string, userID int) error
 	UpdateHeader(avatarPath string, UserID int) error
 	GetProfileByUserID(userID int) (Profile, error)
+	GetShortProfileByUserIDs(userIDs []int) ([]ShortProfile, error)
 	GetAvatarByUserID(userID int) (*string, error)
 	GetHeaderByUserID(userID int) (*string, error)
 	//DeleteAvatar

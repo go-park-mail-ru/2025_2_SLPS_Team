@@ -4,12 +4,14 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	_ "project/docs"
 	"project/internal/handler"
 	"project/repository/db"
 
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func NewPostgres(dataSourceName string) *sql.DB {
@@ -31,8 +33,11 @@ func NewApiRouter() *mux.Router {
 	userStore := db.NewDBUserStore(dbConn)
 	sessionStore := db.NewDBSessionStore(dbConn)
 	profileStore := db.NewDBProfileStore(dbConn)
+	chatStore := db.NewDBChatStore(dbConn)
+	messageStore := db.NewDBMessageStore(dbConn)
 	auth := handler.NewAuthHandler(userStore, sessionStore)
 	profile := handler.NewProfileHandler(profileStore, userStore)
+	chat := handler.NewChatHandler(userStore, profileStore, chatStore, messageStore)
 
 	//hub := websocket.NewHub()
 	//wsr := websocket.NewRouter()
@@ -40,6 +45,7 @@ func NewApiRouter() *mux.Router {
 	//wsr.Handle("send_message", )
 	r := mux.NewRouter()
 	r.PathPrefix("/uploads/").Handler(handler.UploadsHandler("./uploads", "/uploads/"))
+	r.PathPrefix("/docs/").Handler(httpSwagger.WrapHandler)
 	apiRouter := r.PathPrefix("/api").Subrouter()
 	apiRouter.Use(handler.SecureMiddleware)
 	apiRouter.Use(handler.CorsMiddleware)
@@ -50,12 +56,15 @@ func NewApiRouter() *mux.Router {
 	authRouter.HandleFunc("/login", auth.Login).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/logout", auth.Logout).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/isloggedin", auth.IsLoggedInHandler).Methods("GET")
-
-	apiRouter.HandleFunc("/profile/{id}", profile.GetProfileByUserID).Methods("GET")
+	apiRouter.HandleFunc("/profile/{id:[0-9]+}", profile.GetProfileByUserID).Methods("GET")
 	apiRouter.HandleFunc("/profile", profile.UpdateProfile).Methods("PUT")
 	apiRouter.HandleFunc("/profile/avatar", profile.UpdateAvatar).Methods("PATCH")
 	apiRouter.HandleFunc("/profile/header", profile.UpdateHeader).Methods("PATCH")
 
+	chatRouter := apiRouter.PathPrefix("/chats").Subrouter()
+	chatRouter.HandleFunc("/user/{id:[0-9]+}", chat.GetOrCreateChatWithUser).Methods("GET")
+	chatRouter.HandleFunc("/{id:[0-9]+}/message", chat.CreateMessage).Methods("POST")
+	chatRouter.HandleFunc("/{id:[0-9]+}/messages", chat.GetMessagesByChatId).Methods("GET")
 	// GET    /api/posts                    - список постов с пагинацией
 	// GET    /api/posts/{id}               - получение конкретного поста
 	// POST   /api/posts                    - создание поста (требует авторизации)
@@ -81,6 +90,13 @@ func NewApiRouter() *mux.Router {
 	return r
 }
 
+// @title VK API
+// @version 1.0
+// @description This is a VK API.
+// @termsOfService http://swagger.io/terms/
+
+// @host localhost:8080
+// @BasePath /api/
 func main() {
 	var err = godotenv.Load()
 	if err != nil {

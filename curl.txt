@@ -9,8 +9,8 @@ curl -X PUT http://localhost:8080/api/profile \
         "lastName": "Smith",
         "email": "alice@example.com",
         "password": "password123",
-        "confirm_password": "password123",
-        "age": "1990-01-01T00:00:00Z",
+        "confirmPassword": "password123",
+        "dob": "1990-01-01T00:00:00Z",
         "gender": "female"
     }'     -c cookies.txt
 
@@ -32,4 +32,26 @@ curl -i -X POST http://localhost:8080/api/auth/login \
     -H "Content-Type: application/json" \
     -d '{"email":"alice@example.com","password":"password123"}' \
     -c cookies.txt
+
 curl -i -X GET http://localhost:8080/api/profile/1     -H "Content-Type: application/json"     -b cookies.txt
+
+curl -i -X GET http://localhost:8080/api/chat/get-chat-user/1 \
+  -b cookies.txt
+
+curl -i -X POST http://localhost:8080/api/auth/logout \
+    -b cookies.txt
+
+curl -X 'GET' \
+  'http://localhost:8080/api/chats/1/messages?limit=20&offset=0' \
+  -H 'accept: application/json' \
+  -b cookies.txt
+
+curl -X 'POST' \
+  'http://localhost:8080/api/chats/1/message' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -b cookies.txt \
+  -d '{
+
+  "text": "ну новое сообщение"
+}'

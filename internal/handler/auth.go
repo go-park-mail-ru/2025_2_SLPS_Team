@@ -50,6 +50,15 @@ type IsLoggedInResponse struct {
 	UserID int `json:"userID"`
 }
 
+// IsLoggedInHandler проверяет, авторизован ли пользователь по cookie сессии.
+// @Summary Проверить авторизацию пользователя
+// @Description Возвращает ID пользователя, если сессия валидна
+// @Tags auth
+// @Produce json
+// @Success 200 {object} IsLoggedInResponse "Пользователь авторизован"
+// @Failure 404 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
+// @Router /auth/isloggedin [get]
 func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	UserID, err := api.IsLoggedIn(r)
@@ -90,6 +99,17 @@ type LoginRequest struct {
 	Password string `json:"password" valid:"required, stringlength(6|20)"`
 }
 
+// Login выполняет авторизацию пользователя и создает сессию.
+// @Summary Авторизация пользователя
+// @Description Логин с email и паролем, возвращает cookie сессии
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param loginRequest body LoginRequest true "Данные для входа"
+// @Success 200 {object} JSONResponse
+// @Failure 400 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
+// @Router /auth/login [post]
 func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -138,6 +158,15 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	sendJSONSuccess(w, "User logged in", http.StatusOK)
 }
 
+// Logout удаляет текущую сессию пользователя.
+// @Summary Выход пользователя
+// @Description Удаляет cookie сессии, разлогинивает пользователя
+// @Tags auth
+// @Produce json
+// @Success 200 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
+// @Failure 403 {object} JSONResponse
+// @Router /auth/logout [post]
 func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	session, _ := r.Cookie("session_id")
@@ -158,11 +187,23 @@ type RegisterRequest struct {
 	LastName        string    `json:"lastName" valid:"required"`
 	Email           string    `json:"email" valid:"email, required"`
 	Password        string    `json:"password" valid:"required, stringlength(5|20)"`
-	ConfirmPassword string    `json:"confirm_password" valid:"required, stringlength(5|20)"`
-	Dob             time.Time `json:"age" valid:"-"`
+	ConfirmPassword string    `json:"confirmPassword" valid:"required, stringlength(5|20)"`
+	Dob             time.Time `json:"dob" valid:"-"`
 	Gender          string    `json:"gender" valid:"-"`
 }
 
+// Register регистрирует нового пользователя.
+// @Summary Регистрация пользователя
+// @Description Создает нового пользователя с профилем и устанавливает сессию
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param registerRequest body RegisterRequest true "Данные для регистрации"
+// @Success 200 {object} JSONResponse
+// @Failure 400 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
+// @Failure 403 {object} JSONResponse
+// @Router /auth/register [post]
 func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

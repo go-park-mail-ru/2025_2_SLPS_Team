@@ -30,17 +30,46 @@ WHERE user_id = $1`
 }
 
 func (store *DBProfileStore) UpdateAvatar(avatarPath string, userID int) error {
-	queryProfile := `UPDATE profiles SET  avatar_path = $2
-WHERE user_id = $1`
+	queryProfile := `UPDATE profiles SET  avatar_path = $2 WHERE user_id = $1`
 	_, err := store.db.Exec(queryProfile, userID, avatarPath)
 	return err
 }
 
 func (store *DBProfileStore) UpdateHeader(headerPath string, userID int) error {
-	queryProfile := `UPDATE profiles SET  header_path = $2
-WHERE user_id = $1`
+	queryProfile := `UPDATE profiles SET  header_path = $2 WHERE user_id = $1`
 	_, err := store.db.Exec(queryProfile, userID, headerPath)
 	return err
+}
+
+func (store *DBProfileStore) GetShortProfileByUserIDs(userIDs []int) ([]domain.ShortProfile, error) {
+	if len(userIDs) == 0 {
+		return []domain.ShortProfile{}, nil
+	}
+
+	query := `SELECT user_id, first_name, last_name, avatar_path FROM profiles WHERE user_id = ANY($1)`
+
+	rows, err := store.db.Query(query, userIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []domain.ShortProfile
+
+	for rows.Next() {
+		var u domain.ShortProfile
+		err := rows.Scan(&u.UserID, &u.FirstName, &u.LastName, &u.AvatarPath)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, u)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
 }
 
 func (store *DBProfileStore) GetProfileByUserID(userID int) (domain.Profile, error) {

@@ -16,5 +16,6 @@ type MessageWithAuthors struct {
 }
 type MessageStore interface {
 	CreateMessage(message Message) (int, error)
+	//UpdateMessage(text string, messageID int) (int, error)
 	GetMessagesByChatId(chatID int, limit int, offset int) ([]Message, error)
 }

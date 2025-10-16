@@ -1,0 +1,305 @@
+basePath: /api/
+definitions:
+  domain.Message:
+    properties:
+      authorID:
+        type: integer
+      chatID:
+        type: integer
+      createdAt:
+        type: string
+      id:
+        type: integer
+      text:
+        type: string
+    type: object
+  domain.ShortProfile:
+    properties:
+      avatarPath:
+        type: string
+      firstName:
+        type: string
+      lastName:
+        type: string
+      userID:
+        type: integer
+    type: object
+  handler.ChatIDResponse:
+    properties:
+      chatID:
+        type: integer
+    type: object
+  handler.IsLoggedInResponse:
+    properties:
+      userID:
+        type: integer
+    type: object
+  handler.JSONResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  handler.LoginRequest:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  handler.MessageIDResponse:
+    properties:
+      messageID:
+        type: integer
+    type: object
+  handler.MessagesWithAuthorsResp:
+    properties:
+      authors:
+        items:
+          $ref: '#/definitions/domain.ShortProfile'
+        type: array
+      messages:
+        items:
+          $ref: '#/definitions/domain.Message'
+        type: array
+    type: object
+  handler.RegisterRequest:
+    properties:
+      confirmPassword:
+        type: string
+      dob:
+        type: string
+      email:
+        type: string
+      firstName:
+        type: string
+      gender:
+        type: string
+      lastName:
+        type: string
+      password:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a VK API.
+  termsOfService: http://swagger.io/terms/
+  title: VK API
+  version: "1.0"
+paths:
+  /auth/isloggedin:
+    get:
+      description: Возвращает ID пользователя, если сессия валидна
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь авторизован
+          schema:
+            $ref: '#/definitions/handler.IsLoggedInResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Проверить авторизацию пользователя
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Логин с email и паролем, возвращает cookie сессии
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: loginRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Авторизация пользователя
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Удаляет cookie сессии, разлогинивает пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Выход пользователя
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Создает нового пользователя с профилем и устанавливает сессию
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: registerRequest
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Регистрация пользователя
+      tags:
+      - auth
+  /chats/{chatID}/message:
+    post:
+      consumes:
+      - application/json
+      description: Создает новое сообщение в указанном чате
+      parameters:
+      - description: ID чата
+        in: path
+        name: chatID
+        required: true
+        type: integer
+      - description: Тело сообщения
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Message'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MessageIDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Создать сообщение
+      tags:
+      - messages
+  /chats/{id}/messages:
+    get:
+      description: Возвращает сообщения из чата с пагинацией и краткую информацию
+        об авторах
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 20
+        description: Лимит количества сообщений
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Смещение для пагинации
+        in: query
+        name: offset
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MessagesWithAuthorsResp'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить сообщения чата с авторами
+      tags:
+      - messages
+  /chats/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает ID чата между текущим пользователем и указанным userID,
+        создавая чат при отсутствии
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ChatIDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить или создать чат с пользователем
+      tags:
+      - chats
+swagger: "2.0"
