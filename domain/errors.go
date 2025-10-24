@@ -2,7 +2,7 @@ package domain
 
 import "errors"
 
-//Общие доменные ошибки
+// Общие доменные ошибки
 var (
 	ErrNotFound     = errors.New("Объект не найден")
 	ErrAccessDenied = errors.New("access denied")
@@ -10,7 +10,7 @@ var (
 	ErrInternal     = errors.New("internal server error") //Какая-то внутренняя ошибка
 )
 
-//Ошибки для ПОСТОВ
+// Ошибки для ПОСТОВ
 var (
 	ErrPostNotFound      = errors.New("post not found")
 	ErrPostTextTooShort  = errors.New("post text too short")
@@ -19,9 +19,22 @@ var (
 	ErrPostInvalidAuthor = errors.New("invalid author")
 )
 
-//Специфичные ошибки для пользователей
+// Специфичные ошибки для пользователей
 var (
 	ErrUserNotFound = errors.New("user not found")
 	ErrEmailTaken   = errors.New("email already taken") //Такой емейл уже занят
 	ErrInvalidEmail = errors.New("invalid email")       //Кривой неправильный емейл
+)
+
+const (
+	InvalidJSON       = "Invalid JSON"
+	Unauthorized      = "Unauthorized"
+	NotFound          = "Not found"
+	ServerErr         = "Internal Server error"
+	UserNotExist      = "User doesn't exist"
+	IncorrectPassword = "Incorrect password"
+	FailToEncode      = "Fail to ecnode in JSON"
+	InvalidData       = "Invalid data"
+	InvalidParams     = "Invalid query parameters"
+	Forbidden         = "Forbidden"
 )

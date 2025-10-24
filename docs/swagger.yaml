@@ -13,6 +13,25 @@ definitions:
       text:
         type: string
     type: object
+  domain.Profile:
+    properties:
+      aboutMyself:
+        type: string
+      avatarPath:
+        type: string
+      dob:
+        type: string
+      firstName:
+        type: string
+      gender:
+        type: string
+      headerPath:
+        type: string
+      lastName:
+        type: string
+      userID:
+        type: integer
+    type: object
   domain.ShortProfile:
     properties:
       avatarPath:
@@ -303,4 +322,131 @@ paths:
       summary: Получить или создать чат с пользователем
       tags:
       - chats
+  /profile:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Обновляет данные пользователя и загружает новый аватар, если он
+        передан.
+      parameters:
+      - description: JSON с данными профиля
+        in: formData
+        name: profile
+        required: true
+        type: string
+      - description: Новый аватар пользователя
+        in: formData
+        name: avatar
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile updated
+          schema:
+            type: string
+        "400":
+          description: Invalid data / missing fields
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Обновление профиля
+      tags:
+      - profile
+  /profile/{id}:
+    get:
+      description: Возвращает профиль пользователя по его ID.
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Профиль пользователя
+          schema:
+            $ref: '#/definitions/domain.Profile'
+        "400":
+          description: Invalid user ID / User does not exist
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Получение профиля по ID
+      tags:
+      - profile
+  /profile/avatar:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Загружает новый аватар пользователя.
+      parameters:
+      - description: Новый аватар пользователя
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Avatar updated
+          schema:
+            type: string
+        "400":
+          description: Missing avatar field
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Обновление аватара
+      tags:
+      - profile
+  /profile/header:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Загружает новый header пользователя.
+      parameters:
+      - description: Новый header пользователя
+        in: formData
+        name: header
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Header updated
+          schema:
+            type: string
+        "400":
+          description: Missing header field
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Обновление header
+      tags:
+      - profile
 swagger: "2.0"

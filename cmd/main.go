@@ -84,8 +84,8 @@ func NewApiRouter(logger *zap.Logger) *mux.Router {
 	apiRouter := r.PathPrefix("/api").Subrouter()
 	apiRouter.Use(handler.SecureMiddleware)
 	apiRouter.Use(handler.CorsMiddleware)
-	apiRouter.Use(handler.LoggingMiddleware(logger))
 	apiRouter.Use(auth.AuthMiddleware)
+	apiRouter.Use(handler.LoggingMiddleware(logger))
 
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
 	authRouter.HandleFunc("/register", auth.Register).Methods("POST", "OPTIONS")
@@ -94,8 +94,8 @@ func NewApiRouter(logger *zap.Logger) *mux.Router {
 	authRouter.HandleFunc("/isloggedin", auth.IsLoggedInHandler).Methods("GET")
 	apiRouter.HandleFunc("/profile/{id:[0-9]+}", profile.GetProfileByUserID).Methods("GET")
 	apiRouter.HandleFunc("/profile", profile.UpdateProfile).Methods("PUT")
-	apiRouter.HandleFunc("/profile/avatar", profile.UpdateAvatar).Methods("PATCH")
-	apiRouter.HandleFunc("/profile/header", profile.UpdateHeader).Methods("PATCH")
+	apiRouter.HandleFunc("/profile/avatar", profile.UpdateAvatar).Methods("PUT")
+	apiRouter.HandleFunc("/profile/header", profile.UpdateHeader).Methods("PUT")
 
 	chatRouter := apiRouter.PathPrefix("/chats").Subrouter()
 	chatRouter.HandleFunc("/user/{id:[0-9]+}", chat.GetOrCreateChatWithUser).Methods("GET")

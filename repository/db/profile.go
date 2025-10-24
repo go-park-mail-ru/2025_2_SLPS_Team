@@ -3,7 +3,6 @@ package db
 import (
 	"database/sql"
 	"errors"
-	"log"
 	"project/domain"
 )
 
@@ -16,7 +15,6 @@ func NewDBProfileStore(db *sql.DB) domain.ProfileStore {
 }
 
 func (store *DBProfileStore) UpdateProfile(profile domain.Profile, userID int) error {
-	log.Println(userID)
 	queryProfile := `UPDATE profiles SET first_name = $2, last_name = $3, gender = $4, dob = $5, about_myself = $6
 WHERE user_id = $1`
 	_, err := store.db.Exec(queryProfile,

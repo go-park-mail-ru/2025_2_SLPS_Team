@@ -3,10 +3,10 @@ package handler
 import (
 	"context"
 	"errors"
-	"log"
 	"net/http"
 	"os"
 	"project/domain"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -70,15 +70,12 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 		}
-		log.Println(isLoggedIn)
 		if isLoggedIn {
 			if ForbiddenPathsWithAuth[path] {
 				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
 				return
 			} else {
 				ctx := context.WithValue(r.Context(), domain.UserIDKey, userID)
-				log.Println(userID)
-				log.Println("userid мидваря")
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 				//userID, ok := r.Context().Value(userIDKey).(int)
@@ -93,13 +90,24 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
 func LoggingMiddleware(logger *zap.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqID := uuid.New().String()
 
-			reqLogger := logger.With(zap.String("request_id", reqID))
-
+			reqLogger := logger.With(zap.String("requestID", reqID))
+			if userID, ok := r.Context().Value(domain.UserIDKey).(int); ok {
+				reqLogger = reqLogger.With(zap.Int("selfUserID", userID))
+			}
 			ctx := context.WithValue(r.Context(), domain.LoggerKey, reqLogger)
 
 			reqLogger.Info("incoming request",
@@ -107,10 +115,11 @@ func LoggingMiddleware(logger *zap.Logger) mux.MiddlewareFunc {
 				zap.String("path", r.URL.Path),
 				zap.String("remote_addr", r.RemoteAddr),
 			)
-
-			next.ServeHTTP(w, r.WithContext(ctx))
-
-			reqLogger.Info("request completed")
+			start := time.Now()
+			ww := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+			next.ServeHTTP(ww, r.WithContext(ctx))
+			duration := time.Since(start)
+			reqLogger.Info("request completed", zap.Duration("duration", duration), zap.Int("status", ww.statusCode))
 		})
 	}
 }

@@ -6,12 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"net/http"
 	"project/domain"
+	"project/internal/service"
 	"time"
 
 	"github.com/asaskevich/govalidator"
+	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -30,19 +31,17 @@ func NewAuthHandler(userStore domain.UserStore, sessionStore domain.SessionStore
 func (api *AuthHandler) IsLoggedIn(r *http.Request) (int, error) {
 	sessionCookie, err := r.Cookie("session_id")
 	if err != nil {
-		log.Println("Cookie session_id not found:", err)
+		service.Error(r.Context(), "Cookie session_id not found:", err)
 		return 0, domain.ErrNotFound
 	}
 
-	log.Printf("Found session_id: %s\n", sessionCookie.Value)
-
 	session, authorizedErr := api.sessionStore.GetSessionBySessionID(sessionCookie.Value)
 	if authorizedErr != nil {
-		log.Println("Session not found or error:", authorizedErr)
+		service.Error(r.Context(), "Session not found or error:", authorizedErr)
 		return 0, authorizedErr
 	}
 
-	log.Printf("Session loaded: %+v\n", session)
+	service.Info(r.Context(), "Session loaded")
 	return session.UserID, nil
 }
 
@@ -62,13 +61,13 @@ type IsLoggedInResponse struct {
 func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	UserID, err := api.IsLoggedIn(r)
-	log.Println("IsLoggedInHandler called")
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			sendJSONSuccess(w, "Not found", http.StatusNotFound)
-			return
+			sendJSONSuccess(w, domain.NotFound, http.StatusNotFound)
+			service.Error(r.Context(), domain.NotFound, err)
 		} else {
-			sendJSONSuccess(w, "Server error", http.StatusInternalServerError)
+			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+			service.Error(r.Context(), "failed to check registration", err)
 			return
 		}
 	}
@@ -78,8 +77,9 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
-		log.Printf("failed to write JSON response: %v", err)
+		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", service.StructName(res)))
 	}
+	service.Info(r.Context(), "registration success")
 }
 
 func generateSessionID() (string, error) {
@@ -113,36 +113,42 @@ type LoginRequest struct {
 func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
+		sendJSONSuccess(w, domain.InvalidJSON, http.StatusBadRequest)
+		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", service.StructName(req)))
 		return
 	}
 
 	user, err := api.userStore.GetUserByEmail(req.Email)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			sendJSONSuccess(w, "User doesn't exist", http.StatusBadRequest)
+			sendJSONSuccess(w, domain.UserNotExist, http.StatusBadRequest)
+			service.Error(r.Context(), "User by email does not exist", err)
 			return
 		} else {
-			sendJSONSuccess(w, "Server error", http.StatusInternalServerError)
+			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+			service.Error(r.Context(), "Failed to get user by email", err)
 			return
 		}
 
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		sendJSONSuccess(w, "Incorrect password", http.StatusBadRequest)
+		sendJSONSuccess(w, domain.IncorrectPassword, http.StatusBadRequest)
+		service.Error(r.Context(), domain.IncorrectPassword, err)
 		return
 	}
 
 	SID, err := generateSessionID()
 	if err != nil {
-		sendJSONSuccess(w, "Intrnal Server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		service.Error(r.Context(), "Failed to generate sessionID", err)
 		return
 	}
 
 	err = api.sessionStore.AddSession(user.ID, SID)
 	if err != nil {
-		sendJSONSuccess(w, "Intrnal Server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		service.Error(r.Context(), "Failed to add session", err)
 		return
 	}
 
@@ -156,6 +162,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, cookie)
 
 	sendJSONSuccess(w, "User logged in", http.StatusOK)
+	service.Info(r.Context(), "User logged in", zap.Int("userID", user.ID))
 }
 
 // Logout удаляет текущую сессию пользователя.
@@ -172,7 +179,8 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	session, _ := r.Cookie("session_id")
 	err := api.sessionStore.DeleteSession(session.Value)
 	if err != nil {
-		sendJSONSuccess(w, "Internal Server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		service.Error(r.Context(), "Failed to logout", err)
 		return
 	}
 
@@ -180,6 +188,7 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, session)
 
 	sendJSONSuccess(w, "User logged out", http.StatusOK)
+	service.Info(r.Context(), "User logged out")
 }
 
 type RegisterRequest struct {
@@ -207,35 +216,41 @@ type RegisterRequest struct {
 func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
+		sendJSONSuccess(w, domain.InvalidJSON, http.StatusBadRequest)
+		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", service.StructName(req)))
 		return
 	}
 
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
-		sendJSONSuccess(w, "Invalid data", http.StatusBadRequest)
+		sendJSONSuccess(w, domain.InvalidData, http.StatusBadRequest)
+		service.Error(r.Context(), "Register validate failed", err)
 		return
 	}
 
 	_, err = api.userStore.GetUserByEmail(req.Email)
 	if err != nil {
 		if !errors.Is(err, domain.ErrNotFound) {
-			sendJSONSuccess(w, "Internal Server error", http.StatusInternalServerError)
+			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+			service.Error(r.Context(), "Failed to get user by email", err)
 			return
 		}
 	} else {
 		sendJSONSuccess(w, "User already exist", http.StatusBadRequest)
+		service.Warn(r.Context(), "User already exist")
 		return
 	}
 
 	if req.Password != req.ConfirmPassword {
 		sendJSONSuccess(w, "Password field doesn't match", http.StatusBadRequest)
+		service.Info(r.Context(), "Register validate failed: password filed doesn't match")
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		service.Error(r.Context(), "Failed to generate hashed password", err)
 		return
 	}
 	user := domain.User{
@@ -250,21 +265,23 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, err := api.userStore.CreateUser(user, profile)
 	if err != nil {
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		service.Error(r.Context(), "Failed to create user", err)
 		return
 	}
 
 	SID, err := generateSessionID()
 	if err != nil {
-		sendJSONSuccess(w, "Internal Server error", http.StatusInternalServerError)
+		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		service.Error(r.Context(), "Failed to generate sessionID", err)
 		return
 	}
 
 	err = api.sessionStore.AddSession(userID, SID)
 	if err != nil {
 
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
-		log.Println(err)
+		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		service.Error(r.Context(), "Failed to add session", err)
 		return
 	}
 
@@ -277,4 +294,5 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, cookie)
 	sendJSONSuccess(w, "User created", http.StatusOK)
+	service.Info(r.Context(), "User created, registration complete", zap.Int("userID", userID))
 }
