@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"os"
 	_ "project/docs"
 	"project/internal/handler"
 	"project/repository/db"
@@ -12,6 +13,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 func NewPostgres(dataSourceName string) *sql.DB {
@@ -26,8 +29,40 @@ func NewPostgres(dataSourceName string) *sql.DB {
 
 	return db
 }
+func NewLogger() *zap.Logger {
+	env := os.Getenv("APP_ENV")
+	atom := zap.NewAtomicLevel()
+	incodeCfg := zap.NewProductionEncoderConfig()
+	var cfg zap.Config
+	if env == "dev" {
+		atom.SetLevel(zap.DebugLevel)
+		incodeCfg.EncodeTime = zapcore.ISO8601TimeEncoder
+		cfg = zap.Config{
+			Encoding:      "console",
+			Level:         atom,
+			OutputPaths:   []string{"stdout", "logs/app.log"},
+			EncoderConfig: incodeCfg,
+		}
+	} else {
+		atom.SetLevel(zap.InfoLevel)
+		cfg = zap.Config{
+			Encoding:      "json",
+			Level:         atom,
+			OutputPaths:   []string{"stdout", "logs/app.log"},
+			EncoderConfig: incodeCfg,
+		}
+	}
 
-func NewApiRouter() *mux.Router {
+	logger, err := cfg.Build()
+	if err != nil {
+		log.Println(err)
+	}
+	log.Println(logger)
+	return logger
+}
+
+// стоит переписать через структуру, чтобы передавать все сущности
+func NewApiRouter(logger *zap.Logger) *mux.Router {
 	dbPath := "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable"
 	dbConn := NewPostgres(dbPath)
 	userStore := db.NewDBUserStore(dbConn)
@@ -49,6 +84,7 @@ func NewApiRouter() *mux.Router {
 	apiRouter := r.PathPrefix("/api").Subrouter()
 	apiRouter.Use(handler.SecureMiddleware)
 	apiRouter.Use(handler.CorsMiddleware)
+	apiRouter.Use(handler.LoggingMiddleware(logger))
 	apiRouter.Use(auth.AuthMiddleware)
 
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
@@ -102,7 +138,10 @@ func main() {
 	if err != nil {
 		log.Fatal("ошибка загрузки .env файла")
 	}
-	apiRouter := NewApiRouter()
+	logger := NewLogger()
+	defer logger.Sync()
+	apiRouter := NewApiRouter(logger)
+
 	if err := http.ListenAndServe(":8080", apiRouter); err != nil {
 		log.Fatalf("Server failed start: %v", err)
 	}

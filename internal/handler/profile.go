@@ -51,7 +51,7 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userID, _ := r.Context().Value(userIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
 	// для надежности можно проверять что пользователь существует, но по идее если есть сессия с id пользвателем он точно должен существовать
 	//isUserExist, err := api.userStore.IsUserExists(userID)
 	//if err != nil {
@@ -104,7 +104,7 @@ func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userID, _ := r.Context().Value(userIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
 
 	files := r.MultipartForm.File["avatar"]
 	if len(files) == 1 {
@@ -142,7 +142,7 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userID, _ := r.Context().Value(userIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
 
 	files := r.MultipartForm.File["header"]
 	if len(files) == 1 {

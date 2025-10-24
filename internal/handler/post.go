@@ -139,7 +139,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получаем userID из контекста (установлен в auth middleware)
-	userID, ok := r.Context().Value(userIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -147,11 +147,11 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	// Бизнес-логика: создание объекта поста
 	post := &domain.Post{
-		AuthorID:        uint(userID),
-		Text:            req.Text,
+		AuthorID: uint(userID),
+		Text:     req.Text,
 
-		Attachments:     req.Attachments,
-		PhotosPath:      req.Photos,
+		Attachments: req.Attachments,
+		PhotosPath:  req.Photos,
 	}
 
 	// Сохраняем пост в хранилище
@@ -190,7 +190,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получаем userID из контекста
-	userID, ok := r.Context().Value(userIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return
@@ -216,13 +216,13 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 	// Обновляем данные поста
 	updatedPost := &domain.Post{
-		ID:              uint(postID),
-		AuthorID:        uint(userID),
-		Text:            req.Text,
-		CreatedAt:       existingPost.CreatedAt,
+		ID:        uint(postID),
+		AuthorID:  uint(userID),
+		Text:      req.Text,
+		CreatedAt: existingPost.CreatedAt,
 
-		Attachments:     req.Attachments,
-		PhotosPath:      req.Photos,
+		Attachments: req.Attachments,
+		PhotosPath:  req.Photos,
 
 		// GroupName:       req.GroupName,        //Это с заделом на будущее
 		// CommunityAvatar: req.CommunityAvatar,
@@ -230,7 +230,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		// LikeCount:       existingPost.LikeCount,
 		// RepostsCount:    existingPost.RepostsCount,
 		// CommentCount:    existingPost.CommentCount,
-		
+
 	}
 
 	if err := h.postStore.UpdatePost(updatedPost); err != nil {
@@ -252,7 +252,7 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получаем userID из контекста
-	userID, ok := r.Context().Value(userIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONError(w, "Unauthorized", http.StatusUnauthorized)
 		return

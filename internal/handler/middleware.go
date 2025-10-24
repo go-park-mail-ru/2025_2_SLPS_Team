@@ -7,6 +7,10 @@ import (
 	"net/http"
 	"os"
 	"project/domain"
+
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 )
 
 func CorsMiddleware(next http.Handler) http.Handler {
@@ -48,10 +52,6 @@ var AllowedPathsWithOutAuth = map[string]bool{
 	"/api/auth/isloggedin": true,
 }
 
-type contextKey string
-
-const userIDKey = contextKey("userID")
-
 func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
@@ -76,7 +76,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
 				return
 			} else {
-				ctx := context.WithValue(r.Context(), userIDKey, userID)
+				ctx := context.WithValue(r.Context(), domain.UserIDKey, userID)
 				log.Println(userID)
 				log.Println("userid мидваря")
 				next.ServeHTTP(w, r.WithContext(ctx))
@@ -91,4 +91,26 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+func LoggingMiddleware(logger *zap.Logger) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			reqID := uuid.New().String()
+
+			reqLogger := logger.With(zap.String("request_id", reqID))
+
+			ctx := context.WithValue(r.Context(), domain.LoggerKey, reqLogger)
+
+			reqLogger.Info("incoming request",
+				zap.String("method", r.Method),
+				zap.String("path", r.URL.Path),
+				zap.String("remote_addr", r.RemoteAddr),
+			)
+
+			next.ServeHTTP(w, r.WithContext(ctx))
+
+			reqLogger.Info("request completed")
+		})
+	}
 }

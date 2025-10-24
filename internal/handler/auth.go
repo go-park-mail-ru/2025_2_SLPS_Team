@@ -188,7 +188,7 @@ type RegisterRequest struct {
 	Email           string    `json:"email" valid:"email, required"`
 	Password        string    `json:"password" valid:"required, stringlength(5|20)"`
 	ConfirmPassword string    `json:"confirmPassword" valid:"required, stringlength(5|20)"`
-	Dob             time.Time `json:"dob" valid:"-"`
+	Dob             time.Time `json:"dob" valid:"-" example:"1990-01-01T00:00:00Z"`
 	Gender          string    `json:"gender" valid:"-"`
 }
 

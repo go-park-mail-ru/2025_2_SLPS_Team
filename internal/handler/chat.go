@@ -60,7 +60,7 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 		sendJSONSuccess(w, "User doesn't exist", http.StatusBadRequest)
 		return
 	}
-	selfUserID, _ := r.Context().Value(userIDKey).(int)
+	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int)
 	chatID, err := api.chatStore.GetOrCreateChatWithUser(selfUserID, userID)
 	if err != nil {
 		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
@@ -105,7 +105,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userID, _ := r.Context().Value(userIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
 
 	var qParams PaginateQueryParams
 	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
@@ -192,7 +192,7 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, "Invalid JSON", http.StatusBadRequest)
 		return
 	}
-	userID, _ := r.Context().Value(userIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
 	message.AuthorID = userID
 	message.ChatID = chatID
 	messageID, err := api.messageStore.CreateMessage(message)

@@ -12,6 +12,7 @@ wait-db:
 	powershell -Command "while (-not (Test-NetConnection -ComputerName localhost -Port 5432).TcpTestSucceeded) { Start-Sleep -Seconds 1 }"
 
 reload-db:
+	swag init -g cmd/main.go
 	docker-compose down -v
 	docker-compose up -d
 

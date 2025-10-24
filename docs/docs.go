@@ -445,7 +445,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "dob": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "1990-01-01T00:00:00Z"
                 },
                 "email": {
                     "type": "string"
