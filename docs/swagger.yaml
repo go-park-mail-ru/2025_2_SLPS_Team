@@ -86,11 +86,13 @@ definitions:
   handler.RegisterRequest:
     properties:
       confirmPassword:
+        example: "123123"
         type: string
       dob:
         example: "1990-01-01T00:00:00Z"
         type: string
       email:
+        example: example@example.ru
         type: string
       firstName:
         type: string
@@ -99,6 +101,7 @@ definitions:
       lastName:
         type: string
       password:
+        example: "123123"
         type: string
     type: object
 host: localhost:8080

@@ -670,14 +670,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "confirmPassword": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123123"
                 },
                 "dob": {
                     "type": "string",
                     "example": "1990-01-01T00:00:00Z"
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "example@example.ru"
                 },
                 "firstName": {
                     "type": "string"
@@ -689,7 +691,8 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123123"
                 }
             }
         }

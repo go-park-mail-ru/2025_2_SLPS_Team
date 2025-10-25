@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Message struct {
 	ID        int       `json:"id"`
@@ -15,7 +18,7 @@ type MessageWithAuthors struct {
 	Authors []ShortProfile
 }
 type MessageStore interface {
-	CreateMessage(message Message) (int, error)
+	CreateMessage(ctx context.Context, message Message) (int, error)
 	//UpdateMessage(text string, messageID int) (int, error)
-	GetMessagesByChatId(chatID int, limit int, offset int) ([]Message, error)
+	GetMessagesByChatId(ctx context.Context, chatID int, limit int, offset int) ([]Message, error)
 }

@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Profile struct {
 	UserID      int       `json:"userID"`
@@ -20,13 +23,13 @@ type ShortProfile struct {
 	AvatarPath *string `json:"avatarPath"`
 }
 type ProfileStore interface {
-	UpdateProfile(profile Profile, userID int) error
-	UpdateAvatar(avatarPath string, userID int) error
-	UpdateHeader(avatarPath string, UserID int) error
-	GetProfileByUserID(userID int) (Profile, error)
-	GetShortProfileByUserIDs(userIDs []int) ([]ShortProfile, error)
-	GetAvatarByUserID(userID int) (*string, error)
-	GetHeaderByUserID(userID int) (*string, error)
+	UpdateProfile(ctx context.Context, profile Profile, userID int) error
+	UpdateAvatar(ctx context.Context, avatarPath string, userID int) error
+	UpdateHeader(ctx context.Context, avatarPath string, UserID int) error
+	GetProfileByUserID(ctx context.Context, userID int) (Profile, error)
+	GetShortProfileByUserIDs(ctx context.Context, userIDs []int) ([]ShortProfile, error)
+	GetAvatarByUserID(ctx context.Context, userID int) (*string, error)
+	GetHeaderByUserID(ctx context.Context, userID int) (*string, error)
 	//DeleteAvatar
 	//DeleteHeader
 }

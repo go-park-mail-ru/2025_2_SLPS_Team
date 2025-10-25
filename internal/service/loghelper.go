@@ -35,3 +35,16 @@ func Error(ctx context.Context, msg string, err error, fields ...zap.Field) {
 func Warn(ctx context.Context, msg string, fields ...zap.Field) {
 	FromContext(ctx).Warn(msg, fields...)
 }
+
+func AddIDParamToLogger(ctx context.Context, param string, ID int) {
+	FromContext(ctx).With(zap.Int(param, ID))
+}
+
+func DBLogger(ctx context.Context, repo string) *zap.Logger {
+	base := FromContext(ctx)
+
+	return base.With(
+		zap.String("layer", "db"),
+		zap.String("repo", repo),
+	)
+}

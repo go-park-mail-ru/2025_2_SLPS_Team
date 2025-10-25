@@ -83,7 +83,7 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 
 	files := r.MultipartForm.File["avatar"]
 	if len(files) == 1 {
-		avatarOldPath, err := api.profileStore.GetAvatarByUserID(userID)
+		avatarOldPath, err := api.profileStore.GetAvatarByUserID(r.Context(), userID)
 		if err != nil {
 			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "Failed to get old avatar path", err)
@@ -97,7 +97,7 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 			return
 		}
 
-		err = api.profileStore.UpdateAvatar(newfilePath[0], userID)
+		err = api.profileStore.UpdateAvatar(r.Context(), newfilePath[0], userID)
 		if err != nil {
 			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "Failed to update avatar", err)
@@ -108,7 +108,7 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 		service.Warn(r.Context(), "Missing avatar field")
 	}
 
-	err = api.profileStore.UpdateProfile(req, userID)
+	err = api.profileStore.UpdateProfile(r.Context(), req, userID)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to update profile", err)
@@ -144,7 +144,7 @@ func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) 
 
 	files := r.MultipartForm.File["avatar"]
 	if len(files) == 1 {
-		avatarOldPath, err := api.profileStore.GetAvatarByUserID(userID)
+		avatarOldPath, err := api.profileStore.GetAvatarByUserID(r.Context(), userID)
 		if err != nil {
 			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "Failed to get old avatar path", err)
@@ -158,7 +158,7 @@ func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		err = api.profileStore.UpdateAvatar(newfilePath[0], userID)
+		err = api.profileStore.UpdateAvatar(r.Context(), newfilePath[0], userID)
 		if err != nil {
 			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "Failed to update avatar", err)
@@ -200,7 +200,7 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 
 	files := r.MultipartForm.File["header"]
 	if len(files) == 1 {
-		headerOldPath, err := api.profileStore.GetHeaderByUserID(userID)
+		headerOldPath, err := api.profileStore.GetHeaderByUserID(r.Context(), userID)
 		if err != nil {
 			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "Failed to get old header path", err)
@@ -214,7 +214,7 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 			return
 		}
 
-		err = api.profileStore.UpdateHeader(newfilePath[0], userID)
+		err = api.profileStore.UpdateHeader(r.Context(), newfilePath[0], userID)
 		if err != nil {
 			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "Failed to update header", err)
@@ -254,7 +254,7 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 	}
 
 	var profile domain.Profile
-	profile, err = api.profileStore.GetProfileByUserID(userID)
+	profile, err = api.profileStore.GetProfileByUserID(r.Context(), userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			sendJSONSuccess(w, "User does`not exist", http.StatusBadRequest)

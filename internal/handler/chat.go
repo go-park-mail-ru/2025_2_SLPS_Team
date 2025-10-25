@@ -70,7 +70,7 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 		service.Warn(r.Context(), "Failed to create or get chat with same self user")
 		return
 	}
-	chatID, err := api.chatStore.GetOrCreateChatWithUser(selfUserID, userID)
+	chatID, err := api.chatStore.GetOrCreateChatWithUser(r.Context(), selfUserID, userID)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to create or get chat with user", err)
@@ -127,7 +127,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	isMember, err := api.chatStore.IsMemberOfChat(userID, chatID)
+	isMember, err := api.chatStore.IsMemberOfChat(r.Context(), userID, chatID)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to check membership", err, zap.Int("chatID", chatID))
@@ -139,7 +139,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	messages, err := api.messageStore.GetMessagesByChatId(chatID, qParams.Limit, qParams.Offset)
+	messages, err := api.messageStore.GetMessagesByChatId(r.Context(), chatID, qParams.Limit, qParams.Offset)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to get messages", err, zap.Int("chatID", chatID))
@@ -155,7 +155,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 		authorIDs = append(authorIDs, id)
 	}
 
-	authors, err := api.profileStore.GetShortProfileByUserIDs(authorIDs)
+	authors, err := api.profileStore.GetShortProfileByUserIDs(r.Context(), authorIDs)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to get authors", err, zap.Ints("authorIDs", authorIDs))
@@ -197,7 +197,7 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 		service.Error(r.Context(), "Failed to parse chatID", err)
 		return
 	}
-	exits, err := api.chatStore.IsChatExist(chatID)
+	exits, err := api.chatStore.IsChatExist(r.Context(), chatID)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusBadRequest)
 		service.Warn(r.Context(), "Failed to get chat", zap.Int("chatID", chatID))
@@ -218,7 +218,7 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	userID, _ := r.Context().Value(domain.UserIDKey).(int)
 	message.AuthorID = userID
 	message.ChatID = chatID
-	messageID, err := api.messageStore.CreateMessage(message)
+	messageID, err := api.messageStore.CreateMessage(r.Context(), message)
 	if err != nil {
 		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to create message", err, zap.Int("chatID", chatID))

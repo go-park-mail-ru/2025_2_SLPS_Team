@@ -194,9 +194,9 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 type RegisterRequest struct {
 	FirstName       string    `json:"firstName" valid:"required"`
 	LastName        string    `json:"lastName" valid:"required"`
-	Email           string    `json:"email" valid:"email, required"`
-	Password        string    `json:"password" valid:"required, stringlength(5|20)"`
-	ConfirmPassword string    `json:"confirmPassword" valid:"required, stringlength(5|20)"`
+	Email           string    `json:"email" valid:"email, required" example:"example@example.ru"`
+	Password        string    `json:"password" valid:"required, stringlength(5|20)" example:"123123"`
+	ConfirmPassword string    `json:"confirmPassword" valid:"required, stringlength(5|20)" example:"123123"`
 	Dob             time.Time `json:"dob" valid:"-" example:"1990-01-01T00:00:00Z"`
 	Gender          string    `json:"gender" valid:"-"`
 }
