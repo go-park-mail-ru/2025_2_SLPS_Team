@@ -12,12 +12,6 @@ type Post struct {
 	Attachments []string `json:"attachments"` //в БД табличка post_attachments называется
 	PhotosPath  []string `json:"photos"`      //в БД табличка post_photos называется
 
-	// GroupName       string `json:"groupName"`        //Это с заделом на будущее
-	// CommunityAvatar string `json:"communityAvatar"`
-
-	// LikeCount    uint `json:"likes"`
-	// RepostsCount uint `json:"reposts"`
-	// CommentCount uint `json:"comments"`
 }
 
 type PostStore interface {

@@ -39,31 +39,27 @@ type PostsResponse struct {
 
 // CreatePostRequest - запрос на создание поста
 type CreatePostRequest struct {
-	Text            string   `json:"text" valid:"required,stringlength(1|4096)"`
-	Attachments     []string `json:"attachments"`
-	Photos          []string `json:"photos"`
-	GroupName       string   `json:"groupName"`
-	CommunityAvatar string   `json:"communityAvatar"`
+	Text        string   `json:"text" valid:"required,stringlength(1|4096)"`
+	Attachments []string `json:"attachments"`
+	Photos      []string `json:"photos"`
 }
 
 // UpdatePostRequest - запрос на обновление поста
 type UpdatePostRequest struct {
-	Text            string   `json:"text" valid:"required,stringlength(1|4096)"`
-	Attachments     []string `json:"attachments"`
-	Photos          []string `json:"photos"`
-	GroupName       string   `json:"groupName"`
-	CommunityAvatar string   `json:"communityAvatar"`
+	Text        string   `json:"text"`
+	Attachments []string `json:"attachments"`
+	Photos      []string `json:"photos"`
 }
 
 // PostsPaginate - получение постов с пагинацией (публичный endpoint)
 func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 	var req PostsRequest
 	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
-		sendJSONError(w, "Invalid query parameters", http.StatusBadRequest)
+		sendJSONError(w, domain.InvalidParams, http.StatusBadRequest)
 		return
 	}
 
-	// Бизнес-логика: валидация параметров пагинации
+	// Устанавливаем значения по умолчанию
 	if req.Page <= 0 {
 		req.Page = 1
 	}
@@ -87,10 +83,7 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 		HasNext:    req.Page < totalPages,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("Failed to write JSON response: %v", err)
-	}
+	sendJSONSuccessWithData(w, "Posts retrieved successfully", http.StatusOK, response)
 }
 
 // GetPost - получение конкретного поста по ID (публичный endpoint)
