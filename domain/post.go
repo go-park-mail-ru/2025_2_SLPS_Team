@@ -1,6 +1,9 @@
 package domain
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 type Post struct {
 	ID        uint      `json:"id"`         //в БД табличка posts называется
@@ -16,20 +19,15 @@ type Post struct {
 
 type PostStore interface {
 	// Получение постов с пагинацией
-	PostsPaginatedList(page, limit int) ([]Post, int, error)
-
+	PostsPaginatedList(ctx context.Context, page, limit int) ([]Post, int, error)
 	// Получение поста по ID
-	GetPostByID(id uint) (*Post, error)
-
+	GetPostByID(ctx context.Context, id uint) (*Post, error)
 	// Создание поста
-	CreatePost(post *Post) error
-
+	CreatePost(ctx context.Context, post *Post) error
 	// Обновление поста
-	UpdatePost(post *Post) error
-
+	UpdatePost(ctx context.Context, post *Post) error
 	// Удаление поста
-	DeletePost(id uint, authorID uint) error
-
+	DeletePost(ctx context.Context, id uint, authorID uint) error
 	// Получение постов пользователя
-	GetPostsByUser(userID uint, page, limit int) ([]Post, int, error)
+	GetPostsByUser(ctx context.Context, userID uint, page, limit int) ([]Post, int, error)
 }
