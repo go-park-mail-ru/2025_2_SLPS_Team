@@ -28,6 +28,34 @@ definitions:
       text:
         type: string
     type: object
+  domain.Post:
+    properties:
+      attachments:
+        description: в БД табличка post_attachments называется
+        items:
+          type: string
+        type: array
+      authorID:
+        description: в БД табличка posts называется
+        type: integer
+      created_at:
+        description: в БД табличка posts называется
+        type: string
+      id:
+        description: в БД табличка posts называется
+        type: integer
+      photos:
+        description: в БД табличка post_photos называется
+        items:
+          type: string
+        type: array
+      text:
+        description: в БД табличка posts называется
+        type: string
+      updated_at:
+        description: в БД табличка posts называется
+        type: string
+    type: object
   domain.Profile:
     properties:
       aboutMyself:
@@ -60,6 +88,19 @@ definitions:
     properties:
       chatID:
         type: integer
+    type: object
+  handler.CreatePostRequest:
+    properties:
+      attachments:
+        items:
+          type: string
+        type: array
+      photos:
+        items:
+          type: string
+        type: array
+      text:
+        type: string
     type: object
   handler.IsLoggedInResponse:
     properties:
@@ -96,6 +137,19 @@ definitions:
           $ref: '#/definitions/domain.Message'
         type: array
     type: object
+  handler.PostsResponse:
+    properties:
+      hasNext:
+        type: boolean
+      page:
+        type: integer
+      posts:
+        items:
+          $ref: '#/definitions/domain.Post'
+        type: array
+      totalPages:
+        type: integer
+    type: object
   handler.RegisterRequest:
     properties:
       confirmPassword:
@@ -115,6 +169,19 @@ definitions:
         type: string
       password:
         example: "123123"
+        type: string
+    type: object
+  handler.UpdatePostRequest:
+    properties:
+      attachments:
+        items:
+          type: string
+        type: array
+      photos:
+        items:
+          type: string
+        type: array
+      text:
         type: string
     type: object
 host: localhost:8080
@@ -376,6 +443,165 @@ paths:
       summary: Получить или создать чат с пользователем
       tags:
       - chats
+  /posts:
+    post:
+      consumes:
+      - application/json
+      description: Создает новый пост от имени текущего пользователя
+      parameters:
+      - description: Данные поста
+        in: body
+        name: post
+        required: true
+        schema:
+          $ref: '#/definitions/handler.CreatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Создать новый пост
+      tags:
+      - posts
+  /posts/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет пост (только автор)
+      parameters:
+      - description: ID поста
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить пост
+      tags:
+      - posts
+    get:
+      consumes:
+      - application/json
+      description: Возвращает пост по его идентификатору
+      parameters:
+      - description: ID поста
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.Post'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить пост по ID
+      tags:
+      - posts
+    put:
+      consumes:
+      - application/json
+      description: Обновляет существующий пост (только автор)
+      parameters:
+      - description: ID поста
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Обновленные данные поста
+        in: body
+        name: post
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdatePostRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Обновить пост
+      tags:
+      - posts
   /profile:
     put:
       consumes:
@@ -503,4 +729,47 @@ paths:
       summary: Обновление header
       tags:
       - profile
+  /users/{userID}/posts:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает посты конкретного пользователя с пагинацией
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: userID
+        required: true
+        type: integer
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Количество постов на странице
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.PostsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить посты пользователя
+      tags:
+      - posts
 swagger: "2.0"

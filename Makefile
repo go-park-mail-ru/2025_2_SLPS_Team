@@ -20,4 +20,5 @@ reload-db:
 	migrate -path ./repository/migrations -database "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable" up
 
 	go run ./cmd/app/main.go
-
+reload-swagger:
+	swag init -g cmd/app/main.go
