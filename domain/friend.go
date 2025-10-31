@@ -15,11 +15,11 @@ const (
 )
 
 type Friendship struct {
-	FirstUserID   int              `json:"firstUserID"`
-	SecondUseerID int              `json:"secondUserID"`
-	Status        FriendshipStatus `json:"status"`
-	CreatedAt     time.Time        `json:"createdAt"`
-	UpdatedAt     time.Time        `json:"updatedAt"`
+	FirstUserID  int              `json:"firstUserID"`
+	SecondUserID int              `json:"secondUserID"`
+	Status       FriendshipStatus `json:"status"`
+	CreatedAt    time.Time        `json:"createdAt"`
+	UpdatedAt    time.Time        `json:"updatedAt"`
 }
 
 // FriendshipWithProfile добавляет информацию о профиле друга
