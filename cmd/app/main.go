@@ -87,9 +87,12 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	profileStore := db.NewDBProfileStore(dbConn)
 	chatStore := db.NewDBChatStore(dbConn)
 	messageStore := db.NewDBMessageStore(dbConn)
+	postStore := db.NewDBPostStore(dbConn)
+
 	auth := handler.NewAuthHandler(userStore, sessionStore)
 	profile := handler.NewProfileHandler(profileStore, userStore)
 	chat := handler.NewChatHandler(userStore, profileStore, chatStore, messageStore)
+	posts := handler.NewPostsHandler(postStore, userStore)
 
 	//hub := websocket.NewHub()
 	//wsr := websocket.NewRouter()
@@ -109,6 +112,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	authRouter.HandleFunc("/login", auth.Login).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/logout", auth.Logout).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/isloggedin", auth.IsLoggedInHandler).Methods("GET")
+
 	apiRouter.HandleFunc("/profile/{id:[0-9]+}", profile.GetProfileByUserID).Methods("GET")
 	apiRouter.HandleFunc("/profile", profile.UpdateProfile).Methods("PUT")
 	apiRouter.HandleFunc("/profile/avatar", profile.UpdateAvatar).Methods("PUT")
@@ -118,27 +122,19 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	chatRouter.HandleFunc("/user/{id:[0-9]+}", chat.GetOrCreateChatWithUser).Methods("GET")
 	chatRouter.HandleFunc("/{id:[0-9]+}/message", chat.CreateMessage).Methods("POST")
 	chatRouter.HandleFunc("/{id:[0-9]+}/messages", chat.GetMessagesByChatId).Methods("GET")
-	chatRouter.HandleFunc("", chat.GetUserChats).Methods("GET")
-	// GET    /api/posts                    - список постов с пагинацией
-	// GET    /api/posts/{id}               - получение конкретного поста
-	// POST   /api/posts                    - создание поста (требует авторизации)
-	// PUT    /api/posts/{id}               - обновление поста (требует авторизации)
-	// DELETE /api/posts/{id}               - удаление поста (требует авторизации)
-	// GET    /api/users/{userID}/posts     - посты конкретного пользователя
 
-	// Posts routes (публичные - не требуют авторизации) [0-9] это регулярка, которая ограничивает допустимые значения. Те пропустит только цифры тк это id
-	// Это валидация на уровне маршрутизации. Это фишка муршрутизатора gorilla/mux
-	//apiRouter.HandleFunc("/posts", posts.PostsPaginate).Methods("GET")
-	//apiRouter.HandleFunc("/posts/{id:[0-9]+}", posts.GetPost).Methods("GET")
-	//apiRouter.HandleFunc("/users/{userID:[0-9]+}/posts", posts.GetUserPosts).Methods("GET")
-	//
-	//// Posts routes (требуют авторизации)
-	//postsAuthRouter := apiRouter.PathPrefix("/posts").Subrouter()
-	//postsAuthRouter.Use(auth.AuthMiddleware)
-	//postsAuthRouter.HandleFunc("", posts.CreatePost).Methods("POST")
-	//postsAuthRouter.HandleFunc("/{id:[0-9]+}", posts.UpdatePost).Methods("PUT")
-	//postsAuthRouter.HandleFunc("/{id:[0-9]+}", posts.DeletePost).Methods("DELETE")
-	//
+	// Posts routes (публичные - не требуют авторизации)
+	apiRouter.HandleFunc("/posts", posts.PostsPaginate).Methods("GET")
+	apiRouter.HandleFunc("/posts/{id:[0-9]+}", posts.GetPost).Methods("GET")
+	apiRouter.HandleFunc("/users/{userID:[0-9]+}/posts", posts.GetUserPosts).Methods("GET")
+
+	// Posts routes (требуют авторизации)
+	postsAuthRouter := apiRouter.PathPrefix("/posts").Subrouter()
+	postsAuthRouter.Use(auth.AuthMiddleware)
+	postsAuthRouter.HandleFunc("", posts.CreatePost).Methods("POST")
+	postsAuthRouter.HandleFunc("/{id:[0-9]+}", posts.UpdatePost).Methods("PUT")
+	postsAuthRouter.HandleFunc("/{id:[0-9]+}", posts.DeletePost).Methods("DELETE")
+
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 
 	return r
