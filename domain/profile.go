@@ -18,8 +18,7 @@ type Profile struct {
 
 type ShortProfile struct {
 	UserID     int     `json:"userID"`
-	FirstName  string  `json:"firstName"`
-	LastName   string  `json:"lastName"`
+	FullName   string  `json:"fullName"`
 	AvatarPath *string `json:"avatarPath"`
 }
 type ProfileStore interface {

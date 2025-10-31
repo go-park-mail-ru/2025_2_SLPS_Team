@@ -12,12 +12,12 @@ wait-db:
 	powershell -Command "while (-not (Test-NetConnection -ComputerName localhost -Port 5432).TcpTestSucceeded) { Start-Sleep -Seconds 1 }"
 
 reload-db:
-	swag init -g cmd/main.go
+	swag init -g cmd/app/main.go
 	docker-compose down -v
-	docker-compose up -d
+	docker-compose up -d postgres redis
 
 	$(MAKE) wait-db
 	migrate -path ./repository/migrations -database "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable" up
 
-	go run ./cmd/main.go
+	go run ./cmd/app/main.go
 

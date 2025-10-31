@@ -4,14 +4,15 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
-	"os"
+	"project/config"
 	_ "project/docs"
 	"project/internal/handler"
 	"project/repository/db"
+	"project/repository/dbRedis"
 
+	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/joho/godotenv"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -29,12 +30,29 @@ func NewPostgres(dataSourceName string) *sql.DB {
 
 	return db
 }
+
+func NewRedis(dataSourceName string) redis.Conn {
+	var err error
+	redisConn, err := redis.DialURL(dataSourceName)
+	if err != nil {
+		log.Fatalf("cant connect to dbRedis: %v", err)
+	}
+
+	pong, err := redis.String(redisConn.Do("PING"))
+	if err != nil {
+		log.Fatalf("Error PING: %v", err)
+	}
+
+	log.Println("Redis connected:", pong)
+	return redisConn
+}
+
 func NewLogger() *zap.Logger {
-	env := os.Getenv("APP_ENV")
+	isDebug := config.GetConfig().Debug
 	atom := zap.NewAtomicLevel()
 	incodeCfg := zap.NewProductionEncoderConfig()
 	var cfg zap.Config
-	if env == "dev" {
+	if isDebug {
 		atom.SetLevel(zap.DebugLevel)
 		incodeCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 		cfg = zap.Config{
@@ -62,11 +80,10 @@ func NewLogger() *zap.Logger {
 }
 
 // стоит переписать через структуру, чтобы передавать все сущности
-func NewApiRouter(logger *zap.Logger) *mux.Router {
-	dbPath := "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable"
-	dbConn := NewPostgres(dbPath)
+func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux.Router {
+
 	userStore := db.NewDBUserStore(dbConn)
-	sessionStore := db.NewDBSessionStore(dbConn)
+	sessionStore := dbRedis.NewRedisSessionStore(redisConn)
 	profileStore := db.NewDBProfileStore(dbConn)
 	chatStore := db.NewDBChatStore(dbConn)
 	messageStore := db.NewDBMessageStore(dbConn)
@@ -84,8 +101,8 @@ func NewApiRouter(logger *zap.Logger) *mux.Router {
 	apiRouter := r.PathPrefix("/api").Subrouter()
 	apiRouter.Use(handler.SecureMiddleware)
 	apiRouter.Use(handler.CorsMiddleware)
-	apiRouter.Use(auth.AuthMiddleware)
 	apiRouter.Use(handler.LoggingMiddleware(logger))
+	apiRouter.Use(auth.AuthMiddleware)
 
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
 	authRouter.HandleFunc("/register", auth.Register).Methods("POST", "OPTIONS")
@@ -101,6 +118,7 @@ func NewApiRouter(logger *zap.Logger) *mux.Router {
 	chatRouter.HandleFunc("/user/{id:[0-9]+}", chat.GetOrCreateChatWithUser).Methods("GET")
 	chatRouter.HandleFunc("/{id:[0-9]+}/message", chat.CreateMessage).Methods("POST")
 	chatRouter.HandleFunc("/{id:[0-9]+}/messages", chat.GetMessagesByChatId).Methods("GET")
+	chatRouter.HandleFunc("", chat.GetUserChats).Methods("GET")
 	// GET    /api/posts                    - список постов с пагинацией
 	// GET    /api/posts/{id}               - получение конкретного поста
 	// POST   /api/posts                    - создание поста (требует авторизации)
@@ -134,13 +152,20 @@ func NewApiRouter(logger *zap.Logger) *mux.Router {
 // @host localhost:8080
 // @BasePath /api/
 func main() {
-	var err = godotenv.Load()
-	if err != nil {
-		log.Fatal("ошибка загрузки .env файла")
+
+	config.InitGlobalConfig()
+	if config.GetConfig().Debug {
+		log.Println("Debug mode enabled")
 	}
 	logger := NewLogger()
 	defer logger.Sync()
-	apiRouter := NewApiRouter(logger)
+	dbConn := NewPostgres(config.GetConfig().PostgresURL)
+	defer dbConn.Close()
+
+	redisConn := NewRedis(config.GetConfig().RedisURL)
+	defer redisConn.Close()
+
+	apiRouter := NewApiRouter(logger, dbConn, redisConn)
 
 	if err := http.ListenAndServe(":8080", apiRouter); err != nil {
 		log.Fatalf("Server failed start: %v", err)

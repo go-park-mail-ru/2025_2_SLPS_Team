@@ -6,7 +6,11 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"project/domain"
+	"project/internal/service"
 	"strings"
+
+	"go.uber.org/zap"
 )
 
 func UploadsHandler(staticDir string, prefix string) http.Handler {
@@ -22,13 +26,15 @@ func UploadsHandler(staticDir string, prefix string) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, prefix) {
-			sendJSONError(w, "Not found", http.StatusNotFound)
+			sendJSONError(w, domain.NotFound, http.StatusNotFound)
+			service.Info(r.Context(), "File not found", zap.String("url", r.URL.Path))
 			return
 		}
 
 		relPath, err := url.PathUnescape(strings.TrimPrefix(r.URL.Path, prefix))
 		if err != nil {
 			sendJSONError(w, "Bad request", http.StatusBadRequest)
+			service.Info(r.Context(), "File not found", zap.String("url", relPath))
 			return
 		}
 
@@ -36,24 +42,28 @@ func UploadsHandler(staticDir string, prefix string) http.Handler {
 		cleanPath = strings.TrimPrefix(cleanPath, "/")
 
 		if strings.Contains(cleanPath, "..") {
-			sendJSONError(w, "Forbidden", http.StatusForbidden)
+			sendJSONError(w, domain.Forbidden, http.StatusForbidden)
+			service.Warn(r.Context(), "Try get access to forbidden file", zap.String("cleanPath", cleanPath))
 			return
 		}
 
 		fullPath := filepath.Join(absStaticDir, filepath.FromSlash(cleanPath))
 
 		if !strings.HasPrefix(fullPath, absStaticDir) {
-			sendJSONError(w, "Forbidden", http.StatusForbidden)
+			sendJSONError(w, domain.Forbidden, http.StatusForbidden)
+			service.Warn(r.Context(), "Try get access to forbidden file", zap.String("cleanPath", cleanPath))
 			return
 		}
 
 		info, err := os.Stat(fullPath)
 		if err != nil {
-			sendJSONError(w, "Not found", http.StatusNotFound)
+			sendJSONError(w, domain.NotFound, http.StatusNotFound)
+			service.Info(r.Context(), "File not found", zap.String("cleanPath", cleanPath))
 			return
 		}
 		if info.IsDir() {
-			sendJSONError(w, "Not found", http.StatusNotFound)
+			sendJSONError(w, domain.NotFound, http.StatusNotFound)
+			service.Info(r.Context(), "File not found", zap.String("cleanPath", cleanPath))
 			return
 		}
 

@@ -4,8 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"os"
+	"project/config"
 	"project/domain"
+	"project/internal/service"
 	"time"
 
 	"github.com/google/uuid"
@@ -15,7 +16,7 @@ import (
 
 func CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_ORIGIN"))
+		w.Header().Set("Access-Control-Allow-Origin", config.GetConfig().FrontendOrigin)
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -51,6 +52,7 @@ var AllowedPathsWithOutAuth = map[string]bool{
 	"/api/auth/register":   true,
 	"/api/auth/isloggedin": true,
 }
+var SafeMethods = map[string]bool{"GET": true, "HEAD": true, "OPTIONS": true, "TRACE": true}
 
 func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,33 +62,50 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		path := r.URL.Path
-		userID, err := api.IsLoggedIn(r)
+		session, err := api.IsLoggedIn(r)
 		isLoggedIn := true
 		if err != nil {
 			if errors.Is(err, domain.ErrNotFound) {
 				isLoggedIn = false
 			} else {
-				sendJSONSuccess(w, "Server error", http.StatusInternalServerError)
+				sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+				service.Error(r.Context(), "Fail to get IsLoggedIn", err)
 				return
 			}
 		}
 		if isLoggedIn {
 			if ForbiddenPathsWithAuth[path] {
-				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
+				sendJSONSuccess(w, domain.Forbidden, http.StatusForbidden)
+				service.Warn(r.Context(), "Try get access to forbidden path")
 				return
 			} else {
-				ctx := context.WithValue(r.Context(), domain.UserIDKey, userID)
+				ctx := context.WithValue(r.Context(), domain.UserIDKey, session.UserID)
+				newLogger := service.FromContext(ctx).With(zap.Int("selfUserID", session.UserID))
+				ctx = context.WithValue(ctx, domain.LoggerKey, newLogger)
+				service.Info(ctx, "User logged in, add userID to context")
+
+				if !SafeMethods[r.Method] && !config.GetConfig().Debug {
+					service.Info(r.Context(), "in header", zap.String("scrf", r.Header.Get("X-CSRF-Token")))
+					service.Info(r.Context(), "in session", zap.String("scrf", session.CSRFToken))
+					if r.Header.Get("X-CSRF-Token") != session.CSRFToken {
+						sendJSONSuccess(w, domain.Forbidden, http.StatusForbidden)
+						service.Warn(r.Context(), "Try do somthing without CSRF token")
+						return
+					}
+				}
+
 				next.ServeHTTP(w, r.WithContext(ctx))
 				return
-				//userID, ok := r.Context().Value(userIDKey).(int)
 			}
 		} else {
 			if !AllowedPathsWithOutAuth[path] {
-				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
+				sendJSONSuccess(w, domain.Forbidden, http.StatusForbidden)
+				service.Warn(r.Context(), "Try get access to forbidden path")
 				return
 			}
 		}
 		next.ServeHTTP(w, r)
+		return
 	})
 }
 
@@ -105,9 +124,9 @@ func LoggingMiddleware(logger *zap.Logger) mux.MiddlewareFunc {
 			reqID := uuid.New().String()
 
 			reqLogger := logger.With(zap.String("requestID", reqID))
-			if userID, ok := r.Context().Value(domain.UserIDKey).(int); ok {
-				reqLogger = reqLogger.With(zap.Int("selfUserID", userID))
-			}
+			//if userID, ok := r.Context().Value(domain.UserIDKey).(int); ok {
+			//    reqLogger = reqLogger.With(zap.Int("selfUserID", userID))
+			//}
 			ctx := context.WithValue(r.Context(), domain.LoggerKey, reqLogger)
 
 			reqLogger.Info("incoming request",

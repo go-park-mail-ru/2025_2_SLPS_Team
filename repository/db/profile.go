@@ -29,6 +29,7 @@ func (store *DBProfileStore) UpdateProfile(ctx context.Context, profile domain.P
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
+
 	queryProfile := `UPDATE profiles SET first_name = $2, last_name = $3, gender = $4, dob = $5, about_myself = $6
 WHERE user_id = $1`
 	_, err := store.db.Exec(queryProfile,
@@ -111,7 +112,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 		return []domain.ShortProfile{}, nil
 	}
 
-	query := `SELECT user_id, first_name, last_name, avatar_path FROM profiles WHERE user_id = ANY($1)`
+	query := `SELECT user_id, first_name || ' ' || last_name as full_name , avatar_path FROM profiles WHERE user_id = ANY($1)`
 
 	dblogger = dblogger.With(zap.Ints("userIDs", userIDs), zap.String("query", query))
 
@@ -126,7 +127,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 
 	for rows.Next() {
 		var u domain.ShortProfile
-		err := rows.Scan(&u.UserID, &u.FirstName, &u.LastName, &u.AvatarPath)
+		err := rows.Scan(&u.UserID, &u.FullName, &u.AvatarPath)
 		if err != nil {
 			dblogger.Error("Failed to read profile rows", zap.Error(err))
 			return nil, err

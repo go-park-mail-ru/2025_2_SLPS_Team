@@ -53,7 +53,7 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	isUserExist, err := api.userStore.IsUserExists(userID)
+	isUserExist, err := api.userStore.IsUserExists(r.Context(), userID)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to check user existence", err)
@@ -169,7 +169,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 	if err := json.NewEncoder(w).Encode(response); err != nil {
 		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", service.StructName(response)))
 	}
-	service.Info(r.Context(), "Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("messagesCount", len(messages)))
+	service.Info(r.Context(), "Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("limit", qParams.Limit), zap.Int("offset", qParams.Offset))
 }
 
 type MessageIDResponse struct {
@@ -228,4 +228,43 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", service.StructName(MessageIDResponse{})))
 	}
 	service.Info(r.Context(), "Message created successfully", zap.Int("messageID", messageID), zap.Int("chatID", chatID))
+}
+
+// GetUserChats получает список чатов для текущего пользователя, включая
+// последнее сообщение и его автора.
+//
+// @Summary Получение чатов пользователя
+// @Description Возвращает постраничный список чатов для аутентифицированного пользователя.
+// Каждый чат содержит его ID, имя, аватар, тип (групповой/приватный), последнее сообщение и автора последнего сообщения.
+// @Tags chats
+// @Accept json
+// @Produce json
+// @Param limit query int false "Number of chats to return" default(20)
+// @Param offset query int false "Offset for pagination" default(0)
+// @Success 200 {array} domain.FullChat "List of chats"
+// @Failure 400 {object} JSONResponse "Invalid query parameters"
+// @Failure 500 {object} JSONResponse "Internal server error"
+// @Security ApiKeyAuth
+// @Router /chats [get]
+func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+
+	var qParams PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
+		sendJSONSuccess(w, domain.InvalidParams, http.StatusBadRequest)
+		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", service.StructName(qParams)))
+		return
+	}
+
+	chats, err := api.chatStore.GetUserFullChats(r.Context(), userID, qParams.Limit, qParams.Offset)
+	if err != nil {
+		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		service.Error(r.Context(), "Failed to get chats", err)
+		return
+	}
+
+	if err := json.NewEncoder(w).Encode(chats); err != nil {
+		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", service.StructName(chats)))
+	}
+	service.Info(r.Context(), "Chats retrieved successfully", zap.Int("limit", qParams.Limit), zap.Int("offset", qParams.Offset))
 }

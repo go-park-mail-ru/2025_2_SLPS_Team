@@ -178,6 +178,65 @@ const docTemplate = `{
                 }
             }
         },
+        "/chats": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает постраничный список чатов для аутентифицированного пользователя.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Получение чатов пользователя",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Number of chats to return",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 0,
+                        "description": "Offset for pagination",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of chats",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.FullChat"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/chats/user/{id}": {
             "get": {
                 "description": "Возвращает ID чата между текущим пользователем и указанным userID, создавая чат при отсутствии",
@@ -537,6 +596,29 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.FullChat": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isGroup": {
+                    "type": "boolean"
+                },
+                "lastMessage": {
+                    "$ref": "#/definitions/domain.Message"
+                },
+                "lastMessageAuthor": {
+                    "$ref": "#/definitions/domain.ShortProfile"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.Message": {
             "type": "object",
             "properties": {
@@ -592,10 +674,7 @@ const docTemplate = `{
                 "avatarPath": {
                     "type": "string"
                 },
-                "firstName": {
-                    "type": "string"
-                },
-                "lastName": {
+                "fullName": {
                     "type": "string"
                 },
                 "userID": {

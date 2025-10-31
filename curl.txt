@@ -12,7 +12,8 @@ curl -X PUT http://localhost:8080/api/profile \
         "confirmPassword": "password123",
         "dob": "1990-01-01T00:00:00Z",
         "gender": "female"
-    }'     -c cookies.txt
+    }'     \
+    -c cookies.txt
 
 
 curl -i -X PATCH http://localhost:8080/api/profile/avatar \
@@ -50,8 +51,22 @@ curl -X 'POST' \
   'http://localhost:8080/api/chats/1/message' \
   -H 'accept: application/json' \
   -H 'Content-Type: application/json' \
+  -H 'X-CSRF-Token: b4ce098c45f999818c10dd60048eb1c4d5bed41c7b64e1e0f27ae93a7ac44f40' \
   -b cookies.txt \
   -d '{
 
   "text": "ну новое сообщение"
 }'
+curl -i -X POST http://localhost:8080/api/auth/logout \
+    -b cookies.txt
+
+curl -i -X POST http://localhost:8080/api/auth/register     -H "Content-Type: application/json"     -d '{
+    "firstName": "Alice",
+    "lastName": "Smith",
+    "email": "alice@example.com",
+    "password": "password123",
+    "confirmPassword": "password123",
+    "dob": "1990-01-01T00:00:00Z",
+    "gender": "female"
+}'     \
+-c cookies.txt

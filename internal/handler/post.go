@@ -310,7 +310,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Бизнес-логика: проверяем существование пользователя
-	_, err = h.userStore.GetUserByID(int(userID))
+	_, err = h.userStore.GetUserByID(r.Context(), int(userID))
 	if err != nil {
 		sendJSONError(w, "User not found", http.StatusNotFound)
 		return

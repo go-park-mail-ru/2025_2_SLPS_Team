@@ -1,11 +1,8 @@
 package handler
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"project/domain"
 	"project/internal/service"
@@ -28,21 +25,21 @@ func NewAuthHandler(userStore domain.UserStore, sessionStore domain.SessionStore
 	}
 }
 
-func (api *AuthHandler) IsLoggedIn(r *http.Request) (int, error) {
+func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 	sessionCookie, err := r.Cookie("session_id")
 	if err != nil {
 		service.Error(r.Context(), "Cookie session_id not found:", err)
-		return 0, domain.ErrNotFound
+		return nil, domain.ErrNotFound
 	}
 
-	session, authorizedErr := api.sessionStore.GetSessionBySessionID(sessionCookie.Value)
+	session, authorizedErr := api.sessionStore.GetSessionBySessionID(r.Context(), sessionCookie.Value)
 	if authorizedErr != nil {
 		service.Error(r.Context(), "Session not found or error:", authorizedErr)
-		return 0, authorizedErr
+		return nil, authorizedErr
 	}
 
 	service.Info(r.Context(), "Session loaded")
-	return session.UserID, nil
+	return session, nil
 }
 
 type IsLoggedInResponse struct {
@@ -60,11 +57,12 @@ type IsLoggedInResponse struct {
 // @Router /auth/isloggedin [get]
 func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	UserID, err := api.IsLoggedIn(r)
+	session, err := api.IsLoggedIn(r)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			sendJSONSuccess(w, domain.NotFound, http.StatusNotFound)
-			service.Error(r.Context(), domain.NotFound, err)
+			service.Warn(r.Context(), domain.NotFound)
+			return
 		} else {
 			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "failed to check registration", err)
@@ -73,7 +71,7 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	res := IsLoggedInResponse{
-		UserID: UserID,
+		UserID: session.UserID,
 	}
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
@@ -82,16 +80,30 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	service.Info(r.Context(), "registration success")
 }
 
-func generateSessionID() (string, error) {
-	bytes := make([]byte, 31)
-
-	cryptoReader := rand.Reader
-	_, err := cryptoReader.Read(bytes)
+func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userID int) error {
+	tokens, err := api.sessionStore.AddSession(r.Context(), userID)
 	if err != nil {
-		return "", fmt.Errorf("failed to read random bytes: %w", err)
+		return err
 	}
 
-	return hex.EncodeToString(bytes), nil
+	sessionCookie := &http.Cookie{
+		Name:     "session_id",
+		Value:    tokens.SID,
+		Path:     "/",
+		Expires:  time.Now().Add(10 * time.Hour),
+		HttpOnly: true,
+	}
+	http.SetCookie(w, sessionCookie)
+
+	CSRFCookie := &http.Cookie{
+		Name:     "CSRF_token",
+		Value:    tokens.CSRFToken,
+		Path:     "/",
+		Expires:  time.Now().Add(10 * time.Hour),
+		HttpOnly: false,
+	}
+	http.SetCookie(w, CSRFCookie)
+	return nil
 }
 
 type LoginRequest struct {
@@ -118,7 +130,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := api.userStore.GetUserByEmail(req.Email)
+	user, err := api.userStore.GetUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			sendJSONSuccess(w, domain.UserNotExist, http.StatusBadRequest)
@@ -134,32 +146,15 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
 		sendJSONSuccess(w, domain.IncorrectPassword, http.StatusBadRequest)
-		service.Error(r.Context(), domain.IncorrectPassword, err)
+		service.Warn(r.Context(), domain.IncorrectPassword)
 		return
 	}
 
-	SID, err := generateSessionID()
-	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
-		service.Error(r.Context(), "Failed to generate sessionID", err)
-		return
-	}
-
-	err = api.sessionStore.AddSession(user.ID, SID)
-	if err != nil {
+	if err := api.AddSession(w, r, user.ID); err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to add session", err)
 		return
 	}
-
-	cookie := &http.Cookie{
-		Name:     "session_id",
-		Value:    SID,
-		Path:     "/",
-		Expires:  time.Now().Add(10 * time.Hour),
-		HttpOnly: true,
-	}
-	http.SetCookie(w, cookie)
 
 	sendJSONSuccess(w, "User logged in", http.StatusOK)
 	service.Info(r.Context(), "User logged in", zap.Int("userID", user.ID))
@@ -177,7 +172,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	session, _ := r.Cookie("session_id")
-	err := api.sessionStore.DeleteSession(session.Value)
+	err := api.sessionStore.DeleteSession(r.Context(), session.Value)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to logout", err)
@@ -186,6 +181,9 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	session.Expires = time.Now().AddDate(0, 0, -1)
 	http.SetCookie(w, session)
+	CSRFToken, _ := r.Cookie("SCRF_token")
+	CSRFToken.Expires = time.Now().AddDate(0, 0, -1)
+	http.SetCookie(w, CSRFToken)
 
 	sendJSONSuccess(w, "User logged out", http.StatusOK)
 	service.Info(r.Context(), "User logged out")
@@ -228,7 +226,7 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = api.userStore.GetUserByEmail(req.Email)
+	_, err = api.userStore.GetUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		if !errors.Is(err, domain.ErrNotFound) {
 			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
@@ -263,36 +261,19 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Dob:       req.Dob,
 		Gender:    req.Gender,
 	}
-	userID, err := api.userStore.CreateUser(user, profile)
+	userID, err := api.userStore.CreateUser(r.Context(), user, profile)
 	if err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to create user", err)
 		return
 	}
 
-	SID, err := generateSessionID()
-	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
-		service.Error(r.Context(), "Failed to generate sessionID", err)
-		return
-	}
-
-	err = api.sessionStore.AddSession(userID, SID)
-	if err != nil {
-
+	if err := api.AddSession(w, r, userID); err != nil {
 		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to add session", err)
 		return
 	}
 
-	cookie := &http.Cookie{
-		Name:     "session_id",
-		Value:    SID,
-		Path:     "/",
-		Expires:  time.Now().Add(10 * time.Hour),
-		HttpOnly: true,
-	}
-	http.SetCookie(w, cookie)
 	sendJSONSuccess(w, "User created", http.StatusOK)
 	service.Info(r.Context(), "User created, registration complete", zap.Int("userID", userID))
 }

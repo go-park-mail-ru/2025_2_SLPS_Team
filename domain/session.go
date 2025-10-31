@@ -1,12 +1,18 @@
 package domain
 
+import "context"
+
 type Session struct {
-	ID        int
-	SessionID string
-	UserID    int
+	UserID    int    `json:"userID"`
+	CSRFToken string `json:"CSRFToken"`
+}
+
+type SIDAndSCRFToken struct {
+	CSRFToken string `json:"CSRFToken"`
+	SID       string `json:"SID"`
 }
 type SessionStore interface {
-	AddSession(userID int, sessionID string) error
-	GetSessionBySessionID(sessionID string) (Session, error)
-	DeleteSession(sessionID string) error
+	AddSession(ctx context.Context, userID int) (*SIDAndSCRFToken, error)
+	GetSessionBySessionID(ctx context.Context, sessionID string) (*Session, error)
+	DeleteSession(ctx context.Context, sessionID string) error
 }
