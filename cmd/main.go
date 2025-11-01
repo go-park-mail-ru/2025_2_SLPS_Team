@@ -71,11 +71,13 @@ func NewApiRouter(logger *zap.Logger) *mux.Router {
 	chatStore := db.NewDBChatStore(dbConn)
 	messageStore := db.NewDBMessageStore(dbConn)
 	postStore := db.NewDBPostStore(dbConn)
+	friendStore := db.NewDBFriendStore(dbConn)
 
 	auth := handler.NewAuthHandler(userStore, sessionStore)
 	profile := handler.NewProfileHandler(profileStore, userStore)
 	chat := handler.NewChatHandler(userStore, profileStore, chatStore, messageStore)
 	posts := handler.NewPostsHandler(postStore, userStore)
+	friend := handler.NewFriendHandler(friendStore, userStore)
 
 	//hub := websocket.NewHub()
 	//wsr := websocket.NewRouter()
@@ -117,7 +119,18 @@ func NewApiRouter(logger *zap.Logger) *mux.Router {
 	postsAuthRouter.HandleFunc("", posts.CreatePost).Methods("POST")
 	postsAuthRouter.HandleFunc("/{id:[0-9]+}", posts.UpdatePost).Methods("PUT")
 	postsAuthRouter.HandleFunc("/{id:[0-9]+}", posts.DeletePost).Methods("DELETE")
-	
+
+	friendRouter := apiRouter.PathPrefix("/friends").Subrouter()
+	friendRouter.Use(auth.AuthMiddleware)
+	friendRouter.HandleFunc("", friend.GetFriends).Methods("GET")
+	friendRouter.HandleFunc("/requests", friend.GetFriendRequests).Methods("GET")
+	friendRouter.HandleFunc("/sent", friend.GetSentRequests).Methods("GET")
+	friendRouter.HandleFunc("/{id:[0-9]+}", friend.SendFriendRequest).Methods("POST")
+	friendRouter.HandleFunc("/{id:[0-9]+}/accept", friend.AcceptFriendRequest).Methods("PUT")
+	friendRouter.HandleFunc("/{id:[0-9]+}/reject", friend.RejectFriendRequest).Methods("PUT")
+	friendRouter.HandleFunc("/{id:[0-9]+}/status", friend.GetFriendshipStatus).Methods("GET")
+	friendRouter.HandleFunc("/{id:[0-9]+}", friend.RemoveFriend).Methods("DELETE")
+
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 
 	return r

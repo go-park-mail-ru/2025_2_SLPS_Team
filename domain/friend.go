@@ -11,7 +11,7 @@ const (
 	FriendshipPending  FriendshipStatus = "pending"
 	FriendshipAccepted FriendshipStatus = "accepted"
 	FriendshipRejected FriendshipStatus = "rejected"
-	FriendShipBlocked  FriendshipStatus = "blocked"
+	FriendshipBlocked  FriendshipStatus = "blocked"
 )
 
 type Friendship struct {
@@ -39,18 +39,18 @@ type FriendResponse struct {
 }
 
 type FriendStore interface {
-	//Основные методы CRUD
+	// Основные операции CRUD
 	CreateFriendship(ctx context.Context, firstUserID, secondUserID int) error
 	GetFriendship(ctx context.Context, firstUserID, secondUserID int) (*Friendship, error)
 	UpdateFriendshipStatus(ctx context.Context, firstUserID, secondUserID int, status FriendshipStatus) error
-	DeleteFriendship(ctx context.Context, firstUserID, secondUserId int) error
+	DeleteFriendship(ctx context.Context, firstUserID, secondUserID int) error
 
-	//Получение списков
-	GetUserFriends(ctx context.Context, firstUserID, secondUserID int) ([]ShortProfile, error)
-	GetFriendshipByStatus(ctx context.Context, userID int, status FriendshipStatus) ([]FriendshipWithProfile, error)
-	GetFriendshipRequests(ctx context.Context, userID int) ([]FriendshipWithProfile, error)
+	// Получение списков с пагинацией
+	GetUserFriends(ctx context.Context, userID int, page, limit int) ([]ShortProfile, int, error)
+	GetFriendshipRequests(ctx context.Context, userID int, page, limit int) ([]FriendshipWithProfile, int, error)
+	GetSentRequests(ctx context.Context, userID int, page, limit int) ([]FriendshipWithProfile, int, error)
 
-	//Вспомогательные методы
+	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int) (bool, error)
 	GetFriendshipStatus(ctx context.Context, userID1, userID2 int) (FriendshipStatus, error)
 }
