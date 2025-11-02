@@ -25,7 +25,7 @@ RUN apk add --no-cache postgresql-client
 # Копируем только необходимые артефакты
 COPY --from=builder /app/main .
 COPY --from=builder /app/migrate .
-COPY --from=builder /app/repository/migrations ./repository/migrations
+COPY --from=builder /app/db/migrations ./db/migrations
 COPY --from=builder /app/.env .
 COPY --from=builder /app/.env.prod .
 COPY --from=builder /app/logs ./logs

@@ -2,27 +2,23 @@ package handler
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 	"project/domain"
 	"project/internal/service"
 	"strconv"
 	"strings"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
 type ProfileHandler struct {
-	profileStore domain.ProfileStore
-	userStore    domain.UserStore
+	profileService service.ProfileService
 }
 
-func NewProfileHandler(profileStore domain.ProfileStore, userStore domain.UserStore) *ProfileHandler {
+func NewProfileHandler(profileService service.ProfileService) *ProfileHandler {
 	return &ProfileHandler{
-		profileStore: profileStore,
-		userStore:    userStore,
+		profileService: profileService,
 	}
 }
 
@@ -44,78 +40,35 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 	err := r.ParseMultipartForm(50 << 20) // 50MB
 	if err != nil {
 		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
-		service.Error(r.Context(), "Failed to parse multipart form", err)
+		domain.FromContext(r.Context()).Error("Failed to parse multipart form", zap.Error(err))
 		return
 	}
 
 	jsonProfile := r.FormValue("profile")
 	if jsonProfile == "" {
 		sendJSONResponse(w, "Missing profile field", http.StatusBadRequest)
-		service.Warn(r.Context(), "Missing profile field in request")
+		domain.FromContext(r.Context()).Warn("Missing profile field in request")
 		return
 	}
 
 	var req domain.Profile
 	if err := json.NewDecoder(strings.NewReader(jsonProfile)).Decode(&req); err != nil {
 		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		service.Error(r.Context(), "Failed to decode profile JSON", err)
-		return
-	}
-
-	ok, err := govalidator.ValidateStruct(req)
-	if !ok || err != nil {
-		sendJSONResponse(w, domain.InvalidData, http.StatusBadRequest)
-		service.Warn(r.Context(), "Profile validation failed")
+		domain.FromContext(r.Context()).Error("Failed to decode profile JSON", zap.Error(err))
 		return
 	}
 
 	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-	// для надежности можно проверять что пользователь существует, но по идее если есть сессия с id пользвателем он точно должен существовать
-	//isUserExist, err := api.userStore.IsUserExists(userID)
-	//if err != nil {
-	//    sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-	//    return
-	//}
-	//if !isUserExist {
-	//    sendJSONResponse(w, "User does not exist", http.StatusBadRequest)
-	//    return
-	//}
-
 	files := r.MultipartForm.File["avatar"]
-	if len(files) == 1 {
-		avatarOldPath, err := api.profileStore.GetAvatarByUserID(r.Context(), userID)
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to get old avatar path", err)
-			return
-		}
 
-		newfilePath, err := service.HandleFileUpload(files, []*string{avatarOldPath})
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to upload new avatar", err)
-			return
-		}
-
-		err = api.profileStore.UpdateAvatar(r.Context(), newfilePath[0], userID)
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to update avatar", err)
-			return
-		}
-
-	} else {
-		service.Warn(r.Context(), "Missing avatar field")
-	}
-
-	err = api.profileStore.UpdateProfile(r.Context(), req, userID)
+	err = api.profileService.UpdateProfile(r.Context(), req, userID, files)
 	if err != nil {
-		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-		service.Error(r.Context(), "Failed to update profile", err)
+		sendJSONError(w, err)
 		return
 	}
-	service.Info(r.Context(), "Profile updated successfully")
+
 	sendJSONResponse(w, "Profile updated", http.StatusOK)
+	domain.FromContext(r.Context()).Info("Profile updated successfully")
 }
 
 // UpdateAvatar обновляет аватар пользователя.
@@ -136,43 +89,22 @@ func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) 
 	err := r.ParseMultipartForm(50 << 20) // 50MB
 	if err != nil {
 		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
-		service.Error(r.Context(), "Failed to parse multipart form", err)
+		domain.FromContext(r.Context()).Error("Failed to parse multipart form", zap.Error(err))
 		return
 	}
 
 	userID, _ := r.Context().Value(domain.UserIDKey).(int)
 
 	files := r.MultipartForm.File["avatar"]
-	if len(files) == 1 {
-		avatarOldPath, err := api.profileStore.GetAvatarByUserID(r.Context(), userID)
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to get old avatar path", err)
-			return
-		}
 
-		newfilePath, err := service.HandleFileUpload(files, []*string{avatarOldPath})
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to upload avatar", err)
-			return
-		}
-
-		err = api.profileStore.UpdateAvatar(r.Context(), newfilePath[0], userID)
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to update avatar", err)
-			return
-		}
-
-	} else {
-		sendJSONResponse(w, "Missing avatar field", http.StatusBadRequest)
-		service.Warn(r.Context(), "Missing avatar field in request")
+	err = api.profileService.UpdateAvatar(r.Context(), userID, files)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
 	sendJSONResponse(w, "Avatar updated", http.StatusOK)
-	service.Info(r.Context(), "Avatar updated successfully")
+	domain.FromContext(r.Context()).Info("Avatar updated successfully")
 }
 
 // UpdateHeader обновляет header пользователя.
@@ -192,43 +124,21 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 	err := r.ParseMultipartForm(50 << 20) // 50MB
 	if err != nil {
 		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
-		service.Error(r.Context(), "Failed to parse multipart form", err)
+		domain.FromContext(r.Context()).Error("Failed to parse multipart form", zap.Error(err))
 		return
 	}
 
 	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-
 	files := r.MultipartForm.File["header"]
-	if len(files) == 1 {
-		headerOldPath, err := api.profileStore.GetHeaderByUserID(r.Context(), userID)
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to get old header path", err)
-			return
-		}
 
-		newfilePath, err := service.HandleFileUpload(files, []*string{headerOldPath})
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to upload header", err)
-			return
-		}
-
-		err = api.profileStore.UpdateHeader(r.Context(), newfilePath[0], userID)
-		if err != nil {
-			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-			service.Error(r.Context(), "Failed to update header", err)
-			return
-		}
-
-	} else {
-		sendJSONResponse(w, "Missing header field", http.StatusBadRequest)
-		service.Warn(r.Context(), "Missing header field in request")
+	err = api.profileService.UpdateHeader(r.Context(), userID, files)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
 	sendJSONResponse(w, "Header updated", http.StatusOK)
-	service.Info(r.Context(), "Header updated successfully")
+	domain.FromContext(r.Context()).Info("Header updated successfully")
 }
 
 // GetProfileByUserID получает профиль пользователя по ID.
@@ -249,27 +159,17 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		service.Error(r.Context(), "Failed to parse user ID", err)
+		domain.FromContext(r.Context()).Error("Failed to parse user ID", zap.Error(err))
 		return
 	}
 
-	var profile domain.Profile
-	profile, err = api.profileStore.GetProfileByUserID(r.Context(), userID)
+	profile, err := api.profileService.GetProfileByUserID(r.Context(), userID)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			sendJSONResponse(w, "User does`not exist", http.StatusBadRequest)
-			service.Warn(r.Context(), "User not found", zap.Int("userID", userID))
-			return
-		}
-		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-		service.Error(r.Context(), "Failed to get profile", err, zap.Int("userID", userID))
-		return
+		sendJSONError(w, err)
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(profile); err != nil {
-		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", service.StructName(profile)))
-		return
+	err = sendJSONData(r.Context(), w, profile)
+	if err == nil {
+		domain.FromContext(r.Context()).Info("Profile return successfully")
 	}
 }

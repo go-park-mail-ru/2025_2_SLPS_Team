@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"project/domain"
-	"project/internal/service"
 	"time"
 
 	"go.uber.org/zap"
@@ -21,7 +20,7 @@ func NewDBProfileStore(db *sql.DB) domain.ProfileStore {
 
 func (store *DBProfileStore) UpdateProfile(ctx context.Context, profile domain.Profile, userID int) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "profileStore")
+	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start UpdateProfile")
 
@@ -51,7 +50,7 @@ WHERE user_id = $1`
 
 func (store *DBProfileStore) UpdateAvatar(ctx context.Context, avatarPath string, userID int) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "profileStore")
+	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start UpdateAvatar")
 
@@ -75,7 +74,7 @@ func (store *DBProfileStore) UpdateAvatar(ctx context.Context, avatarPath string
 
 func (store *DBProfileStore) UpdateHeader(ctx context.Context, headerPath string, userID int) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "profileStore")
+	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start UpdateHeader")
 
@@ -99,7 +98,7 @@ func (store *DBProfileStore) UpdateHeader(ctx context.Context, headerPath string
 
 func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int) ([]domain.ShortProfile, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "profileStore")
+	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetShortProfileByUserIDs")
 
@@ -145,7 +144,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 
 func (store *DBProfileStore) GetProfileByUserID(ctx context.Context, userID int) (domain.Profile, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "profileStore")
+	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetProfileByUserID")
 
@@ -183,7 +182,7 @@ func (store *DBProfileStore) GetProfileByUserID(ctx context.Context, userID int)
 
 func (store *DBProfileStore) GetAvatarByUserID(ctx context.Context, userID int) (*string, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "profileStore")
+	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetAvatarByUserID")
 
@@ -211,7 +210,7 @@ func (store *DBProfileStore) GetAvatarByUserID(ctx context.Context, userID int) 
 
 func (store *DBProfileStore) GetHeaderByUserID(ctx context.Context, userID int) (*string, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "profileStore")
+	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetHeaderByUserID")
 

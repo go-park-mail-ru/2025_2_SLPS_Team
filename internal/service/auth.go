@@ -16,8 +16,8 @@ type AuthService struct {
 	userStore    domain.UserStore
 }
 
-func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore) *AuthService {
-	return &AuthService{
+func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore) AuthService {
+	return AuthService{
 		sessionStore: sessionStore,
 		userStore:    userStore,
 	}
@@ -28,14 +28,14 @@ func (api *AuthService) IsLoggedIn(ctx context.Context, sessionCookie *http.Cook
 	session, err := api.sessionStore.GetSessionBySessionID(ctx, sessionCookie.Value)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			FromContext(ctx).Warn("Session not found")
+			domain.FromContext(ctx).Warn("Session not found")
 			return nil, err
 		}
-		FromContext(ctx).Error("Session found error:", zap.Error(err))
+		domain.FromContext(ctx).Error("Session found error:", zap.Error(err))
 		return nil, err
 	}
 
-	FromContext(ctx).Info("Session loaded")
+	domain.FromContext(ctx).Info("Session loaded")
 	return session, nil
 }
 
@@ -53,21 +53,21 @@ func (api *AuthService) Login(ctx context.Context, req domain.User) (int, error)
 	user, err := api.userStore.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			FromContext(ctx).Error("User by email does not exist", zap.Error(err))
+			domain.FromContext(ctx).Error("User by email does not exist", zap.Error(err))
 			return 0, domain.ErrNotFound
 		} else {
-			FromContext(ctx).Error("Failed to get user by email", zap.Error(err))
+			domain.FromContext(ctx).Error("Failed to get user by email", zap.Error(err))
 			return 0, domain.ErrDB
 		}
 
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		FromContext(ctx).Warn(domain.IncorrectPassword)
+		domain.FromContext(ctx).Warn(domain.IncorrectPassword)
 		return 0, domain.ErrInvalidInput
 	}
 
-	FromContext(ctx).Info("User logged in", zap.Int("userID", user.ID))
+	domain.FromContext(ctx).Info("User logged in", zap.Int("userID", user.ID))
 	return user.ID, nil
 }
 
@@ -75,11 +75,11 @@ func (api *AuthService) Logout(ctx context.Context, session *http.Cookie) error 
 
 	err := api.sessionStore.DeleteSession(ctx, session.Value)
 	if err != nil {
-		FromContext(ctx).Error("Failed to logout", zap.Error(err))
+		domain.FromContext(ctx).Error("Failed to logout", zap.Error(err))
 		return domain.ErrDB
 	}
 
-	FromContext(ctx).Info("User logged out")
+	domain.FromContext(ctx).Info("User logged out")
 	return nil
 }
 
@@ -87,29 +87,29 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
-		FromContext(ctx).Error("Register validate failed", zap.Error(err))
+		domain.FromContext(ctx).Error("Register validate failed", zap.Error(err))
 		return 0, domain.ErrInvalidInput
 	}
 
 	_, err = api.userStore.GetUserByEmail(ctx, req.Email)
 	if err != nil {
 		if !errors.Is(err, domain.ErrNotFound) {
-			FromContext(ctx).Error("Failed to get user by email", zap.Error(err))
+			domain.FromContext(ctx).Error("Failed to get user by email", zap.Error(err))
 			return 0, domain.ErrDB
 		}
 	} else {
-		FromContext(ctx).Warn("User already exist")
+		domain.FromContext(ctx).Warn("User already exist")
 		return 0, domain.ErrAlreadyExists
 	}
 
 	if req.Password != req.ConfirmPassword {
-		FromContext(ctx).Info("Register validate failed: password filed doesn't match")
+		domain.FromContext(ctx).Info("Register validate failed: password filed doesn't match")
 		return 0, domain.ErrInvalidInput
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		FromContext(ctx).Error("Failed to generate hashed password", zap.Error(err))
+		domain.FromContext(ctx).Error("Failed to generate hashed password", zap.Error(err))
 		return 0, domain.ErrService
 	}
 	user := domain.User{
@@ -124,10 +124,10 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 	}
 	userID, err := api.userStore.CreateUser(ctx, user, profile)
 	if err != nil {
-		FromContext(ctx).Error("Failed to create user", zap.Error(err))
+		domain.FromContext(ctx).Error("Failed to create user", zap.Error(err))
 		return 0, domain.ErrDB
 	}
 
-	FromContext(ctx).Info("User created, registration complete", zap.Int("userID", userID))
+	domain.FromContext(ctx).Info("User created, registration complete", zap.Int("userID", userID))
 	return userID, nil
 }

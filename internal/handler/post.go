@@ -58,7 +58,7 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 	var req PostsRequest
 	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
 
@@ -70,11 +70,11 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 		req.Limit = 20
 	}
 
-	service.Info(r.Context(), "Getting paginated posts", zap.Int("page", req.Page), zap.Int("limit", req.Limit))
+	domain.Info(r.Context(), "Getting paginated posts", zap.Int("page", req.Page), zap.Int("limit", req.Limit))
 	// Получаем посты из хранилища
 	posts, totalPages, err := h.postStore.PostsPaginatedList(r.Context(), req.Page, req.Limit)
 	if err != nil {
-		service.Error(r.Context(), "Failed to get posts", err)
+		domain.Error(r.Context(), "Failed to get posts", err)
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
@@ -89,12 +89,12 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "PostsResponse"))
+		domain.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "PostsResponse"))
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
 
-	service.Info(r.Context(), "Posts retrieved successfully", zap.Int("postsCount", len(posts)), zap.Int("totalPages", totalPages))
+	domain.Info(r.Context(), "Posts retrieved successfully", zap.Int("postsCount", len(posts)), zap.Int("totalPages", totalPages))
 }
 
 // GetPost - получение конкретного поста по ID
@@ -114,20 +114,20 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 	postID, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		sendJSONResponse(w, "Invalid post ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
+		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
 		return
 	}
 
-	service.Info(r.Context(), "Getting post by ID", zap.Uint64("postID", postID))
+	domain.Info(r.Context(), "Getting post by ID", zap.Uint64("postID", postID))
 
 	// Бизнес-логика: получение поста
 	post, err := h.postStore.GetPostByID(r.Context(), uint(postID))
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			sendJSONResponse(w, "Post not found", http.StatusNotFound)
-			service.Warn(r.Context(), "Post not found", zap.Uint64("postID", postID))
+			domain.Warn(r.Context(), "Post not found", zap.Uint64("postID", postID))
 		} else {
-			service.Error(r.Context(), "Failed to get post", err, zap.Uint64("postID", postID))
+			domain.Error(r.Context(), "Failed to get post", err, zap.Uint64("postID", postID))
 			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		}
 		return
@@ -135,7 +135,7 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(post); err != nil {
-		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "Post"))
+		domain.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "Post"))
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
@@ -161,7 +161,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(50 << 20) // 50MB
 	if err != nil {
 		sendJSONResponse(w, "Can't parse multipart form", http.StatusBadRequest)
-		service.Error(r.Context(), "Failed to parse multipart form", err)
+		domain.Error(r.Context(), "Failed to parse multipart form", err)
 		return
 	}
 
@@ -169,14 +169,14 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	text := r.FormValue("text")
 	if text == "" {
 		sendJSONResponse(w, "Text is required", http.StatusBadRequest)
-		service.Warn(r.Context(), "Text is required for post creation")
+		domain.Warn(r.Context(), "Text is required for post creation")
 		return
 	}
 
 	// Бизнес-логика: валидация данных
 	if len(text) < 24 || len(text) > 4096 {
 		sendJSONResponse(w, "Text length must be between 24 and 4096 characters", http.StatusBadRequest)
-		service.Warn(r.Context(), "Post text validation failed", zap.Int("textLength", len(text)))
+		domain.Warn(r.Context(), "Post text validation failed", zap.Int("textLength", len(text)))
 		return
 	}
 
@@ -184,18 +184,18 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	service.Info(r.Context(), "Creating new post", zap.Int("userID", userID))
+	domain.Info(r.Context(), "Creating new post", zap.Int("userID", userID))
 
 	// Обрабатываем вложения
 	var attachmentPaths []string
 	if attachmentFiles, ok := r.MultipartForm.File["attachments"]; ok && len(attachmentFiles) > 0 {
 		attachmentPaths, err = service.UploadFiles(attachmentFiles)
 		if err != nil {
-			service.Error(r.Context(), "Failed to upload attachments", err)
+			domain.Error(r.Context(), "Failed to upload attachments", err)
 			sendJSONResponse(w, "Failed to upload attachments", http.StatusInternalServerError)
 			return
 		}
@@ -210,7 +210,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 			if len(attachmentPaths) > 0 {
 				service.DeleteFiles(convertToPointerSlice(attachmentPaths))
 			}
-			service.Error(r.Context(), "Failed to upload photos", err)
+			domain.Error(r.Context(), "Failed to upload photos", err)
 			sendJSONResponse(w, "Failed to upload photos", http.StatusInternalServerError)
 			return
 		}
@@ -233,13 +233,13 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		if len(photoPaths) > 0 {
 			service.DeleteFiles(convertToPointerSlice(photoPaths))
 		}
-		service.Error(r.Context(), "Failed to create post", err, zap.Int("userID", userID))
+		domain.Error(r.Context(), "Failed to create post", err, zap.Int("userID", userID))
 		sendJSONResponse(w, "Failed to create post", http.StatusInternalServerError)
 		return
 	}
 
 	sendJSONResponse(w, "Post created successfully", http.StatusCreated)
-	service.Info(r.Context(), "Post created successfully",
+	domain.Info(r.Context(), "Post created successfully",
 		zap.Uint("postID", post.ID),
 		zap.Int("userID", userID),
 		zap.Int("attachmentsCount", len(attachmentPaths)),
@@ -269,7 +269,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	postID, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		sendJSONResponse(w, "Invalid post ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
+		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
 		return
 	}
 
@@ -277,7 +277,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	err = r.ParseMultipartForm(50 << 20) // 50MB
 	if err != nil {
 		sendJSONResponse(w, "Can't parse multipart form", http.StatusBadRequest)
-		service.Error(r.Context(), "Failed to parse multipart form", err)
+		domain.Error(r.Context(), "Failed to parse multipart form", err)
 		return
 	}
 
@@ -285,14 +285,14 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	text := r.FormValue("text")
 	if text == "" {
 		sendJSONResponse(w, "Text is required", http.StatusBadRequest)
-		service.Warn(r.Context(), "Text is required for post update")
+		domain.Warn(r.Context(), "Text is required for post update")
 		return
 	}
 
 	// Бизнес-логика: валидация данных
 	if len(text) < 24 || len(text) > 4096 {
 		sendJSONResponse(w, "Text length must be between 24 and 4096 characters", http.StatusBadRequest)
-		service.Warn(r.Context(), "Post text validation failed", zap.Int("textLength", len(text)))
+		domain.Warn(r.Context(), "Post text validation failed", zap.Int("textLength", len(text)))
 		return
 	}
 
@@ -300,20 +300,20 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, "Unauthorized", http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
 	// Бизнес-логика: проверяем существование поста и права доступа
-	service.Info(r.Context(), "Updating post", zap.Uint64("postID", postID), zap.Int("userID", userID))
+	domain.Info(r.Context(), "Updating post", zap.Uint64("postID", postID), zap.Int("userID", userID))
 
 	existingPost, err := h.postStore.GetPostByID(r.Context(), uint(postID))
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			sendJSONResponse(w, "Post not found", http.StatusNotFound)
-			service.Warn(r.Context(), "Post not found for update", zap.Uint64("postID", postID))
+			domain.Warn(r.Context(), "Post not found for update", zap.Uint64("postID", postID))
 		} else {
-			service.Error(r.Context(), "Failed to get post for update", err, zap.Uint64("postID", postID))
+			domain.Error(r.Context(), "Failed to get post for update", err, zap.Uint64("postID", postID))
 			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		}
 		return
@@ -322,7 +322,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, что пользователь является автором поста
 	if existingPost.AuthorID != uint(userID) {
 		sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
-		service.Warn(r.Context(), "Access denied: user is not post author",
+		domain.Warn(r.Context(), "Access denied: user is not post author",
 			zap.Uint64("postID", postID),
 			zap.Int("userID", userID),
 			zap.Uint("authorID", existingPost.AuthorID))
@@ -343,7 +343,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 		newAttachmentPaths, err = service.UploadFiles(attachmentFiles)
 		if err != nil {
-			service.Error(r.Context(), "Failed to upload new attachments", err)
+			domain.Error(r.Context(), "Failed to upload new attachments", err)
 			sendJSONResponse(w, "Failed to upload attachments", http.StatusInternalServerError)
 			return
 		}
@@ -367,7 +367,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 				newFiles := newAttachmentPaths[len(existingPost.Attachments):]
 				service.DeleteFiles(convertToPointerSlice(newFiles))
 			}
-			service.Error(r.Context(), "Failed to upload new photos", err)
+			domain.Error(r.Context(), "Failed to upload new photos", err)
 			sendJSONResponse(w, "Failed to upload photos", http.StatusInternalServerError)
 			return
 		}
@@ -396,7 +396,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 			newFiles := newPhotoPaths[len(existingPost.PhotosPath):]
 			service.DeleteFiles(convertToPointerSlice(newFiles))
 		}
-		service.Error(r.Context(), "Failed to update post", err, zap.Uint64("postID", postID))
+		domain.Error(r.Context(), "Failed to update post", err, zap.Uint64("postID", postID))
 		sendJSONResponse(w, "Failed to update post", http.StatusInternalServerError)
 		return
 	}
@@ -404,19 +404,19 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	// Удаляем старые файлы после успешного обновления в БД
 	if len(oldAttachments) > 0 {
 		if err := service.DeleteFiles(oldAttachments); err != nil {
-			service.Error(r.Context(), "Failed to delete old attachments", err)
+			domain.Error(r.Context(), "Failed to delete old attachments", err)
 			// Не прерываем выполнение, так как пост уже обновлен
 		}
 	}
 	if len(oldPhotos) > 0 {
 		if err := service.DeleteFiles(oldPhotos); err != nil {
-			service.Error(r.Context(), "Failed to delete old photos", err)
+			domain.Error(r.Context(), "Failed to delete old photos", err)
 			// Не прерываем выполнение, так как пост уже обновлен
 		}
 	}
 
 	sendJSONResponse(w, "Post updated successfully", http.StatusOK)
-	service.Info(r.Context(), "Post updated successfully", zap.Uint64("postID", postID))
+	domain.Info(r.Context(), "Post updated successfully", zap.Uint64("postID", postID))
 }
 
 // Вспомогательная функция для конвертации []string в []*string
@@ -448,7 +448,7 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	postID, err := strconv.ParseUint(vars["id"], 10, 32)
 	if err != nil {
 		sendJSONResponse(w, "Invalid post ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
+		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
 		return
 	}
 
@@ -456,20 +456,20 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, "Unauthorized", http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
 	// Бизнес-логика: проверяем существование поста перед удалением
-	service.Info(r.Context(), "Deleting post", zap.Uint64("postID", postID), zap.Int("userID", userID))
+	domain.Info(r.Context(), "Deleting post", zap.Uint64("postID", postID), zap.Int("userID", userID))
 
 	existingPost, err := h.postStore.GetPostByID(r.Context(), uint(postID))
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			sendJSONResponse(w, "Post not found", http.StatusNotFound)
-			service.Warn(r.Context(), "Post not found for deletion", zap.Uint64("postID", postID))
+			domain.Warn(r.Context(), "Post not found for deletion", zap.Uint64("postID", postID))
 		} else {
-			service.Error(r.Context(), "Failed to get post for deletion", err, zap.Uint64("postID", postID))
+			domain.Error(r.Context(), "Failed to get post for deletion", err, zap.Uint64("postID", postID))
 			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		}
 		return
@@ -478,7 +478,7 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	// Проверяем, что пользователь является автором поста
 	if existingPost.AuthorID != uint(userID) {
 		sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
-		service.Warn(r.Context(), "Access denied: user is not post author",
+		domain.Warn(r.Context(), "Access denied: user is not post author",
 			zap.Uint64("postID", postID),
 			zap.Int("userID", userID),
 			zap.Uint("authorID", existingPost.AuthorID))
@@ -500,7 +500,7 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	// Удаляем пост из базы данных
 	if err := h.postStore.DeletePost(r.Context(), uint(postID), uint(userID)); err != nil {
-		service.Error(r.Context(), "Failed to delete post", err, zap.Uint64("postID", postID))
+		domain.Error(r.Context(), "Failed to delete post", err, zap.Uint64("postID", postID))
 		sendJSONResponse(w, "Failed to delete post", http.StatusInternalServerError)
 		return
 	}
@@ -508,13 +508,13 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 	// Удаляем файлы после успешного удаления поста из БД
 	if len(filesToDelete) > 0 {
 		if err := service.DeleteFiles(filesToDelete); err != nil {
-			service.Error(r.Context(), "Failed to delete post files", err)
+			domain.Error(r.Context(), "Failed to delete post files", err)
 			// Не прерываем выполнение, так как пост уже удален из БД
 		}
 	}
 
 	sendJSONResponse(w, "Post deleted successfully", http.StatusOK)
-	service.Info(r.Context(), "Post deleted successfully",
+	domain.Info(r.Context(), "Post deleted successfully",
 		zap.Uint64("postID", postID),
 		zap.Int("deletedFiles", len(filesToDelete)))
 }
@@ -538,14 +538,14 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	userID, err := strconv.ParseUint(vars["userID"], 10, 32)
 	if err != nil {
 		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid user ID", zap.String("userID", vars["userID"]))
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("userID", vars["userID"]))
 		return
 	}
 
 	var req PostsRequest
 	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
 
@@ -557,7 +557,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		req.Limit = 20
 	}
 
-	service.Info(r.Context(), "Getting user posts",
+	domain.Info(r.Context(), "Getting user posts",
 		zap.Uint64("userID", userID),
 		zap.Int("page", req.Page),
 		zap.Int("limit", req.Limit))
@@ -567,9 +567,9 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			sendJSONResponse(w, "User not found", http.StatusNotFound)
-			service.Warn(r.Context(), "User not found", zap.Uint64("userID", userID))
+			domain.Warn(r.Context(), "User not found", zap.Uint64("userID", userID))
 		} else {
-			service.Error(r.Context(), "Failed to get user", err, zap.Uint64("userID", userID))
+			domain.Error(r.Context(), "Failed to get user", err, zap.Uint64("userID", userID))
 			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		}
 		return
@@ -578,7 +578,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	// Получаем посты пользователя
 	posts, totalPages, err := h.postStore.GetPostsByUser(r.Context(), uint(userID), req.Page, req.Limit)
 	if err != nil {
-		service.Error(r.Context(), "Failed to get user posts", err, zap.Uint64("userID", userID))
+		domain.Error(r.Context(), "Failed to get user posts", err, zap.Uint64("userID", userID))
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
@@ -593,12 +593,12 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "PostsResponse"))
+		domain.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "PostsResponse"))
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
 
-	service.Info(r.Context(), "User posts retrieved successfully",
+	domain.Info(r.Context(), "User posts retrieved successfully",
 		zap.Uint64("userID", userID),
 		zap.Int("postsCount", len(posts)),
 		zap.Int("totalPages", totalPages))

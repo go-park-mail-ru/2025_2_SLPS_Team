@@ -7,7 +7,6 @@ import (
 	"path"
 	"path/filepath"
 	"project/domain"
-	"project/internal/service"
 	"strings"
 
 	"go.uber.org/zap"
@@ -27,14 +26,14 @@ func UploadsHandler(staticDir string, prefix string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, prefix) {
 			sendJSONResponse(w, domain.NotFound, http.StatusNotFound)
-			service.Info(r.Context(), "File not found", zap.String("url", r.URL.Path))
+			domain.Info(r.Context(), "File not found", zap.String("url", r.URL.Path))
 			return
 		}
 
 		relPath, err := url.PathUnescape(strings.TrimPrefix(r.URL.Path, prefix))
 		if err != nil {
 			sendJSONResponse(w, "Bad request", http.StatusBadRequest)
-			service.Info(r.Context(), "File not found", zap.String("url", relPath))
+			domain.Info(r.Context(), "File not found", zap.String("url", relPath))
 			return
 		}
 
@@ -43,7 +42,7 @@ func UploadsHandler(staticDir string, prefix string) http.Handler {
 
 		if strings.Contains(cleanPath, "..") {
 			sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
-			service.Warn(r.Context(), "Try get access to forbidden file", zap.String("cleanPath", cleanPath))
+			domain.Warn(r.Context(), "Try get access to forbidden file", zap.String("cleanPath", cleanPath))
 			return
 		}
 
@@ -51,19 +50,19 @@ func UploadsHandler(staticDir string, prefix string) http.Handler {
 
 		if !strings.HasPrefix(fullPath, absStaticDir) {
 			sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
-			service.Warn(r.Context(), "Try get access to forbidden file", zap.String("cleanPath", cleanPath))
+			domain.Warn(r.Context(), "Try get access to forbidden file", zap.String("cleanPath", cleanPath))
 			return
 		}
 
 		info, err := os.Stat(fullPath)
 		if err != nil {
 			sendJSONResponse(w, domain.NotFound, http.StatusNotFound)
-			service.Info(r.Context(), "File not found", zap.String("cleanPath", cleanPath))
+			domain.Info(r.Context(), "File not found", zap.String("cleanPath", cleanPath))
 			return
 		}
 		if info.IsDir() {
 			sendJSONResponse(w, domain.NotFound, http.StatusNotFound)
-			service.Info(r.Context(), "File not found", zap.String("cleanPath", cleanPath))
+			domain.Info(r.Context(), "File not found", zap.String("cleanPath", cleanPath))
 			return
 		}
 

@@ -1,8 +1,7 @@
-package service
+package domain
 
 import (
 	"context"
-	"project/domain"
 	"reflect"
 
 	"go.uber.org/zap"
@@ -17,7 +16,7 @@ func StructName(i interface{}) string {
 }
 
 func FromContext(ctx context.Context) *zap.Logger {
-	if l, ok := ctx.Value(domain.LoggerKey).(*zap.Logger); ok {
+	if l, ok := ctx.Value(LoggerKey).(*zap.Logger); ok {
 		return l
 	}
 	return zap.NewNop()

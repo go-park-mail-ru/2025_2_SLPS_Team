@@ -17,7 +17,7 @@ reload-db:
 	docker-compose up -d postgres redis
 
 	$(MAKE) wait-db
-	migrate -path ./repository/migrations -database "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable" up
+	migrate -path ./db/migrations -database "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable" up
 
 	go run ./cmd/app/main.go
 reload-swagger:

@@ -7,9 +7,9 @@ import (
 	"project/config"
 	_ "project/docs"
 	"project/internal/handler"
+	"project/internal/repository/db"
+	"project/internal/repository/dbRedis"
 	"project/internal/service"
-	"project/repository/db"
-	"project/repository/dbRedis"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
@@ -91,10 +91,12 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	postStore := db.NewDBPostStore(dbConn)
 	wsHub := service.NewHub()
 	friendStore := db.NewDBFriendStore(dbConn)
-
-	auth := handler.NewAuthHandler(userStore, sessionStore)
-	profile := handler.NewProfileHandler(profileStore, userStore)
-	chat := handler.NewChatHandler(userStore, profileStore, chatStore, messageStore, wsHub)
+	authService := service.NewAuthService(userStore, sessionStore)
+	profileService := service.NewProfileService(profileStore, userStore)
+	chatService := service.NewChatService(userStore, profileStore, chatStore, messageStore, wsHub)
+	auth := handler.NewAuthHandler(authService)
+	profile := handler.NewProfileHandler(profileService)
+	chat := handler.NewChatHandler(chatService)
 	posts := handler.NewPostsHandler(postStore, userStore)
 	wshandler := handler.NewWSHandler(wsHub)
 	friend := handler.NewFriendHandler(friendStore, userStore)

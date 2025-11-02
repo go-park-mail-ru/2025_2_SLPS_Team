@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"project/domain"
-	"project/internal/service"
 	"time"
 
 	"go.uber.org/zap"
@@ -19,7 +18,7 @@ func NewDBMessageStore(db *sql.DB) domain.MessageStore {
 }
 func (store *DBMessageStore) GetMessagesByChatId(ctx context.Context, chatID int, limit int, offset int) ([]domain.Message, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "messageStore")
+	dblogger := domain.DBLogger(ctx, "messageStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetMessagesByChatId")
 	defer func() {
@@ -70,7 +69,7 @@ func (store *DBMessageStore) GetMessagesByChatId(ctx context.Context, chatID int
 func (store *DBMessageStore) CreateMessage(ctx context.Context, message domain.Message) (int, error) {
 
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "messageStore")
+	dblogger := domain.DBLogger(ctx, "messageStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start CreateMessage")
 	defer func() {

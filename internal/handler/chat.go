@@ -43,7 +43,7 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
 		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		service.FromContext(r.Context()).Error("Failed to parse user ID", zap.Error(err))
+		domain.FromContext(r.Context()).Error("Failed to parse user ID", zap.Error(err))
 		return
 	}
 	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int)
@@ -51,14 +51,15 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 	chatID, err := api.chatService.GetOrCreateChatWithUser(r.Context(), selfUserID, userID)
 	if err != nil {
 		sendJSONError(w, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(ChatIDResponse{ChatID: chatID}); err != nil {
-		service.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", service.StructName(ChatIDResponse{})))
+		domain.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", domain.StructName(ChatIDResponse{})))
 	}
 
-	service.FromContext(r.Context()).Info("Chat created or retrieved", zap.Int("chatID", chatID), zap.Int("chatWithUserID", userID))
+	domain.FromContext(r.Context()).Info("Chat created or retrieved", zap.Int("chatID", chatID), zap.Int("chatWithUserID", userID))
 }
 
 type MessagesWithAuthorsResp struct {
@@ -85,7 +86,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 	chatID, err := strconv.Atoi(chatIDStr)
 	if err != nil {
 		sendJSONResponse(w, "Invalid chat ID", http.StatusBadRequest)
-		service.FromContext(r.Context()).Error("Failed to parse chat ID", zap.Error(err))
+		domain.FromContext(r.Context()).Error("Failed to parse chat ID", zap.Error(err))
 		return
 	}
 
@@ -94,7 +95,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 	var qParams domain.PaginateQueryParams
 	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		service.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", service.StructName(qParams)))
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
 		return
 	}
 
@@ -104,11 +105,11 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 	}
 
 	if err := json.NewEncoder(w).Encode(messagesWithAuthors); err != nil {
-		service.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", service.StructName(messagesWithAuthors)))
+		domain.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", domain.StructName(messagesWithAuthors)))
 		return
 	}
 
-	service.FromContext(r.Context()).Info("Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("limit", qParams.Limit), zap.Int("offset", qParams.Offset))
+	domain.FromContext(r.Context()).Info("Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("limit", qParams.Limit), zap.Int("offset", qParams.Offset))
 }
 
 type MessageIDResponse struct {
@@ -133,14 +134,14 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	chatID, err := strconv.Atoi(chatIDStr)
 	if err != nil {
 		http.Error(w, "invalid chatID", http.StatusBadRequest)
-		service.FromContext(r.Context()).Error("Failed to parse chatID", zap.Error(err))
+		domain.FromContext(r.Context()).Error("Failed to parse chatID", zap.Error(err))
 		return
 	}
 
 	var message domain.Message
 	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
 		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		service.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", service.StructName(message)))
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(message)))
 		return
 	}
 
@@ -151,12 +152,10 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, err)
 	}
 
-	if err := json.NewEncoder(w).Encode(MessageIDResponse{MessageID: messageID}); err != nil {
-		service.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", service.StructName(MessageIDResponse{})))
-		return
+	err = sendJSONData(r.Context(), w, MessageIDResponse{MessageID: messageID})
+	if err == nil {
+		domain.FromContext(r.Context()).Info("Message created successfully", zap.Int("messageID", messageID), zap.Int("chatID", chatID))
 	}
-
-	service.FromContext(r.Context()).Info("Message created successfully", zap.Int("messageID", messageID), zap.Int("chatID", chatID))
 }
 
 // GetUserChats получает список чатов для текущего пользователя, включая
@@ -181,7 +180,7 @@ func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
 	var qParams domain.PaginateQueryParams
 	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		service.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", service.StructName(qParams)))
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
 		return
 	}
 
@@ -190,10 +189,8 @@ func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
 		sendJSONError(w, err)
 	}
 
-	if err := json.NewEncoder(w).Encode(chats); err != nil {
-		service.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", service.StructName(chats)))
-		return
+	err = sendJSONData(r.Context(), w, chats)
+	if err == nil {
+		domain.FromContext(r.Context()).Info("Chats retrieved successfully", zap.Int("limit", qParams.Limit), zap.Int("offset", qParams.Offset))
 	}
-
-	service.FromContext(r.Context()).Info("Chats retrieved successfully", zap.Int("limit", qParams.Limit), zap.Int("offset", qParams.Offset))
 }

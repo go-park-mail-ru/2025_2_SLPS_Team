@@ -5,7 +5,6 @@ import (
 	"errors"
 	"net/http"
 	"project/domain"
-	"project/internal/service"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -66,25 +65,25 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 	friendID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
 		return
 	}
 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
 	// Нельзя отправить запрос самому себе
 	if userID == friendID {
 		sendJSONResponse(w, "Cannot send friend request to yourself", http.StatusBadRequest)
-		service.Warn(r.Context(), "User tried to send friend request to themselves")
+		domain.Warn(r.Context(), "User tried to send friend request to themselves")
 		return
 	}
 
-	service.Info(r.Context(), "Sending friend request",
+	domain.Info(r.Context(), "Sending friend request",
 		zap.Int("userID", userID),
 		zap.Int("friendID", friendID))
 
@@ -93,9 +92,9 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			sendJSONResponse(w, "User not found", http.StatusNotFound)
-			service.Warn(r.Context(), "Friend user not found", zap.Int("friendID", friendID))
+			domain.Warn(r.Context(), "Friend user not found", zap.Int("friendID", friendID))
 		} else {
-			service.Error(r.Context(), "Failed to get user", err, zap.Int("friendID", friendID))
+			domain.Error(r.Context(), "Failed to get user", err, zap.Int("friendID", friendID))
 			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		}
 		return
@@ -104,7 +103,7 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 	// Проверяем текущий статус дружбы
 	currentStatus, err := h.friendStore.GetFriendshipStatus(r.Context(), userID, friendID)
 	if err != nil && !errors.Is(err, domain.ErrFriendshipNotFound) {
-		service.Error(r.Context(), "Failed to check friendship status", err)
+		domain.Error(r.Context(), "Failed to check friendship status", err)
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
@@ -113,41 +112,41 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 	switch currentStatus {
 	case domain.FriendshipAccepted:
 		sendJSONResponse(w, "Users are already friends", http.StatusConflict)
-		service.Warn(r.Context(), "Friend request to existing friend")
+		domain.Warn(r.Context(), "Friend request to existing friend")
 		return
 	case domain.FriendshipPending:
 		// Определяем кто отправитель запроса
 		friendship, err := h.friendStore.GetFriendship(r.Context(), userID, friendID)
 		if err != nil {
-			service.Error(r.Context(), "Failed to get friendship details", err)
+			domain.Error(r.Context(), "Failed to get friendship details", err)
 			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 			return
 		}
 
 		if friendship.FirstUserID == userID {
 			sendJSONResponse(w, "Friend request already sent", http.StatusConflict)
-			service.Warn(r.Context(), "Duplicate friend request")
+			domain.Warn(r.Context(), "Duplicate friend request")
 		} else {
 			sendJSONResponse(w, "You have incoming friend request from this user", http.StatusConflict)
-			service.Warn(r.Context(), "Friend request to user who already sent request")
+			domain.Warn(r.Context(), "Friend request to user who already sent request")
 		}
 		return
 	case domain.FriendshipBlocked:
 		sendJSONResponse(w, "Cannot send request to blocked user", http.StatusForbidden)
-		service.Warn(r.Context(), "Friend request to blocked user")
+		domain.Warn(r.Context(), "Friend request to blocked user")
 		return
 	}
 
 	// Создаем запрос в друзья
 	err = h.friendStore.CreateFriendship(r.Context(), userID, friendID)
 	if err != nil {
-		service.Error(r.Context(), "Failed to send friend request", err)
+		domain.Error(r.Context(), "Failed to send friend request", err)
 		sendJSONResponse(w, "Failed to send friend request", http.StatusInternalServerError)
 		return
 	}
 
 	sendJSONResponse(w, "Friend request sent successfully", http.StatusOK)
-	service.Info(r.Context(), "Friend request sent successfully")
+	domain.Info(r.Context(), "Friend request sent successfully")
 }
 
 // AcceptFriendRequest принимает запрос в друзья
@@ -168,18 +167,18 @@ func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Reque
 	friendID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
 		return
 	}
 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	service.Info(r.Context(), "Accepting friend request",
+	domain.Info(r.Context(), "Accepting friend request",
 		zap.Int("userID", userID),
 		zap.Int("friendID", friendID))
 
@@ -188,9 +187,9 @@ func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		if errors.Is(err, domain.ErrFriendshipNotFound) {
 			sendJSONResponse(w, "Friend request not found", http.StatusNotFound)
-			service.Warn(r.Context(), "Friend request not found")
+			domain.Warn(r.Context(), "Friend request not found")
 		} else {
-			service.Error(r.Context(), "Failed to get friendship", err)
+			domain.Error(r.Context(), "Failed to get friendship", err)
 			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		}
 		return
@@ -199,19 +198,19 @@ func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Reque
 	// Проверяем что запрос pending и пользователь является получателем
 	if friendship.Status != domain.FriendshipPending || friendship.SecondUserID != userID {
 		sendJSONResponse(w, "No pending friend request found", http.StatusNotFound)
-		service.Warn(r.Context(), "No pending friend request or user is not receiver")
+		domain.Warn(r.Context(), "No pending friend request or user is not receiver")
 		return
 	}
 
 	err = h.friendStore.UpdateFriendshipStatus(r.Context(), userID, friendID, domain.FriendshipAccepted)
 	if err != nil {
-		service.Error(r.Context(), "Failed to accept friend request", err)
+		domain.Error(r.Context(), "Failed to accept friend request", err)
 		sendJSONResponse(w, "Failed to accept friend request", http.StatusInternalServerError)
 		return
 	}
 
 	sendJSONResponse(w, "Friend request accepted successfully", http.StatusOK)
-	service.Info(r.Context(), "Friend request accepted successfully")
+	domain.Info(r.Context(), "Friend request accepted successfully")
 }
 
 // RejectFriendRequest отклоняет запрос в друзья
@@ -232,18 +231,18 @@ func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Reque
 	friendID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
 		return
 	}
 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	service.Info(r.Context(), "Rejecting friend request",
+	domain.Info(r.Context(), "Rejecting friend request",
 		zap.Int("userID", userID),
 		zap.Int("friendID", friendID))
 
@@ -252,9 +251,9 @@ func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		if errors.Is(err, domain.ErrFriendshipNotFound) {
 			sendJSONResponse(w, "Friend request not found", http.StatusNotFound)
-			service.Warn(r.Context(), "Friend request not found")
+			domain.Warn(r.Context(), "Friend request not found")
 		} else {
-			service.Error(r.Context(), "Failed to get friendship", err)
+			domain.Error(r.Context(), "Failed to get friendship", err)
 			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		}
 		return
@@ -263,20 +262,20 @@ func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Reque
 	// Проверяем что запрос pending и пользователь является получателем
 	if friendship.Status != domain.FriendshipPending || friendship.SecondUserID != userID {
 		sendJSONResponse(w, "No pending friend request found", http.StatusNotFound)
-		service.Warn(r.Context(), "No pending friend request or user is not receiver")
+		domain.Warn(r.Context(), "No pending friend request or user is not receiver")
 		return
 	}
 
 	// Удаляем запись вместо установки статуса rejected
 	err = h.friendStore.DeleteFriendship(r.Context(), userID, friendID)
 	if err != nil {
-		service.Error(r.Context(), "Failed to reject friend request", err)
+		domain.Error(r.Context(), "Failed to reject friend request", err)
 		sendJSONResponse(w, "Failed to reject friend request", http.StatusInternalServerError)
 		return
 	}
 
 	sendJSONResponse(w, "Friend request rejected successfully", http.StatusOK)
-	service.Info(r.Context(), "Friend request rejected successfully")
+	domain.Info(r.Context(), "Friend request rejected successfully")
 }
 
 // RemoveFriend удаляет из друзей
@@ -297,44 +296,44 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 	friendID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
 		return
 	}
 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	service.Info(r.Context(), "Removing friend",
+	domain.Info(r.Context(), "Removing friend",
 		zap.Int("userID", userID),
 		zap.Int("friendID", friendID))
 
 	// Проверяем что пользователи действительно друзья
 	areFriends, err := h.friendStore.AreFriends(r.Context(), userID, friendID)
 	if err != nil {
-		service.Error(r.Context(), "Failed to check friendship", err)
+		domain.Error(r.Context(), "Failed to check friendship", err)
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
 
 	if !areFriends {
 		sendJSONResponse(w, "Users are not friends", http.StatusNotFound)
-		service.Warn(r.Context(), "Attempt to remove non-friend")
+		domain.Warn(r.Context(), "Attempt to remove non-friend")
 		return
 	}
 
 	err = h.friendStore.DeleteFriendship(r.Context(), userID, friendID)
 	if err != nil {
-		service.Error(r.Context(), "Failed to remove friend", err)
+		domain.Error(r.Context(), "Failed to remove friend", err)
 		sendJSONResponse(w, "Failed to remove friend", http.StatusInternalServerError)
 		return
 	}
 
 	sendJSONResponse(w, "Friend removed successfully", http.StatusOK)
-	service.Info(r.Context(), "Friend removed successfully")
+	domain.Info(r.Context(), "Friend removed successfully")
 }
 
 // GetFriends получает список друзей
@@ -352,7 +351,7 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 	var req FriendsRequest
 	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
 
@@ -367,18 +366,18 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	service.Info(r.Context(), "Getting user friends",
+	domain.Info(r.Context(), "Getting user friends",
 		zap.Int("userID", userID),
 		zap.Int("page", req.Page),
 		zap.Int("limit", req.Limit))
 
 	friends, totalPages, err := h.friendStore.GetUserFriends(r.Context(), userID, req.Page, req.Limit)
 	if err != nil {
-		service.Error(r.Context(), "Failed to get user friends", err)
+		domain.Error(r.Context(), "Failed to get user friends", err)
 		sendJSONResponse(w, "Failed to get friends", http.StatusInternalServerError)
 		return
 	}
@@ -392,12 +391,12 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "FriendsResponse"))
+		domain.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "FriendsResponse"))
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
 
-	service.Info(r.Context(), "User friends retrieved successfully",
+	domain.Info(r.Context(), "User friends retrieved successfully",
 		zap.Int("friendsCount", len(friends)),
 		zap.Int("totalPages", totalPages))
 }
@@ -417,7 +416,7 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 	var req FriendsRequest
 	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
 
@@ -432,18 +431,18 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	service.Info(r.Context(), "Getting friendship requests",
+	domain.Info(r.Context(), "Getting friendship requests",
 		zap.Int("userID", userID),
 		zap.Int("page", req.Page),
 		zap.Int("limit", req.Limit))
 
 	requests, totalPages, err := h.friendStore.GetFriendshipRequests(r.Context(), userID, req.Page, req.Limit)
 	if err != nil {
-		service.Error(r.Context(), "Failed to get friendship requests", err)
+		domain.Error(r.Context(), "Failed to get friendship requests", err)
 		sendJSONResponse(w, "Failed to get friend requests", http.StatusInternalServerError)
 		return
 	}
@@ -457,12 +456,12 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "FriendRequestsResponse"))
+		domain.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "FriendRequestsResponse"))
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
 
-	service.Info(r.Context(), "Friendship requests retrieved successfully",
+	domain.Info(r.Context(), "Friendship requests retrieved successfully",
 		zap.Int("requestsCount", len(requests)),
 		zap.Int("totalPages", totalPages))
 }
@@ -482,7 +481,7 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 	var req FriendsRequest
 	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
 
@@ -497,18 +496,18 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	service.Info(r.Context(), "Getting sent friend requests",
+	domain.Info(r.Context(), "Getting sent friend requests",
 		zap.Int("userID", userID),
 		zap.Int("page", req.Page),
 		zap.Int("limit", req.Limit))
 
 	requests, totalPages, err := h.friendStore.GetSentRequests(r.Context(), userID, req.Page, req.Limit)
 	if err != nil {
-		service.Error(r.Context(), "Failed to get sent requests", err)
+		domain.Error(r.Context(), "Failed to get sent requests", err)
 		sendJSONResponse(w, "Failed to get sent requests", http.StatusInternalServerError)
 		return
 	}
@@ -522,12 +521,12 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "FriendRequestsResponse"))
+		domain.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "FriendRequestsResponse"))
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
 
-	service.Info(r.Context(), "Sent requests retrieved successfully",
+	domain.Info(r.Context(), "Sent requests retrieved successfully",
 		zap.Int("requestsCount", len(requests)),
 		zap.Int("totalPages", totalPages))
 }
@@ -548,24 +547,24 @@ func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Reque
 	friendID, err := strconv.Atoi(vars["id"])
 	if err != nil {
 		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		service.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
 		return
 	}
 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		service.Warn(r.Context(), "User ID not found in context")
+		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	service.Info(r.Context(), "Getting friendship status",
+	domain.Info(r.Context(), "Getting friendship status",
 		zap.Int("userID", userID),
 		zap.Int("friendID", friendID))
 
 	status, err := h.friendStore.GetFriendshipStatus(r.Context(), userID, friendID)
 	if err != nil && !errors.Is(err, domain.ErrFriendshipNotFound) {
-		service.Error(r.Context(), "Failed to get friendship status", err)
+		domain.Error(r.Context(), "Failed to get friendship status", err)
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
@@ -576,12 +575,12 @@ func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Reque
 
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(response); err != nil {
-		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "FriendshipStatusResponse"))
+		domain.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", "FriendshipStatusResponse"))
 		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		return
 	}
 
-	service.Info(r.Context(), "Friendship status retrieved successfully")
+	domain.Info(r.Context(), "Friendship status retrieved successfully")
 }
 
 // FriendshipStatusResponse - ответ со статусом дружбы

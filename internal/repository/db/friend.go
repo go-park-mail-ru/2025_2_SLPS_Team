@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"project/domain"
-	"project/internal/service"
 	"time"
 
 	"go.uber.org/zap"
@@ -42,7 +41,7 @@ func validatePaginationParams(page, limit int) (int, int, error) {
 // CreateFriendship создает запрос в друзья
 func (store *DBFriendStore) CreateFriendship(ctx context.Context, userID1, userID2 int) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "friendStore")
+	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start CreateFriendship", zap.Int("userID1", userID1), zap.Int("userID2", userID2))
 
@@ -74,7 +73,7 @@ func (store *DBFriendStore) CreateFriendship(ctx context.Context, userID1, userI
 // GetFriendship получает информацию о дружбе
 func (store *DBFriendStore) GetFriendship(ctx context.Context, userID1, userID2 int) (*domain.Friendship, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "friendStore")
+	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetFriendship", zap.Int("userID1", userID1), zap.Int("userID2", userID2))
 
@@ -118,7 +117,7 @@ func (store *DBFriendStore) GetFriendship(ctx context.Context, userID1, userID2 
 // UpdateFriendshipStatus обновляет статус дружбы
 func (store *DBFriendStore) UpdateFriendshipStatus(ctx context.Context, userID1, userID2 int, status domain.FriendshipStatus) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "friendStore")
+	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start UpdateFriendshipStatus", zap.Int("userID1", userID1), zap.Int("userID2", userID2), zap.String("status", string(status)))
 
@@ -159,7 +158,7 @@ func (store *DBFriendStore) UpdateFriendshipStatus(ctx context.Context, userID1,
 // GetUserFriends получает список друзей пользователя с профилями (с пагинацией)
 func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, page, limit int) ([]domain.ShortProfile, int, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "friendStore")
+	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetUserFriends", zap.Int("userID", userID), zap.Int("page", page), zap.Int("limit", limit))
 
@@ -252,7 +251,7 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, page
 // GetFriendshipRequests получает входящие запросы в друзья с профилями (с пагинацией)
 func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID int, page, limit int) ([]domain.FriendshipWithProfile, int, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "friendStore")
+	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetFriendshipRequests", zap.Int("userID", userID), zap.Int("page", page), zap.Int("limit", limit))
 
@@ -337,7 +336,7 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 // GetSentRequests получает отправленные запросы в друзья (с пагинацией)
 func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, page, limit int) ([]domain.FriendshipWithProfile, int, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "friendStore")
+	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetSentRequests", zap.Int("userID", userID), zap.Int("page", page), zap.Int("limit", limit))
 
@@ -422,7 +421,7 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 // DeleteFriendship удаляет запись о дружбе
 func (store *DBFriendStore) DeleteFriendship(ctx context.Context, userID1, userID2 int) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "friendStore")
+	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start DeleteFriendship", zap.Int("userID1", userID1), zap.Int("userID2", userID2))
 
@@ -463,7 +462,7 @@ func (store *DBFriendStore) DeleteFriendship(ctx context.Context, userID1, userI
 // AreFriends проверяет, являются ли пользователи друзьями
 func (store *DBFriendStore) AreFriends(ctx context.Context, userID1, userID2 int) (bool, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "friendStore")
+	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start AreFriends", zap.Int("userID1", userID1), zap.Int("userID2", userID2))
 

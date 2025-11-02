@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"project/domain"
-	"project/internal/service"
 	"time"
 
 	"go.uber.org/zap"
@@ -22,7 +21,7 @@ func NewDBUserStore(db *sql.DB) domain.UserStore {
 
 func (store *DBUserStore) CreateUser(ctx context.Context, user domain.User, profile domain.Profile) (int, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "userStore")
+	dblogger := domain.DBLogger(ctx, "userStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start CreateUser")
 
@@ -68,7 +67,7 @@ func (store *DBUserStore) CreateUser(ctx context.Context, user domain.User, prof
 
 func (store *DBUserStore) GetUserByEmail(ctx context.Context, email string) (domain.User, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "userStore")
+	dblogger := domain.DBLogger(ctx, "userStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetUserByEmail")
 
@@ -95,7 +94,7 @@ func (store *DBUserStore) GetUserByEmail(ctx context.Context, email string) (dom
 }
 func (store *DBUserStore) GetUserByID(ctx context.Context, userID int) (domain.User, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "userStore")
+	dblogger := domain.DBLogger(ctx, "userStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetUserByID")
 
@@ -124,7 +123,7 @@ func (store *DBUserStore) GetUserByID(ctx context.Context, userID int) (domain.U
 
 func (store *DBUserStore) IsUserExists(ctx context.Context, userID int) (bool, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "userStore")
+	dblogger := domain.DBLogger(ctx, "userStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start IsUserExists")
 

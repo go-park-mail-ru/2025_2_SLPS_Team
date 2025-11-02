@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"project/domain"
-	"project/internal/service"
 	"strings"
 	"time"
 
@@ -23,8 +22,8 @@ func NewDBPostStore(db *sql.DB) domain.PostStore {
 
 // Возвращает пагинированный слайс постов
 func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit int) ([]domain.Post, int, error) {
-	start := time.Now()                            //засекаем время начала операции
-	dblogger := service.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
+	start := time.Now()                           //засекаем время начала операции
+	dblogger := domain.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start PostsPaginatedList", zap.Int("page", page), zap.Int("limit", limit))
 
@@ -110,8 +109,8 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit in
 
 // Возвращает пост по ID поста
 func (store *DBPostStore) GetPostByID(ctx context.Context, id uint) (*domain.Post, error) {
-	start := time.Now()                            //засекаем время начала операции
-	dblogger := service.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
+	start := time.Now()                           //засекаем время начала операции
+	dblogger := domain.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetPostByID", zap.Uint("postID", id))
 
@@ -162,7 +161,7 @@ func (store *DBPostStore) GetPostByID(ctx context.Context, id uint) (*domain.Pos
 // Создает новый пост с транзакцией
 func (store *DBPostStore) CreatePost(ctx context.Context, post *domain.Post) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "postStore")
+	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start CreatePost", zap.Uint("authorID", post.AuthorID))
 
@@ -229,7 +228,7 @@ func (store *DBPostStore) CreatePost(ctx context.Context, post *domain.Post) err
 // Обновляет существующий пост
 func (store *DBPostStore) UpdatePost(ctx context.Context, post *domain.Post) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "postStore")
+	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start UpdatePost", zap.Uint("postID", post.ID), zap.Uint("authorID", post.AuthorID))
 
@@ -298,7 +297,7 @@ func (store *DBPostStore) UpdatePost(ctx context.Context, post *domain.Post) err
 // Удаляет существующий пост
 func (store *DBPostStore) DeletePost(ctx context.Context, id uint, authorID uint) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "postStore")
+	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start DeletePost", zap.Uint("postID", id), zap.Uint("authorID", authorID))
 
@@ -359,7 +358,7 @@ func (store *DBPostStore) DeletePost(ctx context.Context, id uint, authorID uint
 // Получение постов пользователя с пагинацией
 func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page, limit int) ([]domain.Post, int, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "postStore")
+	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetPostsByUser", zap.Uint("userID", userID), zap.Int("page", page), zap.Int("limit", limit))
 

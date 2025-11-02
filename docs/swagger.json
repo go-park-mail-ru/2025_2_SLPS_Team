@@ -62,7 +62,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.LoginRequest"
+                            "$ref": "#/definitions/domain.User"
                         }
                     }
                 ],
@@ -140,7 +140,7 @@
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.RegisterRequest"
+                            "$ref": "#/definitions/domain.RegisterRequest"
                         }
                     }
                 ],
@@ -1512,6 +1512,36 @@
                 }
             }
         },
+        "domain.RegisterRequest": {
+            "type": "object",
+            "properties": {
+                "confirmPassword": {
+                    "type": "string",
+                    "example": "123123"
+                },
+                "dob": {
+                    "type": "string",
+                    "example": "1990-01-01T00:00:00Z"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "example@example.ru"
+                },
+                "firstName": {
+                    "type": "string"
+                },
+                "gender": {
+                    "type": "string"
+                },
+                "lastName": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string",
+                    "example": "123123"
+                }
+            }
+        },
         "domain.ShortProfile": {
             "type": "object",
             "properties": {
@@ -1523,6 +1553,20 @@
                 },
                 "userID": {
                     "type": "integer"
+                }
+            }
+        },
+        "domain.User": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "password": {
+                    "type": "string"
                 }
             }
         },
@@ -1601,17 +1645,6 @@
                 }
             }
         },
-        "handler.LoginRequest": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string"
-                }
-            }
-        },
         "handler.MessageIDResponse": {
             "type": "object",
             "properties": {
@@ -1654,36 +1687,6 @@
                 },
                 "totalPages": {
                     "type": "integer"
-                }
-            }
-        },
-        "handler.RegisterRequest": {
-            "type": "object",
-            "properties": {
-                "confirmPassword": {
-                    "type": "string",
-                    "example": "123123"
-                },
-                "dob": {
-                    "type": "string",
-                    "example": "1990-01-01T00:00:00Z"
-                },
-                "email": {
-                    "type": "string",
-                    "example": "example@example.ru"
-                },
-                "firstName": {
-                    "type": "string"
-                },
-                "gender": {
-                    "type": "string"
-                },
-                "lastName": {
-                    "type": "string"
-                },
-                "password": {
-                    "type": "string",
-                    "example": "123123"
                 }
             }
         }

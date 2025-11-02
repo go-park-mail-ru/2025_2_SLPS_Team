@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"project/domain"
-	"project/internal/service"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -41,7 +40,7 @@ func generateRandomToken() (string, error) {
 
 func (store *RedisSessionStore) AddSession(ctx context.Context, userID int) (*domain.SIDAndSCRFToken, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "sessionStore")
+	dblogger := domain.DBLogger(ctx, "sessionStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start AddSession")
 
@@ -86,7 +85,7 @@ func (store *RedisSessionStore) AddSession(ctx context.Context, userID int) (*do
 
 func (store *RedisSessionStore) GetSessionBySessionID(ctx context.Context, sessionID string) (*domain.Session, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "sessionStore")
+	dblogger := domain.DBLogger(ctx, "sessionStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetSessionBySessionID")
 
@@ -116,7 +115,7 @@ func (store *RedisSessionStore) GetSessionBySessionID(ctx context.Context, sessi
 
 func (store *RedisSessionStore) DeleteSession(ctx context.Context, sessionID string) error {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "sessionStore")
+	dblogger := domain.DBLogger(ctx, "sessionStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start DeleteSession")
 

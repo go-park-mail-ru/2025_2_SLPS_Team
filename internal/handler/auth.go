@@ -23,17 +23,12 @@ func NewAuthHandler(authService service.AuthService) *AuthHandler {
 func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 	sessionCookie, err := r.Cookie("session_id")
 	if err != nil {
-		service.Error(r.Context(), "Cookie session_id not found:", err)
+		domain.FromContext(r.Context()).Error("Cookie session_id not found:", zap.Error(err))
 		return nil, domain.ErrNotFound
 	}
 	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)
-	if err != nil {
-		service.Error(r.Context(), "Session not found or error:", err)
-		return nil, err
-	}
 
-	service.Info(r.Context(), "Session loaded")
-	return session, nil
+	return session, err
 }
 
 type IsLoggedInResponse struct {
@@ -67,9 +62,9 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
-		service.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", service.StructName(res)))
+		domain.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", domain.StructName(res)))
 	}
-	service.FromContext(r.Context()).Info("registration success")
+	domain.FromContext(r.Context()).Info("registration success")
 }
 
 func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userID int) error {
@@ -97,18 +92,13 @@ func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userI
 	return nil
 }
 
-type LoginRequest struct {
-	Email    string `json:"email" valid:"required"`
-	Password string `json:"password" valid:"required, stringlength(6|20)"`
-}
-
 // Login выполняет авторизацию пользователя и создает сессию.
 // @Summary Авторизация пользователя
 // @Description Логин с email и паролем, возвращает cookie сессии
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param loginRequest body LoginRequest true "Данные для входа"
+// @Param loginRequest body domain.User true "Данные для входа"
 // @Success 200 {object} JSONResponse
 // @Failure 400 {object} JSONResponse
 // @Failure 500 {object} JSONResponse
@@ -117,7 +107,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req domain.User
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		service.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", service.StructName(req)))
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
 		return
 	}
 	userID, err := api.authService.Login(r.Context(), req)
@@ -133,7 +123,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSONResponse(w, "User logged in", http.StatusOK)
-	service.FromContext(r.Context()).Info("User logged in", zap.Int("userID", userID))
+	domain.FromContext(r.Context()).Info("User logged in", zap.Int("userID", userID))
 }
 
 // Logout удаляет текущую сессию пользователя.
@@ -150,7 +140,7 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	session, err := r.Cookie("session_id")
 	if err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		service.FromContext(r.Context()).Error("Failed to logout", zap.Error(err))
+		domain.FromContext(r.Context()).Error("Failed to logout", zap.Error(err))
 		return
 	}
 	err = api.authService.Logout(r.Context(), session)
@@ -179,7 +169,7 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, CSRFToken)
 
 	sendJSONResponse(w, "User logged out", http.StatusOK)
-	service.FromContext(r.Context()).Info("User loggged out")
+	domain.FromContext(r.Context()).Info("User loggged out")
 }
 
 // Register регистрирует нового пользователя.
@@ -188,7 +178,7 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param registerRequest body RegisterRequest true "Данные для регистрации"
+// @Param registerRequest body domain.RegisterRequest true "Данные для регистрации"
 // @Success 200 {object} JSONResponse
 // @Failure 400 {object} JSONResponse
 // @Failure 500 {object} JSONResponse
@@ -198,7 +188,7 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req domain.RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		service.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", service.StructName(req)))
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
 		return
 	}
 	userID, err := api.authService.Register(r.Context(), req)
@@ -214,5 +204,5 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSONResponse(w, "User created", http.StatusOK)
-	service.FromContext(r.Context()).Info("User created, registration complete", zap.Int("userID", userID))
+	domain.FromContext(r.Context()).Info("User created, registration complete", zap.Int("userID", userID))
 }

@@ -2,3 +2,4 @@
 /static/
 /.dockerignore
 /repository/sqlc/
+/internal/repository/sqlc/

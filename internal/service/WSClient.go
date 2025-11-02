@@ -34,9 +34,9 @@ func (h *Hub) RemoveClient(ctx context.Context, userID int) {
 	if client, ok := h.clients[userID]; ok {
 		client.conn.Close()
 		delete(h.clients, userID)
-		FromContext(ctx).Info("WS client removed successfully")
+		domain.FromContext(ctx).Info("WS client removed successfully")
 	}
-	FromContext(ctx).Warn("Client does not exist")
+	domain.FromContext(ctx).Warn("Client does not exist")
 }
 
 func (h *Hub) AddClient(ctx context.Context, userID int, conn *websocket.Conn) {
@@ -52,7 +52,7 @@ func (h *Hub) AddClient(ctx context.Context, userID int, conn *websocket.Conn) {
 
 	go h.writePump(ctx, client)
 
-	FromContext(ctx).Info("WS client added")
+	domain.FromContext(ctx).Info("WS client added")
 }
 
 func (h *Hub) SendJSON(ctx context.Context, userID int, eventType string, data interface{}) error {
@@ -68,7 +68,7 @@ func (h *Hub) SendJSON(ctx context.Context, userID int, eventType string, data i
 
 	message, err := json.Marshal(envelope)
 	if err != nil {
-		FromContext(ctx).Error(domain.FailToEncode, zap.Error(err))
+		domain.FromContext(ctx).Error(domain.FailToEncode, zap.Error(err))
 		return err
 	}
 
@@ -82,9 +82,9 @@ func (h *Hub) SendToUser(ctx context.Context, userID int, message []byte) {
 	h.mu.RUnlock()
 	if ok {
 		client.send <- message
-		FromContext(ctx).Info("Message sent")
+		domain.FromContext(ctx).Info("Message sent")
 	}
-	FromContext(ctx).Warn("WS client does not exist")
+	domain.FromContext(ctx).Warn("WS client does not exist")
 }
 
 type Envelope struct {
@@ -111,7 +111,7 @@ func (hub *Hub) writePump(ctx context.Context, c *Client) {
 	defer func() {
 		ticker.Stop()
 		hub.RemoveClient(ctx, c.userID)
-		FromContext(ctx).Info("WS connection closed", zap.Int("userID", c.userID))
+		domain.FromContext(ctx).Info("WS connection closed", zap.Int("userID", c.userID))
 	}()
 
 	for {
@@ -119,31 +119,31 @@ func (hub *Hub) writePump(ctx context.Context, c *Client) {
 		case message, ok := <-c.send:
 			err := c.conn.SetWriteDeadline(time.Now().Add(writeWait))
 			if err != nil {
-				FromContext(ctx).Error("Failed set deadline to conn", zap.Error(err))
+				domain.FromContext(ctx).Error("Failed set deadline to conn", zap.Error(err))
 			}
 			if !ok {
 				err = c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				if err != nil {
-					FromContext(ctx).Error("Failed to send closed message", zap.Error(err))
+					domain.FromContext(ctx).Error("Failed to send closed message", zap.Error(err))
 				}
-				FromContext(ctx).Info("Conn closed")
+				domain.FromContext(ctx).Info("Conn closed")
 				return
 			}
 
 			err = c.conn.WriteMessage(websocket.TextMessage, message)
 			if err != nil {
-				FromContext(ctx).Error("Failed to send message", zap.Error(err))
-				FromContext(ctx).Info("Conn closed")
+				domain.FromContext(ctx).Error("Failed to send message", zap.Error(err))
+				domain.FromContext(ctx).Info("Conn closed")
 				return
 			}
 
 		case <-ticker.C:
 			err := c.conn.SetWriteDeadline(time.Now().Add(pongWait))
 			if err != nil {
-				FromContext(ctx).Error("Failed set deadline to conn", zap.Error(err))
+				domain.FromContext(ctx).Error("Failed set deadline to conn", zap.Error(err))
 			}
 			if err := c.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				FromContext(ctx).Error("Failed to send ping message", zap.Error(err))
+				domain.FromContext(ctx).Error("Failed to send ping message", zap.Error(err))
 				return
 			}
 		}

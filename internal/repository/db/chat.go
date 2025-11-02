@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"project/domain"
-	"project/internal/service"
 	"time"
 
 	"go.uber.org/zap"
@@ -22,7 +21,7 @@ func NewDBChatStore(db *sql.DB) domain.ChatStore {
 func (store *DBChatStore) GetOrCreateChatWithUser(ctx context.Context, selfUserID int, userID int) (int, error) {
 
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "chatStore")
+	dblogger := domain.DBLogger(ctx, "chatStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetOrCreateChatWithUser")
 	defer func() {
@@ -86,7 +85,7 @@ func (store *DBChatStore) GetOrCreateChatWithUser(ctx context.Context, selfUserI
 
 func (store *DBChatStore) IsMemberOfChat(ctx context.Context, userID int, chatID int) (bool, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "chatStore")
+	dblogger := domain.DBLogger(ctx, "chatStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start IsMemberOfChat")
 	defer func() {
@@ -108,7 +107,7 @@ func (store *DBChatStore) IsMemberOfChat(ctx context.Context, userID int, chatID
 
 func (store *DBChatStore) IsChatExist(ctx context.Context, chatID int) (bool, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "chatStore")
+	dblogger := domain.DBLogger(ctx, "chatStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start IsChatExist")
 
@@ -133,7 +132,7 @@ func (store *DBChatStore) IsChatExist(ctx context.Context, chatID int) (bool, er
 func (store *DBChatStore) GetUserFullChats(ctx context.Context, userID int, limit, offset int) ([]domain.FullChat, error) {
 
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "chatStore")
+	dblogger := domain.DBLogger(ctx, "chatStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetUserFullChats")
 
@@ -238,7 +237,7 @@ LIMIT $2 OFFSET $3;
 
 func (store *DBChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, userID int, chatID int) ([]int, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "chatStore")
+	dblogger := domain.DBLogger(ctx, "chatStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetOtherChatMembersIdByAuthorId")
 
@@ -284,7 +283,7 @@ func (store *DBChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, u
 
 func (store *DBChatStore) GetFullChatByIDAndSenderID(ctx context.Context, userID int, chatID int) (*domain.FullChat, error) {
 	start := time.Now()
-	dblogger := service.DBLogger(ctx, "chatStore")
+	dblogger := domain.DBLogger(ctx, "chatStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetUserFullChats")
 
@@ -340,7 +339,7 @@ WHERE c.id = $1;
 
 	dblogger = dblogger.With(zap.String("query", query))
 
-	row := store.db.QueryRowContext(ctx, query, chatID, userID)
+	row := store.db.QueryRow(query, chatID, userID)
 
 	var c domain.FullChat
 	var m domain.Message
