@@ -43,18 +43,21 @@ func UploadFile(header *multipart.FileHeader) (string, error) {
 }
 
 func UploadFiles(files []*multipart.FileHeader) ([]string, error) {
-	var fileNames []string
+    var fileNames []string
 
-	for _, header := range files {
-		fileName, err := UploadFile(header)
-		if err != nil {
-			return nil, err
-		}
-		fileNames = append(fileNames, fileName)
+    for _, header := range files {
+        fileName, err := UploadFile(header)
+        if err != nil {
+            // Если произошла ошибка, удаляем уже загруженные файлы
+            for _, uploadedFile := range fileNames {
+                DeleteFile(uploadedFile)
+            }
+            return nil, err
+        }
+        fileNames = append(fileNames, fileName)
+    }
 
-	}
-
-	return fileNames, nil
+    return fileNames, nil
 }
 
 func DeleteFile(fileName string) error {
@@ -66,14 +69,14 @@ func DeleteFile(fileName string) error {
 }
 
 func DeleteFiles(fileNames []*string) error {
-	for _, fileName := range fileNames {
-		if fileName != nil {
-			if err := DeleteFile(*fileName); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
+    for _, fileName := range fileNames {
+        if fileName != nil && *fileName != "" {
+            if err := DeleteFile(*fileName); err != nil {
+                continue
+            }
+        }
+    }
+    return nil
 }
 
 func HandleFileUpload(

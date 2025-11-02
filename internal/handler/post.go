@@ -8,7 +8,6 @@ import (
 	"project/internal/service"
 	"strconv"
 
-	"github.com/asaskevich/govalidator"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
 	"go.uber.org/zap"
@@ -142,13 +141,15 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// CreatePost - создание нового поста
+// CreatePost - создание нового поста с файлами
 // @Summary Создать новый пост
-// @Description Создает новый пост от имени текущего пользователя
+// @Description Создает новый пост от имени текущего пользователя с возможностью загрузки файлов
 // @Tags posts
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
-// @Param post body CreatePostRequest true "Данные поста"
+// @Param text formData string true "Текст поста"
+// @Param attachments formData file false "Вложения"
+// @Param photos formData file false "Фотографии"
 // @Success 201 {object} JSONResponse
 // @Failure 400 {object} JSONResponse
 // @Failure 401 {object} JSONResponse
@@ -156,22 +157,30 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /posts [post]
 func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	var req CreatePostRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONError(w, domain.InvalidJSON, http.StatusBadRequest)
-		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", "CreatePostRequest"))
+	// Парсим multipart форму
+	err := r.ParseMultipartForm(50 << 20) // 50MB
+	if err != nil {
+		sendJSONError(w, "Can't parse multipart form", http.StatusBadRequest)
+		service.Error(r.Context(), "Failed to parse multipart form", err)
+		return
+	}
+
+	// Получаем текст поста
+	text := r.FormValue("text")
+	if text == "" {
+		sendJSONError(w, "Text is required", http.StatusBadRequest)
+		service.Warn(r.Context(), "Text is required for post creation")
 		return
 	}
 
 	// Бизнес-логика: валидация данных
-	ok, err := govalidator.ValidateStruct(req)
-	if !ok || err != nil {
-		sendJSONError(w, domain.InvalidData, http.StatusBadRequest)
-		service.Warn(r.Context(), "Create post validation failed ", zap.Error(err))
+	if len(text) < 24 || len(text) > 4096 {
+		sendJSONError(w, "Text length must be between 24 and 4096 characters", http.StatusBadRequest)
+		service.Warn(r.Context(), "Post text validation failed", zap.Int("textLength", len(text)))
 		return
 	}
 
-	// Получаем userID из контекста (установлен в auth middleware)
+	// Получаем userID из контекста
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
 		sendJSONError(w, domain.Unauthorized, http.StatusUnauthorized)
@@ -181,33 +190,72 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 
 	service.Info(r.Context(), "Creating new post", zap.Int("userID", userID))
 
+	// Обрабатываем вложения
+	var attachmentPaths []string
+	if attachmentFiles, ok := r.MultipartForm.File["attachments"]; ok && len(attachmentFiles) > 0 {
+		attachmentPaths, err = service.UploadFiles(attachmentFiles)
+		if err != nil {
+			service.Error(r.Context(), "Failed to upload attachments", err)
+			sendJSONError(w, "Failed to upload attachments", http.StatusInternalServerError)
+			return
+		}
+	}
+
+	// Обрабатываем фотографии
+	var photoPaths []string
+	if photoFiles, ok := r.MultipartForm.File["photos"]; ok && len(photoFiles) > 0 {
+		photoPaths, err = service.UploadFiles(photoFiles)
+		if err != nil {
+			// Если загрузка фото не удалась, удаляем уже загруженные вложения
+			if len(attachmentPaths) > 0 {
+				service.DeleteFiles(convertToPointerSlice(attachmentPaths))
+			}
+			service.Error(r.Context(), "Failed to upload photos", err)
+			sendJSONError(w, "Failed to upload photos", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	// Бизнес-логика: создание объекта поста
 	post := &domain.Post{
 		AuthorID:    uint(userID),
-		Text:        req.Text,
-		Attachments: req.Attachments,
-		PhotosPath:  req.Photos,
+		Text:        text,
+		Attachments: attachmentPaths,
+		PhotosPath:  photoPaths,
 	}
 
 	// Сохраняем пост в хранилище
 	if err := h.postStore.CreatePost(r.Context(), post); err != nil {
+		// Если сохранение в БД не удалось, удаляем загруженные файлы
+		if len(attachmentPaths) > 0 {
+			service.DeleteFiles(convertToPointerSlice(attachmentPaths))
+		}
+		if len(photoPaths) > 0 {
+			service.DeleteFiles(convertToPointerSlice(photoPaths))
+		}
 		service.Error(r.Context(), "Failed to create post", err, zap.Int("userID", userID))
 		sendJSONError(w, "Failed to create post", http.StatusInternalServerError)
 		return
 	}
 
 	sendJSONSuccess(w, "Post created successfully", http.StatusCreated)
-	service.Info(r.Context(), "Post created successfully", zap.Uint("postID", post.ID), zap.Int("userID", userID))
+	service.Info(r.Context(), "Post created successfully",
+		zap.Uint("postID", post.ID),
+		zap.Int("userID", userID),
+		zap.Int("attachmentsCount", len(attachmentPaths)),
+		zap.Int("photosCount", len(photoPaths)))
 }
 
-// UpdatePost - обновление поста
+// UpdatePost - обновление поста с файлами
 // @Summary Обновить пост
-// @Description Обновляет существующий пост (только автор)
+// @Description Обновляет существующий пост (только автор) с возможностью замены файлов
 // @Tags posts
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
 // @Param id path int true "ID поста"
-// @Param post body UpdatePostRequest true "Обновленные данные поста"
+// @Param text formData string true "Текст поста"
+// @Param attachments formData file false "Новые вложения"
+// @Param photos formData file false "Новые фотографии"
 // @Success 200 {object} JSONResponse
 // @Failure 400 {object} JSONResponse
 // @Failure 401 {object} JSONResponse
@@ -225,20 +273,29 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req UpdatePostRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONError(w, domain.InvalidJSON, http.StatusBadRequest)
-		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", "UpdatePostRequest"))
+	// Парсим multipart форму
+	err = r.ParseMultipartForm(50 << 20) // 50MB
+	if err != nil {
+		sendJSONError(w, "Can't parse multipart form", http.StatusBadRequest)
+		service.Error(r.Context(), "Failed to parse multipart form", err)
+		return
+	}
+
+	// Получаем текст поста
+	text := r.FormValue("text")
+	if text == "" {
+		sendJSONError(w, "Text is required", http.StatusBadRequest)
+		service.Warn(r.Context(), "Text is required for post update")
 		return
 	}
 
 	// Бизнес-логика: валидация данных
-	ok, err := govalidator.ValidateStruct(req)
-	if !ok || err != nil {
-		sendJSONError(w, domain.InvalidData, http.StatusBadRequest)
-		service.Warn(r.Context(), "Update post validation failed", zap.Error(err))
+	if len(text) < 24 || len(text) > 4096 {
+		sendJSONError(w, "Text length must be between 24 and 4096 characters", http.StatusBadRequest)
+		service.Warn(r.Context(), "Post text validation failed", zap.Int("textLength", len(text)))
 		return
 	}
+
 	// Получаем userID из контекста
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
@@ -257,7 +314,6 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 			service.Warn(r.Context(), "Post not found for update", zap.Uint64("postID", postID))
 		} else {
 			service.Error(r.Context(), "Failed to get post for update", err, zap.Uint64("postID", postID))
-
 			sendJSONError(w, domain.ServerErr, http.StatusInternalServerError)
 		}
 		return
@@ -273,24 +329,103 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Подготавливаем старые пути для удаления
+	var oldAttachments []*string
+	var oldPhotos []*string
+
+	// Обрабатываем новые вложения
+	var newAttachmentPaths []string
+	if attachmentFiles, ok := r.MultipartForm.File["attachments"]; ok && len(attachmentFiles) > 0 {
+		// Сохраняем старые пути для последующего удаления
+		for i := range existingPost.Attachments {
+			oldAttachments = append(oldAttachments, &existingPost.Attachments[i])
+		}
+
+		newAttachmentPaths, err = service.UploadFiles(attachmentFiles)
+		if err != nil {
+			service.Error(r.Context(), "Failed to upload new attachments", err)
+			sendJSONError(w, "Failed to upload attachments", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Если новые вложения не загружены, оставляем старые
+		newAttachmentPaths = existingPost.Attachments
+	}
+
+	// Обрабатываем новые фотографии
+	var newPhotoPaths []string
+	if photoFiles, ok := r.MultipartForm.File["photos"]; ok && len(photoFiles) > 0 {
+		// Сохраняем старые пути для последующего удаления
+		for i := range existingPost.PhotosPath {
+			oldPhotos = append(oldPhotos, &existingPost.PhotosPath[i])
+		}
+
+		newPhotoPaths, err = service.UploadFiles(photoFiles)
+		if err != nil {
+			// Если загрузка новых фото не удалась, удаляем уже загруженные новые вложения
+			if len(newAttachmentPaths) > len(existingPost.Attachments) {
+				newFiles := newAttachmentPaths[len(existingPost.Attachments):]
+				service.DeleteFiles(convertToPointerSlice(newFiles))
+			}
+			service.Error(r.Context(), "Failed to upload new photos", err)
+			sendJSONError(w, "Failed to upload photos", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		// Если новые фото не загружены, оставляем старые
+		newPhotoPaths = existingPost.PhotosPath
+	}
+
 	// Обновляем данные поста
 	updatedPost := &domain.Post{
 		ID:          uint(postID),
 		AuthorID:    uint(userID),
-		Text:        req.Text,
+		Text:        text,
 		CreatedAt:   existingPost.CreatedAt,
-		Attachments: req.Attachments,
-		PhotosPath:  req.Photos,
+		Attachments: newAttachmentPaths,
+		PhotosPath:  newPhotoPaths,
 	}
 
 	if err := h.postStore.UpdatePost(r.Context(), updatedPost); err != nil {
+		// Если обновление в БД не удалось, удаляем загруженные новые файлы
+		if len(newAttachmentPaths) > len(existingPost.Attachments) {
+			newFiles := newAttachmentPaths[len(existingPost.Attachments):]
+			service.DeleteFiles(convertToPointerSlice(newFiles))
+		}
+		if len(newPhotoPaths) > len(existingPost.PhotosPath) {
+			newFiles := newPhotoPaths[len(existingPost.PhotosPath):]
+			service.DeleteFiles(convertToPointerSlice(newFiles))
+		}
 		service.Error(r.Context(), "Failed to update post", err, zap.Uint64("postID", postID))
 		sendJSONError(w, "Failed to update post", http.StatusInternalServerError)
 		return
 	}
 
+	// Удаляем старые файлы после успешного обновления в БД
+	if len(oldAttachments) > 0 {
+		if err := service.DeleteFiles(oldAttachments); err != nil {
+			service.Error(r.Context(), "Failed to delete old attachments", err)
+			// Не прерываем выполнение, так как пост уже обновлен
+		}
+	}
+	if len(oldPhotos) > 0 {
+		if err := service.DeleteFiles(oldPhotos); err != nil {
+			service.Error(r.Context(), "Failed to delete old photos", err)
+			// Не прерываем выполнение, так как пост уже обновлен
+		}
+	}
+
 	sendJSONSuccess(w, "Post updated successfully", http.StatusOK)
 	service.Info(r.Context(), "Post updated successfully", zap.Uint64("postID", postID))
+}
+
+// Вспомогательная функция для конвертации []string в []*string
+func convertToPointerSlice(slice []string) []*string {
+	result := make([]*string, len(slice))
+	for i := range slice {
+		result[i] = &slice[i]
+	}
+	return result
 }
 
 // DeletePost - удаление поста
@@ -350,15 +485,38 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Удаляем пост
+	// Подготавливаем пути файлов для удаления
+	var filesToDelete []*string
+
+	// Добавляем вложения для удаления
+	for i := range existingPost.Attachments {
+		filesToDelete = append(filesToDelete, &existingPost.Attachments[i])
+	}
+
+	// Добавляем фотографии для удаления
+	for i := range existingPost.PhotosPath {
+		filesToDelete = append(filesToDelete, &existingPost.PhotosPath[i])
+	}
+
+	// Удаляем пост из базы данных
 	if err := h.postStore.DeletePost(r.Context(), uint(postID), uint(userID)); err != nil {
 		service.Error(r.Context(), "Failed to delete post", err, zap.Uint64("postID", postID))
 		sendJSONError(w, "Failed to delete post", http.StatusInternalServerError)
 		return
 	}
 
+	// Удаляем файлы после успешного удаления поста из БД
+	if len(filesToDelete) > 0 {
+		if err := service.DeleteFiles(filesToDelete); err != nil {
+			service.Error(r.Context(), "Failed to delete post files", err)
+			// Не прерываем выполнение, так как пост уже удален из БД
+		}
+	}
+
 	sendJSONSuccess(w, "Post deleted successfully", http.StatusOK)
-	service.Info(r.Context(), "Post deleted successfully", zap.Uint64("postID", postID))
+	service.Info(r.Context(), "Post deleted successfully",
+		zap.Uint64("postID", postID),
+		zap.Int("deletedFiles", len(filesToDelete)))
 }
 
 // GetUserPosts - получение постов конкретного пользователя
