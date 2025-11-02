@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"project/config"
 	_ "project/docs"
+	"project/internal/WS"
 	"project/internal/handler"
 	"project/repository/db"
 	"project/repository/dbRedis"
@@ -88,25 +89,27 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	chatStore := db.NewDBChatStore(dbConn)
 	messageStore := db.NewDBMessageStore(dbConn)
 	postStore := db.NewDBPostStore(dbConn)
-
+	wsHub := WS.NewHub()
 	auth := handler.NewAuthHandler(userStore, sessionStore)
 	profile := handler.NewProfileHandler(profileStore, userStore)
-	chat := handler.NewChatHandler(userStore, profileStore, chatStore, messageStore)
+	chat := handler.NewChatHandler(userStore, profileStore, chatStore, messageStore, wsHub)
 	posts := handler.NewPostsHandler(postStore, userStore)
+	wshandler := handler.NewWSHandler(wsHub)
 
-	//hub := websocket.NewHub()
-	//wsr := websocket.NewRouter()
-	//message := websocket.NewWebSocketHandler(userStore)
+	//hub := WS.NewHub()
+	//wsr := WS.NewRouter()
+	//message := WS.NewWebSocketHandler(userStore)
 	//wsr.Handle("send_message", )
 	r := mux.NewRouter()
 	r.PathPrefix("/uploads/").Handler(handler.UploadsHandler("./uploads", "/uploads/"))
 	r.PathPrefix("/docs/").Handler(httpSwagger.WrapHandler)
 	apiRouter := r.PathPrefix("/api").Subrouter()
+
 	apiRouter.Use(handler.SecureMiddleware)
 	apiRouter.Use(handler.CorsMiddleware)
 	apiRouter.Use(handler.LoggingMiddleware(logger))
 	apiRouter.Use(auth.AuthMiddleware)
-
+	apiRouter.HandleFunc("/ws", wshandler.ServeWs)
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
 	authRouter.HandleFunc("/register", auth.Register).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/login", auth.Login).Methods("POST", "OPTIONS")

@@ -17,14 +17,16 @@ type ChatHandler struct {
 	profileStore domain.ProfileStore
 	chatStore    domain.ChatStore
 	messageStore domain.MessageStore
+	wsHub        domain.WSHub
 }
 
-func NewChatHandler(userStore domain.UserStore, profileStore domain.ProfileStore, chatStore domain.ChatStore, messageStore domain.MessageStore) *ChatHandler {
+func NewChatHandler(userStore domain.UserStore, profileStore domain.ProfileStore, chatStore domain.ChatStore, messageStore domain.MessageStore, wsHub domain.WSHub) *ChatHandler {
 	return &ChatHandler{
 		userStore:    userStore,
 		profileStore: profileStore,
 		chatStore:    chatStore,
 		messageStore: messageStore,
+		wsHub:        wsHub,
 	}
 }
 
@@ -226,6 +228,36 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := json.NewEncoder(w).Encode(MessageIDResponse{MessageID: messageID}); err != nil {
 		service.Error(r.Context(), domain.FailToEncode, err, zap.String("struct", service.StructName(MessageIDResponse{})))
+		return
+	}
+	chat, err := api.chatStore.GetFullChatByIDAndSenderID(r.Context(), userID, chatID)
+	if err != nil {
+		service.Error(r.Context(), "Fail to get chat", err)
+		return
+	}
+	recipients, err := api.chatStore.GetOtherChatMembersIdByAuthorId(r.Context(), userID, chatID)
+	if err != nil {
+		service.Error(r.Context(), "Fail to get recipients", err)
+		return
+	}
+	data, err := json.Marshal(chat)
+	if err != nil {
+		service.Error(r.Context(), "Fail to marshal chat", err)
+		return
+	}
+	response := domain.Envelope{
+		Type: "new_message",
+		Data: data,
+	}
+
+	jsonResponse, err := json.Marshal(response)
+	if err != nil {
+		service.Error(r.Context(), "Fail to marshal chat", err)
+		return
+	}
+
+	for _, recipient := range recipients {
+		api.wsHub.SendToUser(recipient, jsonResponse)
 	}
 	service.Info(r.Context(), "Message created successfully", zap.Int("messageID", messageID), zap.Int("chatID", chatID))
 }

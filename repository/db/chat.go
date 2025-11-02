@@ -235,3 +235,142 @@ LIMIT $2 OFFSET $3;
 	dblogger.Info("Chats returns")
 	return chats, nil
 }
+
+func (store *DBChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, userID int, chatID int) ([]int, error) {
+	start := time.Now()
+	dblogger := service.DBLogger(ctx, "chatStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetOtherChatMembersIdByAuthorId")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+	query := `
+	SELECT member_id
+	FROM chat_members
+	WHERE member_id != $1 and chat_id = $2
+	`
+	rows, err := store.db.Query(query, userID, chatID)
+	dblogger = dblogger.With(zap.String("query", query), zap.Int("userID", userID), zap.Int("ChatID", chatID))
+	if err != nil {
+		dblogger.Error("Failed to find members of chat")
+		return nil, fmt.Errorf("query failed: %w", err)
+	}
+	defer rows.Close()
+
+	memberIDs := []int{}
+	for rows.Next() {
+		var memberID int
+		err := rows.Scan(
+			&memberID,
+		)
+		if err != nil {
+			dblogger.Error("Failed to read member rows", zap.Error(err))
+			return nil, fmt.Errorf("scan failed: %w", err)
+		}
+
+		memberIDs = append(memberIDs, memberID)
+	}
+
+	if err := rows.Err(); err != nil {
+		dblogger.Error("Failed to read member rows", zap.Error(err))
+		return nil, fmt.Errorf("rows error: %w", err)
+	}
+
+	dblogger.Info("Members returns")
+	return memberIDs, nil
+}
+
+func (store *DBChatStore) GetFullChatByIDAndSenderID(ctx context.Context, userID int, chatID int) (*domain.FullChat, error) {
+	start := time.Now()
+	dblogger := service.DBLogger(ctx, "chatStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetUserFullChats")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	query := `
+
+WITH last_message AS (
+    SELECT DISTINCT ON (chat_id)
+        id AS message_id,
+        chat_id,
+        author_id,
+        text,
+        created_at
+    FROM messages
+    WHERE chat_id = $1
+    ORDER BY chat_id, created_at DESC
+)
+SELECT
+    c.id AS chat_id,
+    c.is_group,
+    COALESCE(private_user.chat_name, c.name) AS chat_name,
+    COALESCE(private_user.chat_avatar, c.avatar) AS chat_avatar,
+
+    lm.message_id AS last_message_id,
+    lm.text AS last_message_text,
+    lm.created_at AS last_message_created_at,
+
+    author_user.id AS last_message_author_id,
+    author_profile.first_name || ' ' || author_profile.last_name AS last_message_author_name,
+    author_profile.avatar_path AS last_message_author_avatar
+
+FROM chats c
+LEFT JOIN last_message lm ON lm.chat_id = c.id
+LEFT JOIN users author_user ON author_user.id = lm.author_id
+LEFT JOIN profiles author_profile ON author_profile.user_id = author_user.id
+
+LEFT JOIN LATERAL (
+    SELECT 
+        p.first_name || ' ' || p.last_name AS chat_name,
+        p.avatar_path AS chat_avatar
+    FROM chat_members cm2
+    JOIN profiles p ON p.user_id = cm2.member_id
+    WHERE cm2.chat_id = c.id AND cm2.member_id = $2
+    LIMIT 1
+) private_user ON NOT c.is_group
+
+WHERE c.id = $1;
+    `
+
+	dblogger = dblogger.With(zap.String("query", query))
+
+	row := store.db.QueryRowContext(ctx, query, chatID, userID)
+
+	var c domain.FullChat
+	var m domain.Message
+	var u domain.ShortProfile
+
+	err := row.Scan(
+		&c.ID,
+		&c.IsGroup,
+		&c.Name,
+		&c.AvatarPath,
+		&m.ID,
+		&m.Text,
+		&m.CreatedAt,
+		&u.UserID,
+		&u.FullName,
+		&u.AvatarPath,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, fmt.Errorf("chat not found: %w", err)
+		}
+		dblogger.Error("Failed to scan chat row", zap.Error(err))
+		return nil, fmt.Errorf("scan failed: %w", err)
+	}
+
+	m.AuthorID = u.UserID
+	m.ChatID = c.ID
+	c.LastMessage = m
+	c.LastMessageAuthor = u
+
+	dblogger.Info("Chat returned successfully", zap.Int("chat_id", chatID))
+	return &c, nil
+}

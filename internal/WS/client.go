@@ -1,9 +1,9 @@
-package websocket
+package WS
 
 import (
 	"encoding/json"
 	"log"
-	"net/http"
+	"project/domain"
 	"sync"
 	"time"
 
@@ -20,22 +20,13 @@ type Hub struct {
 	mu      sync.RWMutex
 }
 
-func NewHub() *Hub {
+func NewHub() domain.WSHub {
 	return &Hub{
 		clients: make(map[int]*Client),
-		mu:      sync.RWMutex{},
 	}
 }
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true
-	},
-}
-
-func (h *Hub) removeClient(userID int) {
+func (h *Hub) RemoveClient(userID int) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -44,6 +35,22 @@ func (h *Hub) removeClient(userID int) {
 		delete(h.clients, userID)
 	}
 }
+
+func (h *Hub) AddClient(userID int, conn *websocket.Conn) {
+	client := &Client{
+		conn:   conn,
+		send:   make(chan []byte, 256), // буфер на случай bursts сообщений
+		userID: userID,
+	}
+
+	h.mu.Lock()
+	h.clients[userID] = client
+	h.mu.Unlock()
+
+	go h.writePump(client)
+	println("client added")
+}
+
 func (h *Hub) SendJSON(userID int, eventType string, data interface{}) error {
 	payload, err := json.Marshal(data)
 	if err != nil {
@@ -60,15 +67,16 @@ func (h *Hub) SendJSON(userID int, eventType string, data interface{}) error {
 		return err
 	}
 
-	h.sendToUser(userID, message)
+	h.SendToUser(userID, message)
 	return nil
 }
 
-func (h *Hub) sendToUser(userID int, message []byte) {
+func (h *Hub) SendToUser(userID int, message []byte) {
 	h.mu.RLock()
 	client, ok := h.clients[userID]
 	h.mu.RUnlock()
 	if ok {
+		log.Println("сообщение отправлено")
 		client.send <- message
 	}
 }
@@ -87,16 +95,16 @@ const writeWait = 10 * time.Second
 //
 //		for message := range c.send {
 //			c.conn.SetWriteDeadline(time.Now().Add(writeWait))
-//			if err := c.conn.WriteMessage(websocket.TextMessage, message); err != nil {
+//			if err := c.conn.WriteMessage(WS.TextMessage, message); err != nil {
 //				return
 //			}
 //		}
 //	} без пинпонга
-func (c *Client) writePump(hub *Hub) {
+func (hub *Hub) writePump(c *Client) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
-		hub.removeClient(c.userID)
+		hub.RemoveClient(c.userID)
 	}()
 
 	for {
@@ -120,25 +128,4 @@ func (c *Client) writePump(hub *Hub) {
 			}
 		}
 	}
-}
-
-func ServeWs(hub *Hub, w http.ResponseWriter, r *http.Request) {
-	conn, err := upgrader.Upgrade(w, r, nil)
-	if err != nil {
-		log.Println("upgrade error:", err)
-		return
-	}
-
-	userID, _ := r.Context().Value("userID").(int)
-
-	client := &Client{
-		conn:   conn,
-		send:   make(chan []byte, 256),
-		userID: userID,
-	}
-
-	hub.mu.Lock()
-	hub.clients[userID] = client
-	hub.mu.Unlock()
-	go client.writePump(hub)
 }

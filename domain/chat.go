@@ -17,10 +17,11 @@ type FullChat struct {
 
 type ChatStore interface {
 	//CreateChat(chat Chat) error
-	//GetOtherChatMembersIdByAuthorId(userID int, chatID int) ([]int, error)
+	GetOtherChatMembersIdByAuthorId(ctx context.Context, userID int, chatID int) ([]int, error)
 	GetOrCreateChatWithUser(ctx context.Context, selfUserID int, userID int) (int, error)
 	IsMemberOfChat(ctx context.Context, userID int, chatID int) (bool, error)
 	IsChatExist(ctx context.Context, chatID int) (bool, error)
 	GetUserFullChats(ctx context.Context, userID int, limit, offset int) ([]FullChat, error)
+	GetFullChatByIDAndSenderID(ctx context.Context, userID int, chatID int) (*FullChat, error)
 	//GetChatMembers(chatID int, limit int, offset int) ([]ShortProfile, error)
 }

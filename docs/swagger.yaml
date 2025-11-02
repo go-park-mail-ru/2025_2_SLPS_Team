@@ -772,4 +772,26 @@ paths:
       summary: Получить посты пользователя
       tags:
       - posts
+  /ws:
+    get:
+      consumes:
+      - application/json
+      description: Устанавливает WebSocket соединение для текущего пользователя и
+        регистрирует его в WSHub
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Неверный запрос или отсутствует userID в контексте
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Ошибка сервера при апгрейде соединения
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Подключение к WebSocket
+      tags:
+      - WS
 swagger: "2.0"

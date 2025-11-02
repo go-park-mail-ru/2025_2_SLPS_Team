@@ -70,3 +70,13 @@ curl -i -X POST http://localhost:8080/api/auth/register     -H "Content-Type: ap
     "gender": "female"
 }'     \
 -c cookies.txt
+
+curl -X 'POST' \
+  'http://localhost:8080/api/chats/1/message' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+
+  "text": "string"
+}' \
+-b cookies.txt
