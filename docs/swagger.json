@@ -389,52 +389,42 @@
                 }
             }
         },
-        "/posts": {
-            "post": {
+        "/friends": {
+            "get": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Создает новый пост от имени текущего пользователя",
-                "consumes": [
-                    "application/json"
-                ],
+                "description": "Возвращает список друзей пользователя с пагинацией",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "posts"
+                    "friends"
                 ],
-                "summary": "Создать новый пост",
+                "summary": "Получить список друзей",
                 "parameters": [
                     {
-                        "description": "Данные поста",
-                        "name": "post",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.CreatePostRequest"
-                        }
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество друзей на странице",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
+                            "$ref": "#/definitions/handler.FriendsResponse"
                         }
                     },
                     "500": {
@@ -446,45 +436,42 @@
                 }
             }
         },
-        "/posts/{id}": {
+        "/friends/requests": {
             "get": {
-                "description": "Возвращает пост по его идентификатору",
-                "consumes": [
-                    "application/json"
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
                 ],
+                "description": "Возвращает список входящих запросов на дружбу с пагинацией",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
-                    "posts"
+                    "friends"
                 ],
-                "summary": "Получить пост по ID",
+                "summary": "Получить входящие запросы в друзья",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID поста",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество запросов на странице",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/domain.Post"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Not Found",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
+                            "$ref": "#/definitions/handler.FriendRequestsResponse"
                         }
                     },
                     "500": {
@@ -494,14 +481,63 @@
                         }
                     }
                 }
-            },
-            "put": {
+            }
+        },
+        "/friends/sent": {
+            "get": {
                 "security": [
                     {
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Обновляет существующий пост (только автор)",
+                "description": "Возвращает список отправленных запросов на дружбу с пагинацией",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "friends"
+                ],
+                "summary": "Получить отправленные запросы в друзья",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество запросов на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.FriendRequestsResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/{id}": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Отправляет запрос на дружбу другому пользователю",
                 "consumes": [
                     "application/json"
                 ],
@@ -509,25 +545,16 @@
                     "application/json"
                 ],
                 "tags": [
-                    "posts"
+                    "friends"
                 ],
-                "summary": "Обновить пост",
+                "summary": "Отправить запрос в друзья",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID поста",
+                        "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "description": "Обновленные данные поста",
-                        "name": "post",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.UpdatePostRequest"
-                        }
                     }
                 ],
                 "responses": {
@@ -543,20 +570,14 @@
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -575,7 +596,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Удаляет пост (только автор)",
+                "description": "Удаляет пользователя из списка друзей",
                 "consumes": [
                     "application/json"
                 ],
@@ -583,13 +604,13 @@
                     "application/json"
                 ],
                 "tags": [
-                    "posts"
+                    "friends"
                 ],
-                "summary": "Удалить пост",
+                "summary": "Удалить из друзей",
                 "parameters": [
                     {
                         "type": "integer",
-                        "description": "ID поста",
+                        "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -608,20 +629,164 @@
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/{id}/accept": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Принимает входящий запрос на дружбу",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "friends"
+                ],
+                "summary": "Принять запрос в друзья",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя (отправителя запроса)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/{id}/reject": {
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Отклоняет входящий запрос на дружбу",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "friends"
+                ],
+                "summary": "Отклонить запрос в друзья",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя (отправителя запроса)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/{id}/status": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает текущий статус дружбы с указанным пользователем",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "friends"
+                ],
+                "summary": "Получить статус дружбы",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.FriendshipStatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -642,9 +807,9 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Создает новый пост от имени текущего пользователя",
+                "description": "Создает новый пост от имени текущего пользователя с возможностью загрузки файлов",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -655,13 +820,23 @@
                 "summary": "Создать новый пост",
                 "parameters": [
                     {
-                        "description": "Данные поста",
-                        "name": "post",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.CreatePostRequest"
-                        }
+                        "type": "string",
+                        "description": "Текст поста",
+                        "name": "text",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Вложения",
+                        "name": "attachments",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Фотографии",
+                        "name": "photos",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
@@ -747,9 +922,9 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Обновляет существующий пост (только автор)",
+                "description": "Обновляет существующий пост (только автор) с возможностью замены файлов",
                 "consumes": [
-                    "application/json"
+                    "multipart/form-data"
                 ],
                 "produces": [
                     "application/json"
@@ -767,13 +942,23 @@
                         "required": true
                     },
                     {
-                        "description": "Обновленные данные поста",
-                        "name": "post",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.UpdatePostRequest"
-                        }
+                        "type": "string",
+                        "description": "Текст поста",
+                        "name": "text",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Новые вложения",
+                        "name": "attachments",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Новые фотографии",
+                        "name": "photos",
+                        "in": "formData"
                     }
                 ],
                 "responses": {
@@ -1178,6 +1363,44 @@
         }
     },
     "definitions": {
+        "domain.FriendshipStatus": {
+            "type": "string",
+            "enum": [
+                "pending",
+                "accepted",
+                "rejected",
+                "blocked"
+            ],
+            "x-enum-varnames": [
+                "FriendshipPending",
+                "FriendshipAccepted",
+                "FriendshipRejected",
+                "FriendshipBlocked"
+            ]
+        },
+        "domain.FriendshipWithProfile": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "firstUserID": {
+                    "type": "integer"
+                },
+                "friend": {
+                    "$ref": "#/definitions/domain.ShortProfile"
+                },
+                "secondUserID": {
+                    "type": "integer"
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.FriendshipStatus"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.FullChat": {
             "type": "object",
             "properties": {
@@ -1217,45 +1440,6 @@
                     "type": "integer"
                 },
                 "text": {
-                    "type": "string"
-                }
-            }
-        },
-        "domain.Post": {
-            "type": "object",
-            "properties": {
-                "attachments": {
-                    "description": "в БД табличка post_attachments называется",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "authorID": {
-                    "description": "в БД табличка posts называется",
-                    "type": "integer"
-                },
-                "created_at": {
-                    "description": "в БД табличка posts называется",
-                    "type": "string"
-                },
-                "id": {
-                    "description": "в БД табличка posts называется",
-                    "type": "integer"
-                },
-                "photos": {
-                    "description": "в БД табличка post_photos называется",
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "text": {
-                    "description": "в БД табличка posts называется",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "description": "в БД табличка posts называется",
                     "type": "string"
                 }
             }
@@ -1350,23 +1534,51 @@
                 }
             }
         },
-        "handler.CreatePostRequest": {
+        "handler.FriendRequestsResponse": {
             "type": "object",
             "properties": {
-                "attachments": {
+                "hasNext": {
+                    "type": "boolean"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "requests": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/domain.FriendshipWithProfile"
                     }
                 },
-                "photos": {
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.FriendsResponse": {
+            "type": "object",
+            "properties": {
+                "friends": {
                     "type": "array",
                     "items": {
-                        "type": "string"
+                        "$ref": "#/definitions/domain.ShortProfile"
                     }
                 },
-                "text": {
-                    "type": "string"
+                "hasNext": {
+                    "type": "boolean"
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "totalPages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.FriendshipStatusResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "$ref": "#/definitions/domain.FriendshipStatus"
                 }
             }
         },
@@ -1472,26 +1684,6 @@
                 "password": {
                     "type": "string",
                     "example": "123123"
-                }
-            }
-        },
-        "handler.UpdatePostRequest": {
-            "type": "object",
-            "properties": {
-                "attachments": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "text": {
-                    "type": "string"
                 }
             }
         }

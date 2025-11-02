@@ -71,14 +71,14 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 			if errors.Is(err, domain.ErrNotFound) {
 				isLoggedIn = false
 			} else {
-				sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+				sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 				service.Error(r.Context(), "Fail to get IsLoggedIn", err)
 				return
 			}
 		}
 		if isLoggedIn {
 			if ForbiddenPathsWithAuth[path] {
-				sendJSONSuccess(w, domain.Forbidden, http.StatusForbidden)
+				sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
 				service.Warn(r.Context(), "Try get access to forbidden path")
 				return
 			} else {
@@ -91,7 +91,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 					service.Info(r.Context(), "in header", zap.String("scrf", r.Header.Get("X-CSRF-Token")))
 					service.Info(r.Context(), "in session", zap.String("scrf", session.CSRFToken))
 					if r.Header.Get("X-CSRF-Token") != session.CSRFToken {
-						sendJSONSuccess(w, domain.Forbidden, http.StatusForbidden)
+						sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
 						service.Warn(r.Context(), "Try do somthing without CSRF token")
 						return
 					}
@@ -102,7 +102,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 			}
 		} else {
 			if !AllowedPathsWithOutAuth[path] {
-				sendJSONSuccess(w, domain.Forbidden, http.StatusForbidden)
+				sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
 				service.Warn(r.Context(), "Try get access to forbidden path")
 				return
 			}

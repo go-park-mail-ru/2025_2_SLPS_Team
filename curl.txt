@@ -80,3 +80,14 @@ curl -X 'POST' \
   "text": "string"
 }' \
 -b cookies.txt
+
+curl -X 'POST' \
+  'http://localhost:8080/api/friends/1' \
+  -H 'accept: application/json' \
+  -d '' \
+-b cookies.txt
+
+curl -X 'PUT' \
+  'http://localhost:8080/api/friends/1/accept' \
+  -H 'accept: application/json' \
+ -b cookies.txt

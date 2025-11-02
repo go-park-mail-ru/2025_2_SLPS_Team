@@ -174,7 +174,7 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, page
 
 	// Запрос для получения друзей с пагинацией
 	query := `
-		SELECT p.user_id, p.first_name, p.last_name, p.avatar_path
+		SELECT p.user_id, p.first_name || ' '||p.last_name, p.avatar_path
 		FROM profiles p
 		WHERE p.user_id IN (
 			SELECT CASE 
@@ -202,8 +202,7 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, page
 		var friend domain.ShortProfile
 		err := rows.Scan(
 			&friend.UserID,
-			&friend.FirstName,
-			&friend.LastName,
+			&friend.FullName,
 			&friend.AvatarPath,
 		)
 		if err != nil {
@@ -270,7 +269,7 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	query := `
 		SELECT 
 			fr.first_user_id, fr.second_user_id, fr.status, fr.created_at, fr.updated_at,
-			p.user_id, p.first_name, p.last_name, p.avatar_path
+			p.user_id, p.first_name|| ' '||p.last_name, p.avatar_path
 		FROM friend_relationships fr
 		JOIN profiles p ON p.user_id = fr.first_user_id
 		WHERE fr.second_user_id = $1 AND fr.status = 'pending'
@@ -296,8 +295,7 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 			&request.CreatedAt,
 			&request.UpdatedAt,
 			&request.Friend.UserID,
-			&request.Friend.FirstName,
-			&request.Friend.LastName,
+			&request.Friend.FullName,
 			&request.Friend.AvatarPath,
 		)
 		if err != nil {
@@ -356,7 +354,7 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 	query := `
 		SELECT 
 			fr.first_user_id, fr.second_user_id, fr.status, fr.created_at, fr.updated_at,
-			p.user_id, p.first_name, p.last_name, p.avatar_path
+			p.user_id, p.first_name ||' '|| p.last_name, p.avatar_path
 		FROM friend_relationships fr
 		JOIN profiles p ON p.user_id = fr.second_user_id
 		WHERE fr.first_user_id = $1 AND fr.status = 'pending'
@@ -382,8 +380,7 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 			&request.CreatedAt,
 			&request.UpdatedAt,
 			&request.Friend.UserID,
-			&request.Friend.FirstName,
-			&request.Friend.LastName,
+			&request.Friend.FullName,
 			&request.Friend.AvatarPath,
 		)
 		if err != nil {

@@ -125,6 +125,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	apiRouter.HandleFunc("/profile/header", profile.UpdateHeader).Methods("PUT")
 
 	chatRouter := apiRouter.PathPrefix("/chats").Subrouter()
+	chatRouter.HandleFunc("", chat.GetUserChats).Methods("GET")
 	chatRouter.HandleFunc("/user/{id:[0-9]+}", chat.GetOrCreateChatWithUser).Methods("GET")
 	chatRouter.HandleFunc("/{id:[0-9]+}/message", chat.CreateMessage).Methods("POST")
 	chatRouter.HandleFunc("/{id:[0-9]+}/messages", chat.GetMessagesByChatId).Methods("GET")

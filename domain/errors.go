@@ -1,13 +1,20 @@
 package domain
 
-import "errors"
+import (
+	"errors"
+	"net/http"
+)
 
+// общие ошибки на уровне сервиса и бд
 // Общие доменные ошибки
 var (
-	ErrNotFound     = errors.New("Объект не найден")
-	ErrAccessDenied = errors.New("access denied")
-	ErrInvalidInput = errors.New("invalid input")
-	ErrInternal     = errors.New("internal server error") //Какая-то внутренняя ошибка
+	ErrNotFound      = errors.New("not found")
+	ErrAccessDenied  = errors.New("access denied")
+	ErrInvalidInput  = errors.New("invalid input")
+	ErrNotExist      = errors.New("not exist")
+	ErrDB            = errors.New("db error")
+	ErrAlreadyExists = errors.New("already exist")
+	ErrService       = errors.New("service error") //Какая-то внутренняя ошибка
 )
 
 // Ошибки для ПОСТОВ
@@ -19,7 +26,7 @@ var (
 	ErrPostInvalidAuthor = errors.New("invalid author")
 )
 
-//Ошибки для ДРУЗЕЙ
+// Ошибки для ДРУЗЕЙ
 var (
 	ErrFriendshipNotFound      = errors.New("friendship not found")
 	ErrAlreadyFriends          = errors.New("users are already friends")
@@ -28,7 +35,6 @@ var (
 	ErrCannotFriendSelf        = errors.New("cannot send friend request to yourself")
 	ErrInvalidFriendshipStatus = errors.New("invalid friendship status")
 	ErrFriendshipBlocked       = errors.New("friendship is blocked")
-	
 )
 
 // Ошибки для пользователей
@@ -38,6 +44,7 @@ var (
 	ErrInvalidEmail = errors.New("invalid email")       //Кривой неправильный емейл
 )
 
+// общие сообщения пользователю
 const (
 	InvalidJSON           = "Invalid JSON"
 	Unauthorized          = "Unauthorized"
@@ -54,3 +61,25 @@ const (
 	FriendRequestRejected = "Friend request rejected successfully"
 	FriendRemoved         = "Friend removed successfully"
 )
+
+func MapErrorToHTTP(err error) (int, string) {
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return http.StatusNotFound, "Resource not found"
+
+	case errors.Is(err, ErrAccessDenied):
+		return http.StatusForbidden, "Access denied"
+
+	case errors.Is(err, ErrInvalidInput):
+		return http.StatusBadRequest, "Invalid input"
+
+	case errors.Is(err, ErrAlreadyExists):
+		return http.StatusConflict, "Already exists"
+
+	case errors.Is(err, ErrDB):
+		return http.StatusInternalServerError, "Database error"
+
+	default:
+		return http.StatusInternalServerError, "Internal server error"
+	}
+}

@@ -50,31 +50,31 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 	userIDStr := vars["id"]
 	userID, err := strconv.Atoi(userIDStr)
 	if err != nil {
-		sendJSONSuccess(w, "Invalid user ID", http.StatusBadRequest)
+		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
 		service.Error(r.Context(), "Failed to parse user ID", err)
 		return
 	}
 
 	isUserExist, err := api.userStore.IsUserExists(r.Context(), userID)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to check user existence", err)
 		return
 	}
 	if !isUserExist {
-		sendJSONSuccess(w, "User doesn't exist", http.StatusBadRequest)
+		sendJSONResponse(w, "User doesn't exist", http.StatusBadRequest)
 		service.Warn(r.Context(), "User not found")
 		return
 	}
 	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int)
 	if userID == selfUserID {
-		sendJSONSuccess(w, "Cant create chat with yourself", http.StatusBadRequest)
+		sendJSONResponse(w, "Cant create chat with yourself", http.StatusBadRequest)
 		service.Warn(r.Context(), "Failed to create or get chat with same self user")
 		return
 	}
 	chatID, err := api.chatStore.GetOrCreateChatWithUser(r.Context(), selfUserID, userID)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to create or get chat with user", err)
 		return
 	}
@@ -115,7 +115,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 	chatIDStr := vars["id"]
 	chatID, err := strconv.Atoi(chatIDStr)
 	if err != nil {
-		sendJSONSuccess(w, "Invalid chat ID", http.StatusBadRequest)
+		sendJSONResponse(w, "Invalid chat ID", http.StatusBadRequest)
 		service.Error(r.Context(), "Failed to parse chat ID", err)
 		return
 	}
@@ -124,26 +124,26 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 
 	var qParams PaginateQueryParams
 	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONError(w, domain.InvalidParams, http.StatusBadRequest)
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
 		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", service.StructName(qParams)))
 		return
 	}
 
 	isMember, err := api.chatStore.IsMemberOfChat(r.Context(), userID, chatID)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to check membership", err, zap.Int("chatID", chatID))
 		return
 	}
 	if !isMember {
-		sendJSONSuccess(w, domain.Forbidden, http.StatusForbidden)
+		sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
 		service.Warn(r.Context(), "User not a member of chat", zap.Int("chatID", chatID))
 		return
 	}
 
 	messages, err := api.messageStore.GetMessagesByChatId(r.Context(), chatID, qParams.Limit, qParams.Offset)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to get messages", err, zap.Int("chatID", chatID))
 		return
 	}
@@ -159,7 +159,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 
 	authors, err := api.profileStore.GetShortProfileByUserIDs(r.Context(), authorIDs)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to get authors", err, zap.Ints("authorIDs", authorIDs))
 		return
 	}
@@ -201,19 +201,19 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 	exits, err := api.chatStore.IsChatExist(r.Context(), chatID)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusBadRequest)
+		sendJSONResponse(w, domain.ServerErr, http.StatusBadRequest)
 		service.Warn(r.Context(), "Failed to get chat", zap.Int("chatID", chatID))
 		return
 	}
 
 	if !exits {
-		sendJSONSuccess(w, "Chat does not exist", http.StatusBadRequest)
+		sendJSONResponse(w, "Chat does not exist", http.StatusBadRequest)
 		service.Warn(r.Context(), "Chat not found", zap.Int("chatID", chatID))
 		return
 	}
 	var message domain.Message
 	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
-		sendJSONError(w, domain.InvalidJSON, http.StatusBadRequest)
+		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
 		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", service.StructName(message)))
 		return
 	}
@@ -222,7 +222,7 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	message.ChatID = chatID
 	messageID, err := api.messageStore.CreateMessage(r.Context(), message)
 	if err != nil {
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONResponse(w, "Internal server error", http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to create message", err, zap.Int("chatID", chatID))
 		return
 	}
@@ -283,14 +283,14 @@ func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
 
 	var qParams PaginateQueryParams
 	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONSuccess(w, domain.InvalidParams, http.StatusBadRequest)
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
 		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", service.StructName(qParams)))
 		return
 	}
 
 	chats, err := api.chatStore.GetUserFullChats(r.Context(), userID, qParams.Limit, qParams.Offset)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to get chats", err)
 		return
 	}

@@ -1,5 +1,32 @@
 basePath: /api/
 definitions:
+  domain.FriendshipStatus:
+    enum:
+    - pending
+    - accepted
+    - rejected
+    - blocked
+    type: string
+    x-enum-varnames:
+    - FriendshipPending
+    - FriendshipAccepted
+    - FriendshipRejected
+    - FriendshipBlocked
+  domain.FriendshipWithProfile:
+    properties:
+      createdAt:
+        type: string
+      firstUserID:
+        type: integer
+      friend:
+        $ref: '#/definitions/domain.ShortProfile'
+      secondUserID:
+        type: integer
+      status:
+        $ref: '#/definitions/domain.FriendshipStatus'
+      updatedAt:
+        type: string
+    type: object
   domain.FullChat:
     properties:
       avatarPath:
@@ -26,34 +53,6 @@ definitions:
       id:
         type: integer
       text:
-        type: string
-    type: object
-  domain.Post:
-    properties:
-      attachments:
-        description: в БД табличка post_attachments называется
-        items:
-          type: string
-        type: array
-      authorID:
-        description: в БД табличка posts называется
-        type: integer
-      created_at:
-        description: в БД табличка posts называется
-        type: string
-      id:
-        description: в БД табличка posts называется
-        type: integer
-      photos:
-        description: в БД табличка post_photos называется
-        items:
-          type: string
-        type: array
-      text:
-        description: в БД табличка posts называется
-        type: string
-      updated_at:
-        description: в БД табличка posts называется
         type: string
     type: object
   domain.Post:
@@ -117,31 +116,36 @@ definitions:
       chatID:
         type: integer
     type: object
-  handler.CreatePostRequest:
+  handler.FriendRequestsResponse:
     properties:
-      attachments:
+      hasNext:
+        type: boolean
+      page:
+        type: integer
+      requests:
         items:
-          type: string
+          $ref: '#/definitions/domain.FriendshipWithProfile'
         type: array
-      photos:
-        items:
-          type: string
-        type: array
-      text:
-        type: string
+      totalPages:
+        type: integer
     type: object
-  handler.CreatePostRequest:
+  handler.FriendsResponse:
     properties:
-      attachments:
+      friends:
         items:
-          type: string
+          $ref: '#/definitions/domain.ShortProfile'
         type: array
-      photos:
-        items:
-          type: string
-        type: array
-      text:
-        type: string
+      hasNext:
+        type: boolean
+      page:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  handler.FriendshipStatusResponse:
+    properties:
+      status:
+        $ref: '#/definitions/domain.FriendshipStatus'
     type: object
   handler.IsLoggedInResponse:
     properties:
@@ -191,19 +195,6 @@ definitions:
       totalPages:
         type: integer
     type: object
-  handler.PostsResponse:
-    properties:
-      hasNext:
-        type: boolean
-      page:
-        type: integer
-      posts:
-        items:
-          $ref: '#/definitions/domain.Post'
-        type: array
-      totalPages:
-        type: integer
-    type: object
   handler.RegisterRequest:
     properties:
       confirmPassword:
@@ -223,19 +214,6 @@ definitions:
         type: string
       password:
         example: "123123"
-        type: string
-    type: object
-  handler.UpdatePostRequest:
-    properties:
-      attachments:
-        items:
-          type: string
-        type: array
-      photos:
-        items:
-          type: string
-        type: array
-      text:
         type: string
     type: object
 host: localhost:8080
@@ -497,18 +475,288 @@ paths:
       summary: Получить или создать чат с пользователем
       tags:
       - chats
-  /posts:
+  /friends:
+    get:
+      description: Возвращает список друзей пользователя с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Количество друзей на странице
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.FriendsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить список друзей
+      tags:
+      - friends
+  /friends/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет пользователя из списка друзей
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить из друзей
+      tags:
+      - friends
     post:
       consumes:
       - application/json
-      description: Создает новый пост от имени текущего пользователя
+      description: Отправляет запрос на дружбу другому пользователю
       parameters:
-      - description: Данные поста
-        in: body
-        name: post
+      - description: ID пользователя
+        in: path
+        name: id
         required: true
-        schema:
-          $ref: '#/definitions/handler.CreatePostRequest'
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Отправить запрос в друзья
+      tags:
+      - friends
+  /friends/{id}/accept:
+    put:
+      consumes:
+      - application/json
+      description: Принимает входящий запрос на дружбу
+      parameters:
+      - description: ID пользователя (отправителя запроса)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Принять запрос в друзья
+      tags:
+      - friends
+  /friends/{id}/reject:
+    put:
+      consumes:
+      - application/json
+      description: Отклоняет входящий запрос на дружбу
+      parameters:
+      - description: ID пользователя (отправителя запроса)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Отклонить запрос в друзья
+      tags:
+      - friends
+  /friends/{id}/status:
+    get:
+      description: Возвращает текущий статус дружбы с указанным пользователем
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.FriendshipStatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить статус дружбы
+      tags:
+      - friends
+  /friends/requests:
+    get:
+      description: Возвращает список входящих запросов на дружбу с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Количество запросов на странице
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.FriendRequestsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить входящие запросы в друзья
+      tags:
+      - friends
+  /friends/sent:
+    get:
+      description: Возвращает список отправленных запросов на дружбу с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 20
+        description: Количество запросов на странице
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.FriendRequestsResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить отправленные запросы в друзья
+      tags:
+      - friends
+  /posts:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Создает новый пост от имени текущего пользователя с возможностью
+        загрузки файлов
+      parameters:
+      - description: Текст поста
+        in: formData
+        name: text
+        required: true
+        type: string
+      - description: Вложения
+        in: formData
+        name: attachments
+        type: file
+      - description: Фотографии
+        in: formData
+        name: photos
+        type: file
       produces:
       - application/json
       responses:
@@ -610,20 +858,28 @@ paths:
       - posts
     put:
       consumes:
-      - application/json
-      description: Обновляет существующий пост (только автор)
+      - multipart/form-data
+      description: Обновляет существующий пост (только автор) с возможностью замены
+        файлов
       parameters:
       - description: ID поста
         in: path
         name: id
         required: true
         type: integer
-      - description: Обновленные данные поста
-        in: body
-        name: post
+      - description: Текст поста
+        in: formData
+        name: text
         required: true
-        schema:
-          $ref: '#/definitions/handler.UpdatePostRequest'
+        type: string
+      - description: Новые вложения
+        in: formData
+        name: attachments
+        type: file
+      - description: Новые фотографии
+        in: formData
+        name: photos
+        type: file
       produces:
       - application/json
       responses:

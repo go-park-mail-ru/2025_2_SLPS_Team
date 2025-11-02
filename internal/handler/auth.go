@@ -60,11 +60,11 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	session, err := api.IsLoggedIn(r)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			sendJSONSuccess(w, domain.NotFound, http.StatusNotFound)
+			sendJSONResponse(w, domain.NotFound, http.StatusNotFound)
 			service.Warn(r.Context(), domain.NotFound)
 			return
 		} else {
-			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "failed to check registration", err)
 			return
 		}
@@ -125,7 +125,7 @@ type LoginRequest struct {
 func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONSuccess(w, domain.InvalidJSON, http.StatusBadRequest)
+		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
 		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", service.StructName(req)))
 		return
 	}
@@ -133,11 +133,11 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	user, err := api.userStore.GetUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			sendJSONSuccess(w, domain.UserNotExist, http.StatusBadRequest)
+			sendJSONResponse(w, domain.UserNotExist, http.StatusBadRequest)
 			service.Error(r.Context(), "User by email does not exist", err)
 			return
 		} else {
-			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "Failed to get user by email", err)
 			return
 		}
@@ -145,18 +145,18 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(req.Password)); err != nil {
-		sendJSONSuccess(w, domain.IncorrectPassword, http.StatusBadRequest)
+		sendJSONResponse(w, domain.IncorrectPassword, http.StatusBadRequest)
 		service.Warn(r.Context(), domain.IncorrectPassword)
 		return
 	}
 
 	if err := api.AddSession(w, r, user.ID); err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to add session", err)
 		return
 	}
 
-	sendJSONSuccess(w, "User logged in", http.StatusOK)
+	sendJSONResponse(w, "User logged in", http.StatusOK)
 	service.Info(r.Context(), "User logged in", zap.Int("userID", user.ID))
 }
 
@@ -171,21 +171,39 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Router /auth/logout [post]
 func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
-	session, _ := r.Cookie("session_id")
-	err := api.sessionStore.DeleteSession(r.Context(), session.Value)
+	session, err := r.Cookie("session_id")
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
+		service.Error(r.Context(), "Failed to logout", err)
+		return
+	}
+	err = api.sessionStore.DeleteSession(r.Context(), session.Value)
+	if err != nil {
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to logout", err)
 		return
 	}
 
-	session.Expires = time.Now().AddDate(0, 0, -1)
-	http.SetCookie(w, session)
-	CSRFToken, _ := r.Cookie("SCRF_token")
-	CSRFToken.Expires = time.Now().AddDate(0, 0, -1)
+	sessionCookie := &http.Cookie{
+		Name:     "session_id",
+		Value:    session.Value,
+		Path:     "/",
+		Expires:  time.Now().AddDate(0, 0, -1),
+		HttpOnly: true,
+	}
+	http.SetCookie(w, sessionCookie)
+
+	CSRFTokenCookie, _ := r.Cookie("CSRF_token")
+	CSRFToken := &http.Cookie{
+		Name:     "CSRF_token",
+		Value:    CSRFTokenCookie.Value,
+		Path:     "/",
+		Expires:  time.Now().AddDate(0, 0, -1),
+		HttpOnly: false,
+	}
 	http.SetCookie(w, CSRFToken)
 
-	sendJSONSuccess(w, "User logged out", http.StatusOK)
+	sendJSONResponse(w, "User logged out", http.StatusOK)
 	service.Info(r.Context(), "User logged out")
 }
 
@@ -214,14 +232,14 @@ type RegisterRequest struct {
 func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req RegisterRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONSuccess(w, domain.InvalidJSON, http.StatusBadRequest)
+		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
 		service.Error(r.Context(), domain.InvalidJSON, err, zap.String("struct", service.StructName(req)))
 		return
 	}
 
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
-		sendJSONSuccess(w, domain.InvalidData, http.StatusBadRequest)
+		sendJSONResponse(w, domain.InvalidData, http.StatusBadRequest)
 		service.Error(r.Context(), "Register validate failed", err)
 		return
 	}
@@ -229,25 +247,25 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	_, err = api.userStore.GetUserByEmail(r.Context(), req.Email)
 	if err != nil {
 		if !errors.Is(err, domain.ErrNotFound) {
-			sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+			sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 			service.Error(r.Context(), "Failed to get user by email", err)
 			return
 		}
 	} else {
-		sendJSONSuccess(w, "User already exist", http.StatusBadRequest)
+		sendJSONResponse(w, "User already exist", http.StatusBadRequest)
 		service.Warn(r.Context(), "User already exist")
 		return
 	}
 
 	if req.Password != req.ConfirmPassword {
-		sendJSONSuccess(w, "Password field doesn't match", http.StatusBadRequest)
+		sendJSONResponse(w, "Password field doesn't match", http.StatusBadRequest)
 		service.Info(r.Context(), "Register validate failed: password filed doesn't match")
 		return
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to generate hashed password", err)
 		return
 	}
@@ -263,17 +281,17 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, err := api.userStore.CreateUser(r.Context(), user, profile)
 	if err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to create user", err)
 		return
 	}
 
 	if err := api.AddSession(w, r, userID); err != nil {
-		sendJSONSuccess(w, domain.ServerErr, http.StatusInternalServerError)
+		sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
 		service.Error(r.Context(), "Failed to add session", err)
 		return
 	}
 
-	sendJSONSuccess(w, "User created", http.StatusOK)
+	sendJSONResponse(w, "User created", http.StatusOK)
 	service.Info(r.Context(), "User created, registration complete", zap.Int("userID", userID))
 }

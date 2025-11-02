@@ -26,14 +26,14 @@ func UploadsHandler(staticDir string, prefix string) http.Handler {
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, prefix) {
-			sendJSONError(w, domain.NotFound, http.StatusNotFound)
+			sendJSONResponse(w, domain.NotFound, http.StatusNotFound)
 			service.Info(r.Context(), "File not found", zap.String("url", r.URL.Path))
 			return
 		}
 
 		relPath, err := url.PathUnescape(strings.TrimPrefix(r.URL.Path, prefix))
 		if err != nil {
-			sendJSONError(w, "Bad request", http.StatusBadRequest)
+			sendJSONResponse(w, "Bad request", http.StatusBadRequest)
 			service.Info(r.Context(), "File not found", zap.String("url", relPath))
 			return
 		}
@@ -42,7 +42,7 @@ func UploadsHandler(staticDir string, prefix string) http.Handler {
 		cleanPath = strings.TrimPrefix(cleanPath, "/")
 
 		if strings.Contains(cleanPath, "..") {
-			sendJSONError(w, domain.Forbidden, http.StatusForbidden)
+			sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
 			service.Warn(r.Context(), "Try get access to forbidden file", zap.String("cleanPath", cleanPath))
 			return
 		}
@@ -50,19 +50,19 @@ func UploadsHandler(staticDir string, prefix string) http.Handler {
 		fullPath := filepath.Join(absStaticDir, filepath.FromSlash(cleanPath))
 
 		if !strings.HasPrefix(fullPath, absStaticDir) {
-			sendJSONError(w, domain.Forbidden, http.StatusForbidden)
+			sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
 			service.Warn(r.Context(), "Try get access to forbidden file", zap.String("cleanPath", cleanPath))
 			return
 		}
 
 		info, err := os.Stat(fullPath)
 		if err != nil {
-			sendJSONError(w, domain.NotFound, http.StatusNotFound)
+			sendJSONResponse(w, domain.NotFound, http.StatusNotFound)
 			service.Info(r.Context(), "File not found", zap.String("cleanPath", cleanPath))
 			return
 		}
 		if info.IsDir() {
-			sendJSONError(w, domain.NotFound, http.StatusNotFound)
+			sendJSONResponse(w, domain.NotFound, http.StatusNotFound)
 			service.Info(r.Context(), "File not found", zap.String("cleanPath", cleanPath))
 			return
 		}
