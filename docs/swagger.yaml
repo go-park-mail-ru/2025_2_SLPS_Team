@@ -56,6 +56,34 @@ definitions:
         description: в БД табличка posts называется
         type: string
     type: object
+  domain.Post:
+    properties:
+      attachments:
+        description: в БД табличка post_attachments называется
+        items:
+          type: string
+        type: array
+      authorID:
+        description: в БД табличка posts называется
+        type: integer
+      created_at:
+        description: в БД табличка posts называется
+        type: string
+      id:
+        description: в БД табличка posts называется
+        type: integer
+      photos:
+        description: в БД табличка post_photos называется
+        items:
+          type: string
+        type: array
+      text:
+        description: в БД табличка posts называется
+        type: string
+      updated_at:
+        description: в БД табличка posts называется
+        type: string
+    type: object
   domain.Profile:
     properties:
       aboutMyself:
@@ -88,6 +116,19 @@ definitions:
     properties:
       chatID:
         type: integer
+    type: object
+  handler.CreatePostRequest:
+    properties:
+      attachments:
+        items:
+          type: string
+        type: array
+      photos:
+        items:
+          type: string
+        type: array
+      text:
+        type: string
     type: object
   handler.CreatePostRequest:
     properties:
@@ -136,6 +177,19 @@ definitions:
         items:
           $ref: '#/definitions/domain.Message'
         type: array
+    type: object
+  handler.PostsResponse:
+    properties:
+      hasNext:
+        type: boolean
+      page:
+        type: integer
+      posts:
+        items:
+          $ref: '#/definitions/domain.Post'
+        type: array
+      totalPages:
+        type: integer
     type: object
   handler.PostsResponse:
     properties:

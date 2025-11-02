@@ -903,64 +903,9 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "/ws": {
-            "get": {
-                "description": "Устанавливает WebSocket соединение для текущего пользователя и регистрирует его в WSHub",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "WS"
-                ],
-                "summary": "Подключение к WebSocket",
-                "responses": {
-                    "101": {
-                        "description": "Switching Protocols"
-                    },
-                    "400": {
-                        "description": "Неверный запрос или отсутствует userID в контексте",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Ошибка сервера при апгрейде соединения",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    }
-                }
-            }
         }
     },
     "definitions": {
-        "domain.FullChat": {
-            "type": "object",
-            "properties": {
-                "avatarPath": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "isGroup": {
-                    "type": "boolean"
-                },
-                "lastMessage": {
-                    "$ref": "#/definitions/domain.Message"
-                },
-                "lastMessageAuthor": {
-                    "$ref": "#/definitions/domain.ShortProfile"
-                },
-                "name": {
-                    "type": "string"
-                }
-            }
-        },
         "domain.Message": {
             "type": "object",
             "properties": {
@@ -1055,7 +1000,10 @@ const docTemplate = `{
                 "avatarPath": {
                     "type": "string"
                 },
-                "fullName": {
+                "firstName": {
+                    "type": "string"
+                },
+                "lastName": {
                     "type": "string"
                 },
                 "userID": {
@@ -1068,26 +1016,6 @@ const docTemplate = `{
             "properties": {
                 "chatID": {
                     "type": "integer"
-                }
-            }
-        },
-        "handler.CreatePostRequest": {
-            "type": "object",
-            "properties": {
-                "attachments": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "photos": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "text": {
-                    "type": "string"
                 }
             }
         },
