@@ -145,7 +145,7 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int, chatID in
 		}
 
 		for _, recipient := range recipients {
-			api.wsHub.SendToUser(recipient, jsonResponse)
+			api.wsHub.SendToUser(ctx, recipient, jsonResponse)
 		}
 
 		FromContext(ctx).Info("message send to recipients")

@@ -1,6 +1,7 @@
 package domain
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/gorilla/websocket"
@@ -11,8 +12,8 @@ type Envelope struct {
 	Data json.RawMessage
 }
 type WSHub interface {
-	RemoveClient(userID int)
-	SendJSON(userID int, eventType string, data interface{}) error
-	SendToUser(userID int, message []byte)
-	AddClient(userID int, conn *websocket.Conn)
+	RemoveClient(ctx context.Context, userID int)
+	SendJSON(ctx context.Context, userID int, eventType string, data interface{}) error
+	SendToUser(ctx context.Context, userID int, message []byte)
+	AddClient(ctx context.Context, userID int, conn *websocket.Conn)
 }

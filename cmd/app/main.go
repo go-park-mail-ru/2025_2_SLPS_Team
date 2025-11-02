@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"project/config"
 	_ "project/docs"
-	"project/internal/WS"
 	"project/internal/handler"
+	"project/internal/service"
 	"project/repository/db"
 	"project/repository/dbRedis"
 
@@ -89,7 +89,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	chatStore := db.NewDBChatStore(dbConn)
 	messageStore := db.NewDBMessageStore(dbConn)
 	postStore := db.NewDBPostStore(dbConn)
-	wsHub := WS.NewHub()
+	wsHub := service.NewHub()
 	friendStore := db.NewDBFriendStore(dbConn)
 
 	auth := handler.NewAuthHandler(userStore, sessionStore)
