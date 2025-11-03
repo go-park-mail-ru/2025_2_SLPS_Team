@@ -6,6 +6,7 @@ type Chat struct {
 	ID      int `json:"id"`
 	Members []ShortProfile
 }
+
 type FullChat struct {
 	ID                int          `json:"id"`
 	IsGroup           bool         `json:"isGroup"`
@@ -13,6 +14,13 @@ type FullChat struct {
 	Name              string       `json:"name"`
 	LastMessage       Message      `json:"lastMessage"`
 	LastMessageAuthor ShortProfile `json:"lastMessageAuthor"`
+}
+
+type ChatService interface {
+	GetOrCreateChatWithUser(ctx context.Context, selfUserID int, userID int) (int, error)
+	GetMessagesByChatId(ctx context.Context, params PaginateQueryParams, userID int, chatID int) (*MessagesWithAuthors, error)
+	CreateMessage(ctx context.Context, userID int, chatID int, message Message) (int, error)
+	GetUserChats(ctx context.Context, userID int, params PaginateQueryParams) ([]FullChat, error)
 }
 
 type ChatStore interface {

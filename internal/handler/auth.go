@@ -4,17 +4,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"project/domain"
-	"project/internal/service"
 	"time"
 
 	"go.uber.org/zap"
 )
 
 type AuthHandler struct {
-	authService service.AuthService
+	authService domain.AuthService
 }
 
-func NewAuthHandler(authService service.AuthService) *AuthHandler {
+func NewAuthHandler(authService domain.AuthService) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 	}
@@ -48,7 +47,7 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	sessionCookie, err := r.Cookie("session_id")
 	if err != nil {
-		sendJSONError(w, err)
+		sendJSONError(w, domain.ErrInvalidInput)
 		return
 	}
 	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)

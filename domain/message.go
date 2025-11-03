@@ -13,9 +13,9 @@ type Message struct {
 	CreatedAt time.Time `json:"createdAt"`
 	//IsEdited bool `json:"isEdited"`
 }
-type MessageWithAuthors struct {
-	Message []Message
-	Authors []ShortProfile
+type MessagesWithAuthors struct {
+	Messages []Message
+	Authors  map[int]ShortProfile
 }
 type MessageStore interface {
 	CreateMessage(ctx context.Context, message Message) (int, error)

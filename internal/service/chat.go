@@ -16,8 +16,8 @@ type ChatService struct {
 	wsHub        domain.WSHub
 }
 
-func NewChatService(userStore domain.UserStore, profileStore domain.ProfileStore, chatStore domain.ChatStore, messageStore domain.MessageStore, wsHub domain.WSHub) ChatService {
-	return ChatService{
+func NewChatService(userStore domain.UserStore, profileStore domain.ProfileStore, chatStore domain.ChatStore, messageStore domain.MessageStore, wsHub domain.WSHub) domain.ChatService {
+	return &ChatService{
 		userStore:    userStore,
 		profileStore: profileStore,
 		chatStore:    chatStore,
@@ -51,12 +51,7 @@ func (api *ChatService) GetOrCreateChatWithUser(ctx context.Context, selfUserID 
 	return chatID, nil
 }
 
-type MessagesWithAuthors struct {
-	Messages []domain.Message      `json:"messages"`
-	Authors  []domain.ShortProfile `json:"authors"`
-}
-
-func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.PaginateQueryParams, userID int, chatID int) (*MessagesWithAuthors, error) {
+func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.PaginateQueryParams, userID int, chatID int) (*domain.MessagesWithAuthors, error) {
 
 	isMember, err := api.chatStore.IsMemberOfChat(ctx, userID, chatID)
 	if err != nil {
@@ -90,7 +85,7 @@ func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.P
 		return nil, domain.ErrDB
 	}
 
-	messagesWithAuthors := MessagesWithAuthors{
+	messagesWithAuthors := domain.MessagesWithAuthors{
 		Messages: messages,
 		Authors:  authors,
 	}

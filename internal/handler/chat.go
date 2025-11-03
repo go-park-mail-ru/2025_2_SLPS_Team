@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"project/domain"
-	"project/internal/service"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -13,10 +12,10 @@ import (
 )
 
 type ChatHandler struct {
-	chatService service.ChatService
+	chatService domain.ChatService
 }
 
-func NewChatHandler(chatService service.ChatService) *ChatHandler {
+func NewChatHandler(chatService domain.ChatService) *ChatHandler {
 	return &ChatHandler{
 		chatService: chatService,
 	}
@@ -62,11 +61,6 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 	domain.FromContext(r.Context()).Info("Chat created or retrieved", zap.Int("chatID", chatID), zap.Int("chatWithUserID", userID))
 }
 
-type MessagesWithAuthorsResp struct {
-	Messages []domain.Message      `json:"messages"`
-	Authors  []domain.ShortProfile `json:"authors"`
-}
-
 // GetMessagesByChatId возвращает список сообщений и краткие профили авторов в чате
 // @Summary Получить сообщения чата с авторами
 // @Description Возвращает сообщения из чата с пагинацией и краткую информацию об авторах
@@ -75,7 +69,7 @@ type MessagesWithAuthorsResp struct {
 // @Param id path int true "ID чата"
 // @Param limit query int false "Лимит количества сообщений" default(20)
 // @Param offset query int false "Смещение для пагинации" default(0)
-// @Success 200 {object} handler.MessagesWithAuthorsResp
+// @Success 200 {object} domain.MessageWithAuthors
 // @Failure 400 {object} JSONResponse
 // @Failure 403 {object} JSONResponse
 // @Failure 500 {object} JSONResponse

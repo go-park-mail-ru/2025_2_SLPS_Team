@@ -15,8 +15,8 @@ type ProfileService struct {
 	userStore    domain.UserStore
 }
 
-func NewProfileService(profileStore domain.ProfileStore, userStore domain.UserStore) ProfileService {
-	return ProfileService{
+func NewProfileService(profileStore domain.ProfileStore, userStore domain.UserStore) domain.ProfileService {
+	return &ProfileService{
 		profileStore: profileStore,
 		userStore:    userStore,
 	}

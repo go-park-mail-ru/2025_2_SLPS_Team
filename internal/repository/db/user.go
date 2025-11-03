@@ -65,7 +65,7 @@ func (store *DBUserStore) CreateUser(ctx context.Context, user domain.User, prof
 	return userID, nil
 }
 
-func (store *DBUserStore) GetUserByEmail(ctx context.Context, email string) (domain.User, error) {
+func (store *DBUserStore) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "userStore")
 	dbloggerCopy := dblogger
@@ -83,14 +83,14 @@ func (store *DBUserStore) GetUserByEmail(ctx context.Context, email string) (dom
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			dblogger.Info("User not found")
-			return domain.User{}, domain.ErrNotFound
+			return nil, domain.ErrNotFound
 		}
 		dblogger.Error("Failed to get User", zap.Error(err))
-		return domain.User{}, err
+		return nil, err
 	}
 
 	dblogger.Info("User found and return")
-	return user, nil
+	return &user, nil
 }
 func (store *DBUserStore) GetUserByID(ctx context.Context, userID int) (domain.User, error) {
 	start := time.Now()

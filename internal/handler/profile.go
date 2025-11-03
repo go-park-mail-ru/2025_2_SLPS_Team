@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"project/domain"
-	"project/internal/service"
 	"strconv"
 	"strings"
 
@@ -13,10 +12,10 @@ import (
 )
 
 type ProfileHandler struct {
-	profileService service.ProfileService
+	profileService domain.ProfileService
 }
 
-func NewProfileHandler(profileService service.ProfileService) *ProfileHandler {
+func NewProfileHandler(profileService domain.ProfileService) *ProfileHandler {
 	return &ProfileHandler{
 		profileService: profileService,
 	}

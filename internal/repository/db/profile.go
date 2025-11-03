@@ -96,7 +96,7 @@ func (store *DBProfileStore) UpdateHeader(ctx context.Context, headerPath string
 	return err
 }
 
-func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int) ([]domain.ShortProfile, error) {
+func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int) (map[int]domain.ShortProfile, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
@@ -108,7 +108,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 	}()
 
 	if len(userIDs) == 0 {
-		return []domain.ShortProfile{}, nil
+		return make(map[int]domain.ShortProfile), nil
 	}
 
 	query := `SELECT user_id, first_name || ' ' || last_name as full_name , avatar_path FROM profiles WHERE user_id = ANY($1)`
@@ -122,7 +122,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 	}
 	defer rows.Close()
 
-	var users []domain.ShortProfile
+	usersMap := make(map[int]domain.ShortProfile)
 
 	for rows.Next() {
 		var u domain.ShortProfile
@@ -131,7 +131,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 			dblogger.Error("Failed to read profile rows", zap.Error(err))
 			return nil, err
 		}
-		users = append(users, u)
+		usersMap[u.UserID] = u
 	}
 
 	if err = rows.Err(); err != nil {
@@ -139,7 +139,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 		return nil, err
 	}
 
-	return users, nil
+	return usersMap, nil
 }
 
 func (store *DBProfileStore) GetProfileByUserID(ctx context.Context, userID int) (domain.Profile, error) {

@@ -16,8 +16,8 @@ type AuthService struct {
 	userStore    domain.UserStore
 }
 
-func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore) AuthService {
-	return AuthService{
+func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore) domain.AuthService {
+	return &AuthService{
 		sessionStore: sessionStore,
 		userStore:    userStore,
 	}
@@ -42,7 +42,8 @@ func (api *AuthService) IsLoggedIn(ctx context.Context, sessionCookie *http.Cook
 func (api *AuthService) AddSession(ctx context.Context, userID int) (*domain.SIDAndSCRFToken, error) {
 	tokens, err := api.sessionStore.AddSession(ctx, userID)
 	if err != nil {
-		return nil, err
+		domain.FromContext(ctx).Error("Failed to add session", zap.Error(err))
+		return nil, domain.ErrDB
 	}
 
 	return tokens, nil

@@ -21,7 +21,7 @@ var Global *Config
 
 func InitGlobalConfig() {
 	if err := godotenv.Load(".env"); err != nil {
-		log.Printf("Warning: cannot load %s, using system env vars")
+		log.Printf("Warning: cannot load using system env vars")
 	}
 	env := os.Getenv("APP_ENV")
 	if env == "" {

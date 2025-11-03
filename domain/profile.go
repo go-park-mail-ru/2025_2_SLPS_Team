@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+	"mime/multipart"
 	"time"
 )
 
@@ -21,12 +22,20 @@ type ShortProfile struct {
 	FullName   string  `json:"fullName"`
 	AvatarPath *string `json:"avatarPath"`
 }
+
+type ProfileService interface {
+	UpdateProfile(ctx context.Context, profile Profile, userID int, files []*multipart.FileHeader) error
+	UpdateAvatar(ctx context.Context, userID int, files []*multipart.FileHeader) error
+	UpdateHeader(ctx context.Context, userID int, files []*multipart.FileHeader) error
+	GetProfileByUserID(ctx context.Context, userID int) (*Profile, error)
+}
+
 type ProfileStore interface {
 	UpdateProfile(ctx context.Context, profile Profile, userID int) error
 	UpdateAvatar(ctx context.Context, avatarPath string, userID int) error
 	UpdateHeader(ctx context.Context, avatarPath string, UserID int) error
 	GetProfileByUserID(ctx context.Context, userID int) (Profile, error)
-	GetShortProfileByUserIDs(ctx context.Context, userIDs []int) ([]ShortProfile, error)
+	GetShortProfileByUserIDs(ctx context.Context, userIDs []int) (map[int]ShortProfile, error)
 	GetAvatarByUserID(ctx context.Context, userID int) (*string, error)
 	GetHeaderByUserID(ctx context.Context, userID int) (*string, error)
 	//DeleteAvatar

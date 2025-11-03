@@ -11,6 +11,7 @@ type Envelope struct {
 	Type string
 	Data json.RawMessage
 }
+
 type WSHub interface {
 	RemoveClient(ctx context.Context, userID int)
 	SendJSON(ctx context.Context, userID int, eventType string, data interface{}) error
