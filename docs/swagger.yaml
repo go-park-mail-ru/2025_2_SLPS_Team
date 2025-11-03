@@ -854,14 +854,14 @@ paths:
         required: true
         type: string
       - collectionFormat: multi
-        description: Вложения к посту
+        description: Вложения
         in: formData
         items:
           type: file
         name: attachments
         type: array
       - collectionFormat: multi
-        description: Фотографии к посту
+        description: Фотографии
         in: formData
         items:
           type: file
@@ -988,14 +988,14 @@ paths:
         required: true
         type: string
       - collectionFormat: multi
-        description: Вложения к посту
+        description: Новые вложения
         in: formData
         items:
           type: file
         name: attachments
         type: array
       - collectionFormat: multi
-        description: Фотографии к посту
+        description: Новые фотографии
         in: formData
         items:
           type: file

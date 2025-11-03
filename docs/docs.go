@@ -924,7 +924,7 @@ const docTemplate = `{
                             "type": "file"
                         },
                         "collectionFormat": "multi",
-                        "description": "Вложения к посту",
+                        "description": "Вложения",
                         "name": "attachments",
                         "in": "formData"
                     },
@@ -934,7 +934,7 @@ const docTemplate = `{
                             "type": "file"
                         },
                         "collectionFormat": "multi",
-                        "description": "Фотографии к посту",
+                        "description": "Фотографии",
                         "name": "photos",
                         "in": "formData"
                     }
@@ -1058,7 +1058,7 @@ const docTemplate = `{
                             "type": "file"
                         },
                         "collectionFormat": "multi",
-                        "description": "Вложения к посту",
+                        "description": "Новые вложения",
                         "name": "attachments",
                         "in": "formData"
                     },
@@ -1068,7 +1068,7 @@ const docTemplate = `{
                             "type": "file"
                         },
                         "collectionFormat": "multi",
-                        "description": "Фотографии к посту",
+                        "description": "Новые фотографии",
                         "name": "photos",
                         "in": "formData"
                     }

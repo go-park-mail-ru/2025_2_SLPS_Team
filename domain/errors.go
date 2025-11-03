@@ -28,13 +28,7 @@ var (
 
 // Ошибки для ДРУЗЕЙ
 var (
-	ErrFriendshipNotFound      = errors.New("friendship not found")
-	ErrAlreadyFriends          = errors.New("users are already friends")
-	ErrFriendRequestPending    = errors.New("friend request already pending")
-	ErrFriendRequestExists     = errors.New("friend request already exists") // Добавляем эту ошибку
-	ErrCannotFriendSelf        = errors.New("cannot send friend request to yourself")
-	ErrInvalidFriendshipStatus = errors.New("invalid friendship status")
-	ErrFriendshipBlocked       = errors.New("friendship is blocked")
+	ErrFriendshipNotFound = errors.New("friendship not found")
 )
 
 // Ошибки для пользователей
@@ -81,30 +75,6 @@ func MapErrorToHTTP(err error) (int, string) {
 		return http.StatusInternalServerError, ServerErr
 
 	// Добавляем обработку ошибок друзей
-	case errors.Is(err, ErrFriendshipNotFound):
-		return http.StatusNotFound, "Friendship not found"
-
-	case errors.Is(err, ErrAlreadyFriends):
-		return http.StatusConflict, "Already friends"
-
-	case errors.Is(err, ErrFriendRequestPending):
-		return http.StatusConflict, "Friend request already pending"
-
-	case errors.Is(err, ErrFriendRequestExists):
-		return http.StatusConflict, "Friend request already exists"
-
-	case errors.Is(err, ErrCannotFriendSelf):
-		return http.StatusBadRequest, "Cannot send friend request to yourself"
-
-	case errors.Is(err, ErrFriendshipBlocked):
-		return http.StatusForbidden, "Friendship is blocked"
-
-	case errors.Is(err, ErrUserNotFound):
-		return http.StatusNotFound, "User not found"
-
-	case errors.Is(err, ErrPostNotFound):
-		return http.StatusNotFound, "Post not found"
-
 	default:
 		return http.StatusInternalServerError, ServerErr
 	}
