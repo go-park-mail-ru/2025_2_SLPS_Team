@@ -25,7 +25,7 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 	// Нельзя отправить запрос самому себе
 	if userID == friendID {
 		domain.Warn(ctx, "User tried to send friend request to themselves")
-		return domain.ErrCannotFriendSelf
+		return domain.ErrInvalidInput
 	}
 
 	domain.Info(ctx, "Sending friend request",
@@ -37,7 +37,7 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			domain.Warn(ctx, "Friend user not found", zap.Int("friendID", friendID))
-			return domain.ErrUserNotFound
+			return domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get user", err, zap.Int("friendID", friendID))
 		return domain.ErrDB
@@ -45,7 +45,7 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 
 	// Проверяем текущий статус дружбы
 	currentStatus, err := s.friendStore.GetFriendshipStatus(ctx, userID, friendID)
-	if err != nil && !errors.Is(err, domain.ErrFriendshipNotFound) {
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
 		domain.Error(ctx, "Failed to check friendship status", err)
 		return domain.ErrDB
 	}
@@ -54,7 +54,7 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 	switch currentStatus {
 	case domain.FriendshipAccepted:
 		domain.Warn(ctx, "Friend request to existing friend")
-		return domain.ErrAlreadyFriends
+		return domain.ErrAlreadyExists
 	case domain.FriendshipPending:
 		// Определяем кто отправитель запроса
 		friendship, err := s.friendStore.GetFriendship(ctx, userID, friendID)
@@ -65,14 +65,14 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 
 		if friendship.FirstUserID == userID {
 			domain.Warn(ctx, "Duplicate friend request")
-			return domain.ErrFriendRequestPending
+			return domain.ErrAlreadyExists
 		} else {
 			domain.Warn(ctx, "Friend request to user who already sent request")
-			return domain.ErrFriendRequestExists // Используем новую ошибку
+			return domain.ErrAlreadyExists 
 		}
 	case domain.FriendshipBlocked:
 		domain.Warn(ctx, "Friend request to blocked user")
-		return domain.ErrFriendshipBlocked
+		return domain.ErrAccessDenied
 	}
 
 	// Создаем запрос в друзья
@@ -95,9 +95,9 @@ func (s *FriendService) AcceptFriendRequest(ctx context.Context, userID, friendI
 	// Проверяем существование запроса
 	friendship, err := s.friendStore.GetFriendship(ctx, userID, friendID)
 	if err != nil {
-		if errors.Is(err, domain.ErrFriendshipNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			domain.Warn(ctx, "Friend request not found")
-			return domain.ErrFriendshipNotFound
+			return domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get friendship", err)
 		return domain.ErrDB
@@ -106,7 +106,7 @@ func (s *FriendService) AcceptFriendRequest(ctx context.Context, userID, friendI
 	// Проверяем что запрос pending, пользователь является получателем (не отправителем)
 	if friendship.Status != domain.FriendshipPending || friendship.ActionUserID == userID {
 		domain.Warn(ctx, "No pending friend request or user is sender (not receiver)")
-		return domain.ErrFriendshipNotFound
+		return domain.ErrNotFound
 	}
 
 	err = s.friendStore.UpdateFriendshipStatus(ctx, userID, friendID, domain.FriendshipAccepted)
@@ -128,9 +128,9 @@ func (s *FriendService) RejectFriendRequest(ctx context.Context, userID, friendI
 	// Проверяем существование запроса
 	friendship, err := s.friendStore.GetFriendship(ctx, userID, friendID)
 	if err != nil {
-		if errors.Is(err, domain.ErrFriendshipNotFound) {
+		if errors.Is(err, domain.ErrNotFound) {
 			domain.Warn(ctx, "Friend request not found")
-			return domain.ErrFriendshipNotFound
+			return domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get friendship", err)
 		return domain.ErrDB
@@ -139,7 +139,7 @@ func (s *FriendService) RejectFriendRequest(ctx context.Context, userID, friendI
 	// Проверяем что запрос pending, пользователь является получателем (не отправителем)
 	if friendship.Status != domain.FriendshipPending || friendship.ActionUserID == userID {
 		domain.Warn(ctx, "No pending friend request or user is sender (not receiver)")
-		return domain.ErrFriendshipNotFound
+		return domain.ErrNotFound
 	}
 
 	// Удаляем запись вместо установки статуса rejected
@@ -168,7 +168,7 @@ func (s *FriendService) RemoveFriend(ctx context.Context, userID, friendID int) 
 
 	if !areFriends {
 		domain.Warn(ctx, "Attempt to remove non-friend")
-		return domain.ErrFriendshipNotFound
+		return domain.ErrNotFound
 	}
 
 	err = s.friendStore.DeleteFriendship(ctx, userID, friendID)
@@ -260,7 +260,7 @@ func (s *FriendService) GetFriendshipStatus(ctx context.Context, userID, friendI
 		zap.Int("friendID", friendID))
 
 	status, err := s.friendStore.GetFriendshipStatus(ctx, userID, friendID)
-	if err != nil && !errors.Is(err, domain.ErrFriendshipNotFound) {
+	if err != nil && !errors.Is(err, domain.ErrNotFound) {
 		domain.Error(ctx, "Failed to get friendship status", err)
 		return "", domain.ErrDB
 	}

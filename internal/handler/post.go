@@ -108,19 +108,19 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// CreatePost создает новый пост
+// CreatePost - создание нового поста с файлами
 // @Summary Создать новый пост
 // @Description Создает новый пост от имени текущего пользователя с возможностью загрузки файлов
 // @Tags posts
 // @Accept multipart/form-data
 // @Produce json
-// @Param text formData string true "Текст поста (24-4096 символов)" minLength(24) maxLength(4096)
-// @Param attachments formData file false "Вложения к посту" collectionFormat("multi")
-// @Param photos formData file false "Фотографии к посту" collectionFormat("multi")
-// @Success 201 {object} JSONResponse "Пост успешно создан"
-// @Failure 400 {object} JSONResponse "Неверные данные запроса"
-// @Failure 401 {object} JSONResponse "Пользователь не авторизован"
-// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Param text formData string true "Текст поста"
+// @Param attachments formData []file false "Вложения" collectionFormat(multi)
+// @Param photos formData []file false "Фотографии" collectionFormat(multi)
+// @Success 201 {object} JSONResponse
+// @Failure 400 {object} JSONResponse
+// @Failure 401 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
 // @Security ApiKeyAuth
 // @Router /posts [post]
 func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
@@ -163,16 +163,16 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	domain.Info(r.Context(), "Post created successfully", zap.Uint("postID", post.ID))
 }
 
-// UpdatePost обновляет существующий пост
+// UpdatePost - обновление поста с файлами
 // @Summary Обновить пост
 // @Description Обновляет существующий пост (только автор) с возможностью замены файлов
 // @Tags posts
 // @Accept multipart/form-data
 // @Produce json
 // @Param id path int true "ID поста" minimum(1)
-// @Param text formData string true "Текст поста (24-4096 символов)" minLength(24) maxLength(4096)
-// @Param attachments formData file false "Новые вложения" collectionFormat("multi")
-// @Param photos formData file false "Новые фотографии" collectionFormat("multi")
+// @Param text formData string true "Текст поста"
+// @Param attachments formData []file false "Новые вложения" collectionFormat(multi)
+// @Param photos formData []file false "Новые фотографии" collectionFormat(multi)
 // @Success 200 {object} JSONResponse "Пост успешно обновлен"
 // @Failure 400 {object} JSONResponse "Неверные данные запроса"
 // @Failure 401 {object} JSONResponse "Пользователь не авторизован"

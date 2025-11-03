@@ -412,6 +412,7 @@ const docTemplate = `{
                 "summary": "Получить список друзей",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "default": 1,
                         "description": "Номер страницы",
@@ -419,6 +420,8 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
                         "default": 20,
                         "description": "Количество друзей на странице",
@@ -428,13 +431,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Успешный ответ со списком друзей",
                         "schema": {
                             "$ref": "#/definitions/handler.FriendsResponse"
                         }
                     },
+                    "400": {
+                        "description": "Неверные параметры пагинации",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -459,6 +468,7 @@ const docTemplate = `{
                 "summary": "Получить входящие запросы в друзья",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "default": 1,
                         "description": "Номер страницы",
@@ -466,6 +476,8 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
                         "default": 20,
                         "description": "Количество запросов на странице",
@@ -475,13 +487,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Успешный ответ со списком запросов",
                         "schema": {
                             "$ref": "#/definitions/handler.FriendRequestsResponse"
                         }
                     },
+                    "400": {
+                        "description": "Неверные параметры пагинации",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -506,6 +524,7 @@ const docTemplate = `{
                 "summary": "Получить отправленные запросы в друзья",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "default": 1,
                         "description": "Номер страницы",
@@ -513,6 +532,8 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
                         "default": 20,
                         "description": "Количество запросов на странице",
@@ -522,13 +543,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Успешный ответ со списком отправленных запросов",
                         "schema": {
                             "$ref": "#/definitions/handler.FriendRequestsResponse"
                         }
                     },
+                    "400": {
+                        "description": "Неверные параметры пагинации",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -556,8 +583,9 @@ const docTemplate = `{
                 "summary": "Отправить запрос в друзья",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
-                        "description": "ID пользователя",
+                        "description": "ID пользователя, которому отправляется запрос",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -565,31 +593,31 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Запрос успешно отправлен",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверный ID пользователя или попытка добавить самого себя",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Пользователь не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "409": {
-                        "description": "Conflict",
+                        "description": "Запрос уже существует или пользователи уже друзья",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -615,6 +643,7 @@ const docTemplate = `{
                 "summary": "Удалить из друзей",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "ID пользователя",
                         "name": "id",
@@ -624,25 +653,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Пользователь успешно удален из друзей",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверный ID пользователя",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Пользователи не являются друзьями",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -670,6 +699,7 @@ const docTemplate = `{
                 "summary": "Принять запрос в друзья",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "ID пользователя (отправителя запроса)",
                         "name": "id",
@@ -679,25 +709,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Запрос успешно принят",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверный ID пользователя",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Запрос не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -725,6 +755,7 @@ const docTemplate = `{
                 "summary": "Отклонить запрос в друзья",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "ID пользователя (отправителя запроса)",
                         "name": "id",
@@ -734,25 +765,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Запрос успешно отклонен",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверный ID пользователя",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Запрос не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -777,6 +808,7 @@ const docTemplate = `{
                 "summary": "Получить статус дружбы",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "ID пользователя",
                         "name": "id",
@@ -786,19 +818,19 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Успешный ответ со статусом дружбы",
                         "schema": {
                             "$ref": "#/definitions/handler.FriendshipStatusResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверный ID пользователя",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -807,6 +839,58 @@ const docTemplate = `{
             }
         },
         "/posts": {
+            "get": {
+                "description": "Возвращает список постов с поддержкой пагинации",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Получить посты с пагинацией",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество постов на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешный ответ с постами",
+                        "schema": {
+                            "$ref": "#/definitions/handler.PostsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "security": [
                     {
@@ -833,13 +917,21 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "file",
+                        "type": "array",
+                        "items": {
+                            "type": "file"
+                        },
+                        "collectionFormat": "multi",
                         "description": "Вложения",
                         "name": "attachments",
                         "in": "formData"
                     },
                     {
-                        "type": "file",
+                        "type": "array",
+                        "items": {
+                            "type": "file"
+                        },
+                        "collectionFormat": "multi",
                         "description": "Фотографии",
                         "name": "photos",
                         "in": "formData"
@@ -888,6 +980,7 @@ const docTemplate = `{
                 "summary": "Получить пост по ID",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "ID поста",
                         "name": "id",
@@ -897,25 +990,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Пост найден",
                         "schema": {
                             "$ref": "#/definitions/domain.Post"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверный ID поста",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Пост не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -941,6 +1034,7 @@ const docTemplate = `{
                 "summary": "Обновить пост",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "ID поста",
                         "name": "id",
@@ -955,13 +1049,21 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "file",
+                        "type": "array",
+                        "items": {
+                            "type": "file"
+                        },
+                        "collectionFormat": "multi",
                         "description": "Новые вложения",
                         "name": "attachments",
                         "in": "formData"
                     },
                     {
-                        "type": "file",
+                        "type": "array",
+                        "items": {
+                            "type": "file"
+                        },
+                        "collectionFormat": "multi",
                         "description": "Новые фотографии",
                         "name": "photos",
                         "in": "formData"
@@ -969,37 +1071,37 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Пост успешно обновлен",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверные данные запроса",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Пользователь не авторизован",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "403": {
-                        "description": "Forbidden",
+                        "description": "Доступ запрещен (не автор поста)",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Пост не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -1025,6 +1127,7 @@ const docTemplate = `{
                 "summary": "Удалить пост",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "ID поста",
                         "name": "id",
@@ -1034,37 +1137,37 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Пост успешно удален",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверный ID поста",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "401": {
-                        "description": "Unauthorized",
+                        "description": "Пользователь не авторизован",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "403": {
-                        "description": "Forbidden",
+                        "description": "Доступ запрещен (не автор поста)",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Пост не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -1286,6 +1389,7 @@ const docTemplate = `{
                 "summary": "Получить посты пользователя",
                 "parameters": [
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "description": "ID пользователя",
                         "name": "userID",
@@ -1293,6 +1397,7 @@ const docTemplate = `{
                         "required": true
                     },
                     {
+                        "minimum": 1,
                         "type": "integer",
                         "default": 1,
                         "description": "Номер страницы",
@@ -1300,6 +1405,8 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "maximum": 100,
+                        "minimum": 1,
                         "type": "integer",
                         "default": 20,
                         "description": "Количество постов на странице",
@@ -1309,25 +1416,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Успешный ответ с постами пользователя",
                         "schema": {
                             "$ref": "#/definitions/handler.PostsResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Неверные параметры запроса",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Пользователь не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -1387,6 +1494,10 @@ const docTemplate = `{
         "domain.FriendshipWithProfile": {
             "type": "object",
             "properties": {
+                "actionUserID": {
+                    "description": "Кто отправил запрос",
+                    "type": "integer"
+                },
                 "createdAt": {
                     "type": "string"
                 },
@@ -1395,6 +1506,9 @@ const docTemplate = `{
                 },
                 "friend": {
                     "$ref": "#/definitions/domain.ShortProfile"
+                },
+                "id": {
+                    "type": "integer"
                 },
                 "secondUserID": {
                     "type": "integer"
@@ -1585,50 +1699,79 @@ const docTemplate = `{
             }
         },
         "handler.FriendRequestsResponse": {
+            "description": "Ответ с пагинированным списком запросов в друзья",
             "type": "object",
             "properties": {
                 "hasNext": {
-                    "type": "boolean"
+                    "description": "Есть ли следующая страница",
+                    "type": "boolean",
+                    "example": true
                 },
                 "page": {
-                    "type": "integer"
+                    "description": "Текущая страница",
+                    "type": "integer",
+                    "example": 1
                 },
                 "requests": {
+                    "description": "Список запросов",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/domain.FriendshipWithProfile"
                     }
                 },
                 "totalPages": {
-                    "type": "integer"
+                    "description": "Общее количество страниц",
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
         "handler.FriendsResponse": {
+            "description": "Ответ с пагинированным списком друзей",
             "type": "object",
             "properties": {
                 "friends": {
+                    "description": "Список друзей",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/domain.ShortProfile"
                     }
                 },
                 "hasNext": {
-                    "type": "boolean"
+                    "description": "Есть ли следующая страница",
+                    "type": "boolean",
+                    "example": true
                 },
                 "page": {
-                    "type": "integer"
+                    "description": "Текущая страница",
+                    "type": "integer",
+                    "example": 1
                 },
                 "totalPages": {
-                    "type": "integer"
+                    "description": "Общее количество страниц",
+                    "type": "integer",
+                    "example": 5
                 }
             }
         },
         "handler.FriendshipStatusResponse": {
+            "description": "Ответ с текущим статусом дружбы между пользователями",
             "type": "object",
             "properties": {
                 "status": {
-                    "$ref": "#/definitions/domain.FriendshipStatus"
+                    "description": "Статус дружбы",
+                    "enum": [
+                        "pending",
+                        "accepted",
+                        "rejected",
+                        "blocked"
+                    ],
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.FriendshipStatus"
+                        }
+                    ],
+                    "example": "pending"
                 }
             }
         },
@@ -1677,22 +1820,30 @@ const docTemplate = `{
             }
         },
         "handler.PostsResponse": {
+            "description": "Ответ с пагинированным списком постов",
             "type": "object",
             "properties": {
                 "hasNext": {
-                    "type": "boolean"
+                    "description": "Есть ли следующая страница",
+                    "type": "boolean",
+                    "example": true
                 },
                 "page": {
-                    "type": "integer"
+                    "description": "Текущая страница",
+                    "type": "integer",
+                    "example": 1
                 },
                 "posts": {
+                    "description": "Список постов",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/domain.Post"
                     }
                 },
                 "totalPages": {
-                    "type": "integer"
+                    "description": "Общее количество страниц",
+                    "type": "integer",
+                    "example": 5
                 }
             }
         }
