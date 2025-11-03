@@ -8,6 +8,7 @@ import (
 	"project/domain"
 	"time"
 
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -48,7 +49,7 @@ func (store *DBChatStore) GetOrCreateChatWithUser(ctx context.Context, selfUserI
         HAVING COUNT(*) = 2 AND bool_and(member_id = ANY($1))
         LIMIT 1
     `
-	row := tx.QueryRow(query, ids)
+	row := tx.QueryRow(query, pq.Array(ids))
 	err = row.Scan(&chatID)
 	dblogger = dblogger.With(zap.Int("userID", userID))
 	if err == nil {

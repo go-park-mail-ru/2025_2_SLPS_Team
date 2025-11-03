@@ -96,3 +96,9 @@ mockgen -package=mocks project/domain \
     ChatService \
     ProfileService \
     > service/mocks/mock_services.go
+
+curl -X POST "http://localhost:8080/api/posts" \
+  -F "text=1231231231231231231231231231231231231233123" \
+  -F "photos=@/c/123.png" \
+  -F "photos=@/c/123.png" \
+  -b cookies.txt

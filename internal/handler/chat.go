@@ -69,7 +69,7 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 // @Param id path int true "ID чата"
 // @Param limit query int false "Лимит количества сообщений" default(20)
 // @Param offset query int false "Смещение для пагинации" default(0)
-// @Success 200 {object} domain.MessageWithAuthors
+// @Success 200 {object} domain.MessagesWithAuthors
 // @Failure 400 {object} JSONResponse
 // @Failure 403 {object} JSONResponse
 // @Failure 500 {object} JSONResponse

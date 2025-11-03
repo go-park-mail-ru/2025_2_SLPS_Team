@@ -14,12 +14,17 @@ definitions:
     - FriendshipBlocked
   domain.FriendshipWithProfile:
     properties:
+      actionUserID:
+        description: Кто отправил запрос
+        type: integer
       createdAt:
         type: string
       firstUserID:
         type: integer
       friend:
         $ref: '#/definitions/domain.ShortProfile'
+      id:
+        type: integer
       secondUserID:
         type: integer
       status:
@@ -54,6 +59,17 @@ definitions:
         type: integer
       text:
         type: string
+    type: object
+  domain.MessagesWithAuthors:
+    properties:
+      authors:
+        additionalProperties:
+          $ref: '#/definitions/domain.ShortProfile'
+        type: object
+      messages:
+        items:
+          $ref: '#/definitions/domain.Message'
+        type: array
     type: object
   domain.Post:
     properties:
@@ -147,35 +163,60 @@ definitions:
         type: integer
     type: object
   handler.FriendRequestsResponse:
+    description: Ответ с пагинированным списком запросов в друзья
     properties:
       hasNext:
+        description: Есть ли следующая страница
+        example: true
         type: boolean
       page:
+        description: Текущая страница
+        example: 1
         type: integer
       requests:
+        description: Список запросов
         items:
           $ref: '#/definitions/domain.FriendshipWithProfile'
         type: array
       totalPages:
+        description: Общее количество страниц
+        example: 3
         type: integer
     type: object
   handler.FriendsResponse:
+    description: Ответ с пагинированным списком друзей
     properties:
       friends:
+        description: Список друзей
         items:
           $ref: '#/definitions/domain.ShortProfile'
         type: array
       hasNext:
+        description: Есть ли следующая страница
+        example: true
         type: boolean
       page:
+        description: Текущая страница
+        example: 1
         type: integer
       totalPages:
+        description: Общее количество страниц
+        example: 5
         type: integer
     type: object
   handler.FriendshipStatusResponse:
+    description: Ответ с текущим статусом дружбы между пользователями
     properties:
       status:
-        $ref: '#/definitions/domain.FriendshipStatus'
+        allOf:
+        - $ref: '#/definitions/domain.FriendshipStatus'
+        description: Статус дружбы
+        enum:
+        - pending
+        - accepted
+        - rejected
+        - blocked
+        example: pending
     type: object
   handler.IsLoggedInResponse:
     properties:
@@ -194,28 +235,25 @@ definitions:
       messageID:
         type: integer
     type: object
-  handler.MessagesWithAuthorsResp:
-    properties:
-      authors:
-        items:
-          $ref: '#/definitions/domain.ShortProfile'
-        type: array
-      messages:
-        items:
-          $ref: '#/definitions/domain.Message'
-        type: array
-    type: object
   handler.PostsResponse:
+    description: Ответ с пагинированным списком постов
     properties:
       hasNext:
+        description: Есть ли следующая страница
+        example: true
         type: boolean
       page:
+        description: Текущая страница
+        example: 1
         type: integer
       posts:
+        description: Список постов
         items:
           $ref: '#/definitions/domain.Post'
         type: array
       totalPages:
+        description: Общее количество страниц
+        example: 5
         type: integer
     type: object
 host: localhost:8080
@@ -431,7 +469,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/handler.MessagesWithAuthorsResp'
+            $ref: '#/definitions/domain.MessagesWithAuthors'
         "400":
           description: Bad Request
           schema:
@@ -484,22 +522,29 @@ paths:
       - default: 1
         description: Номер страницы
         in: query
+        minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество друзей на странице
         in: query
+        maximum: 100
+        minimum: 1
         name: limit
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Успешный ответ со списком друзей
           schema:
             $ref: '#/definitions/handler.FriendsResponse'
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -515,6 +560,7 @@ paths:
       parameters:
       - description: ID пользователя
         in: path
+        minimum: 1
         name: id
         required: true
         type: integer
@@ -522,19 +568,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Пользователь успешно удален из друзей
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Bad Request
+          description: Неверный ID пользователя
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Not Found
+          description: Пользователи не являются друзьями
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -547,8 +593,9 @@ paths:
       - application/json
       description: Отправляет запрос на дружбу другому пользователю
       parameters:
-      - description: ID пользователя
+      - description: ID пользователя, которому отправляется запрос
         in: path
+        minimum: 1
         name: id
         required: true
         type: integer
@@ -556,23 +603,23 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Запрос успешно отправлен
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Bad Request
+          description: Неверный ID пользователя или попытка добавить самого себя
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Not Found
+          description: Пользователь не найден
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "409":
-          description: Conflict
+          description: Запрос уже существует или пользователи уже друзья
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -588,6 +635,7 @@ paths:
       parameters:
       - description: ID пользователя (отправителя запроса)
         in: path
+        minimum: 1
         name: id
         required: true
         type: integer
@@ -595,19 +643,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Запрос успешно принят
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Bad Request
+          description: Неверный ID пользователя
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Not Found
+          description: Запрос не найден
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -623,6 +671,7 @@ paths:
       parameters:
       - description: ID пользователя (отправителя запроса)
         in: path
+        minimum: 1
         name: id
         required: true
         type: integer
@@ -630,19 +679,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Запрос успешно отклонен
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Bad Request
+          description: Неверный ID пользователя
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Not Found
+          description: Запрос не найден
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -656,6 +705,7 @@ paths:
       parameters:
       - description: ID пользователя
         in: path
+        minimum: 1
         name: id
         required: true
         type: integer
@@ -663,15 +713,15 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Успешный ответ со статусом дружбы
           schema:
             $ref: '#/definitions/handler.FriendshipStatusResponse'
         "400":
-          description: Bad Request
+          description: Неверный ID пользователя
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -686,22 +736,29 @@ paths:
       - default: 1
         description: Номер страницы
         in: query
+        minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество запросов на странице
         in: query
+        maximum: 100
+        minimum: 1
         name: limit
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Успешный ответ со списком запросов
           schema:
             $ref: '#/definitions/handler.FriendRequestsResponse'
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -716,22 +773,29 @@ paths:
       - default: 1
         description: Номер страницы
         in: query
+        minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество запросов на странице
         in: query
+        maximum: 100
+        minimum: 1
         name: limit
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Успешный ответ со списком отправленных запросов
           schema:
             $ref: '#/definitions/handler.FriendRequestsResponse'
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -740,42 +804,86 @@ paths:
       tags:
       - friends
   /posts:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список постов с поддержкой пагинации
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество постов на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ с постами
+          schema:
+            $ref: '#/definitions/handler.PostsResponse'
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить посты с пагинацией
+      tags:
+      - posts
     post:
       consumes:
       - multipart/form-data
       description: Создает новый пост от имени текущего пользователя с возможностью
         загрузки файлов
       parameters:
-      - description: Текст поста
+      - description: Текст поста (24-4096 символов)
         in: formData
+        maxLength: 4096
+        minLength: 24
         name: text
         required: true
         type: string
-      - description: Вложения
+      - collectionFormat: multi
+        description: Вложения к посту
         in: formData
+        items:
+          type: file
         name: attachments
-        type: file
-      - description: Фотографии
+        type: array
+      - collectionFormat: multi
+        description: Фотографии к посту
         in: formData
+        items:
+          type: file
         name: photos
-        type: file
+        type: array
       produces:
       - application/json
       responses:
         "201":
-          description: Created
+          description: Пост успешно создан
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Bad Request
+          description: Неверные данные запроса
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "401":
-          description: Unauthorized
+          description: Пользователь не авторизован
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -791,6 +899,7 @@ paths:
       parameters:
       - description: ID поста
         in: path
+        minimum: 1
         name: id
         required: true
         type: integer
@@ -798,27 +907,27 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Пост успешно удален
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Bad Request
+          description: Неверный ID поста
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "401":
-          description: Unauthorized
+          description: Пользователь не авторизован
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "403":
-          description: Forbidden
+          description: Доступ запрещен (не автор поста)
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Not Found
+          description: Пост не найден
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -833,6 +942,7 @@ paths:
       parameters:
       - description: ID поста
         in: path
+        minimum: 1
         name: id
         required: true
         type: integer
@@ -840,19 +950,19 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Пост найден
           schema:
             $ref: '#/definitions/domain.Post'
         "400":
-          description: Bad Request
+          description: Неверный ID поста
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Not Found
+          description: Пост не найден
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       summary: Получить пост по ID
@@ -866,47 +976,56 @@ paths:
       parameters:
       - description: ID поста
         in: path
+        minimum: 1
         name: id
         required: true
         type: integer
-      - description: Текст поста
+      - description: Текст поста (24-4096 символов)
         in: formData
+        maxLength: 4096
+        minLength: 24
         name: text
         required: true
         type: string
-      - description: Новые вложения
+      - collectionFormat: multi
+        description: Вложения к посту
         in: formData
+        items:
+          type: file
         name: attachments
-        type: file
-      - description: Новые фотографии
+        type: array
+      - collectionFormat: multi
+        description: Фотографии к посту
         in: formData
+        items:
+          type: file
         name: photos
-        type: file
+        type: array
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Пост успешно обновлен
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Bad Request
+          description: Неверные данные запроса
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "401":
-          description: Unauthorized
+          description: Пользователь не авторизован
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "403":
-          description: Forbidden
+          description: Доступ запрещен (не автор поста)
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Not Found
+          description: Пост не найден
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -1049,36 +1168,40 @@ paths:
       parameters:
       - description: ID пользователя
         in: path
+        minimum: 1
         name: userID
         required: true
         type: integer
       - default: 1
         description: Номер страницы
         in: query
+        minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество постов на странице
         in: query
+        maximum: 100
+        minimum: 1
         name: limit
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Успешный ответ с постами пользователя
           schema:
             $ref: '#/definitions/handler.PostsResponse'
         "400":
-          description: Bad Request
+          description: Неверные параметры запроса
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Not Found
+          description: Пользователь не найден
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       summary: Получить посты пользователя

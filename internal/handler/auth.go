@@ -22,7 +22,7 @@ func NewAuthHandler(authService domain.AuthService) *AuthHandler {
 func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 	sessionCookie, err := r.Cookie("session_id")
 	if err != nil {
-		domain.FromContext(r.Context()).Error("Cookie session_id not found:", zap.Error(err))
+		domain.FromContext(r.Context()).Info("Cookie session_id not found:", zap.Error(err))
 		return nil, domain.ErrNotFound
 	}
 	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)

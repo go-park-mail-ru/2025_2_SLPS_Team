@@ -71,27 +71,27 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 				isLoggedIn = false
 			} else {
 				sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
-				domain.Error(r.Context(), "Fail to get IsLoggedIn", err)
+				domain.FromContext(r.Context()).Error("Fail to get IsLoggedIn", zap.Error(err))
 				return
 			}
 		}
 		if isLoggedIn {
 			if ForbiddenPathsWithAuth[path] {
 				sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
-				domain.Warn(r.Context(), "Try get access to forbidden path")
+				domain.FromContext(r.Context()).Warn("Try get access to forbidden path")
 				return
 			} else {
 				ctx := context.WithValue(r.Context(), domain.UserIDKey, session.UserID)
 				newLogger := domain.FromContext(ctx).With(zap.Int("selfUserID", session.UserID))
 				ctx = context.WithValue(ctx, domain.LoggerKey, newLogger)
-				domain.Info(ctx, "User logged in, add userID to context")
+				domain.FromContext(ctx).Info("User logged in, add userID to context")
 
 				if !SafeMethods[r.Method] && !config.GetConfig().Debug {
-					domain.Info(r.Context(), "in header", zap.String("scrf", r.Header.Get("X-CSRF-Token")))
-					domain.Info(r.Context(), "in session", zap.String("scrf", session.CSRFToken))
+					domain.FromContext(r.Context()).Info("in header", zap.String("scrf", r.Header.Get("X-CSRF-Token")))
+					domain.FromContext(r.Context()).Info("in session", zap.String("scrf", session.CSRFToken))
 					if r.Header.Get("X-CSRF-Token") != session.CSRFToken {
 						sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
-						domain.Warn(r.Context(), "Try do somthing without CSRF token")
+						domain.FromContext(r.Context()).Warn("Try do somthing without CSRF token")
 						return
 					}
 				}
@@ -102,7 +102,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 		} else {
 			if !AllowedPathsWithOutAuth[path] {
 				sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
-				domain.Warn(r.Context(), "Try get access to forbidden path")
+				domain.FromContext(r.Context()).Warn("Try get access to forbidden path")
 				return
 			}
 		}

@@ -7,6 +7,7 @@ import (
 	"project/domain"
 	"time"
 
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -115,7 +116,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 
 	dblogger = dblogger.With(zap.Ints("userIDs", userIDs), zap.String("query", query))
 
-	rows, err := store.db.Query(query, userIDs)
+	rows, err := store.db.Query(query, pq.Array(userIDs))
 	if err != nil {
 		dblogger.Error("Failed to get profiles by user ids", zap.Error(err))
 		return nil, err

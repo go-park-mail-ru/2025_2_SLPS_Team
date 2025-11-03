@@ -115,8 +115,8 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param text formData string true "Текст поста (24-4096 символов)" minLength(24) maxLength(4096)
-// @Param attachments formData file false "Вложения к посту" collectionFormat("multi")
-// @Param photos formData file false "Фотографии к посту" collectionFormat("multi")
+// @Param attachments formData []file false "Вложения к посту" collectionFormat(multi)
+// @Param photos formData []file false "Фотографии к посту" collectionFormat(multi)
 // @Success 201 {object} JSONResponse "Пост успешно создан"
 // @Failure 400 {object} JSONResponse "Неверные данные запроса"
 // @Failure 401 {object} JSONResponse "Пользователь не авторизован"
@@ -171,8 +171,8 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param id path int true "ID поста" minimum(1)
 // @Param text formData string true "Текст поста (24-4096 символов)" minLength(24) maxLength(4096)
-// @Param attachments formData file false "Новые вложения" collectionFormat("multi")
-// @Param photos formData file false "Новые фотографии" collectionFormat("multi")
+// @Param attachments formData []file false "Вложения к посту" collectionFormat(multi)
+// @Param photos formData []file false "Фотографии к посту" collectionFormat(multi)
 // @Success 200 {object} JSONResponse "Пост успешно обновлен"
 // @Failure 400 {object} JSONResponse "Неверные данные запроса"
 // @Failure 401 {object} JSONResponse "Пользователь не авторизован"

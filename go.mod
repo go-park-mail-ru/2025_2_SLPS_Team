@@ -3,6 +3,7 @@ module project
 go 1.25.1
 
 require (
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/golang-migrate/migrate/v4 v4.19.0
 	github.com/golang/mock v1.6.0
