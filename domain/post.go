@@ -17,6 +17,20 @@ type Post struct {
 
 }
 
+// PostCreateRequest - запрос на создание поста для валидации
+type PostCreateRequest struct {
+	Text        string   `json:"text" valid:"required,stringlength(24|4096)"`
+	Attachments []string `json:"attachments" valid:"optional"`
+	Photos      []string `json:"photos" valid:"optional"`
+}
+
+// PostUpdateRequest - запрос на обновление поста для валидации
+type PostUpdateRequest struct {
+	Text        string   `json:"text" valid:"required,stringlength(24|4096)"`
+	Attachments []string `json:"attachments" valid:"optional"`
+	Photos      []string `json:"photos" valid:"optional"`
+}
+
 type PostStore interface {
 	// Получение постов с пагинацией
 	PostsPaginatedList(ctx context.Context, page, limit int) ([]Post, int, error)

@@ -39,28 +39,30 @@ func validatePaginationParams(page, limit int) (int, int, error) {
 }
 
 // CreateFriendship создает запрос в друзья
-func (store *DBFriendStore) CreateFriendship(ctx context.Context, userID1, userID2 int) error {
+func (store *DBFriendStore) CreateFriendship(ctx context.Context, actionUserID, targetUserID int) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start CreateFriendship", zap.Int("userID1", userID1), zap.Int("userID2", userID2))
+	dbloggerCopy.Info("DB start CreateFriendship",
+		zap.Int("actionUserID", actionUserID),
+		zap.Int("targetUserID", targetUserID))
 
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	firstUserID, secondUserID := ensureUserOrder(userID1, userID2)
+	firstUserID, secondUserID := ensureUserOrder(actionUserID, targetUserID)
 
 	query := `
-		INSERT INTO friend_relationships (first_user_id, second_user_id, status)
-		VALUES ($1, $2, $3)
+		INSERT INTO friend_relationships (first_user_id, second_user_id, action_user_id, status)
+		VALUES ($1, $2, $3, $4)
 		ON CONFLICT (first_user_id, second_user_id) 
-		DO UPDATE SET status = $3, updated_at = CURRENT_TIMESTAMP
+		DO UPDATE SET status = $4, action_user_id = $3, updated_at = CURRENT_TIMESTAMP
 	`
 
 	dblogger = dblogger.With(zap.String("query", query))
-	_, err := store.db.ExecContext(ctx, query, firstUserID, secondUserID, domain.FriendshipPending)
+	_, err := store.db.ExecContext(ctx, query, firstUserID, secondUserID, actionUserID, domain.FriendshipPending)
 	if err != nil {
 		dblogger.Error("Failed to create friendship", zap.Error(err))
 		return fmt.Errorf("failed to create friendship: %w", err)
@@ -85,7 +87,7 @@ func (store *DBFriendStore) GetFriendship(ctx context.Context, userID1, userID2 
 	firstUserID, secondUserID := ensureUserOrder(userID1, userID2)
 
 	query := `
-		SELECT first_user_id, second_user_id, status, created_at, updated_at
+		SELECT first_user_id, second_user_id, action_user_id, status, created_at, updated_at
 		FROM friend_relationships 
 		WHERE first_user_id = $1 AND second_user_id = $2
 	`
@@ -95,6 +97,7 @@ func (store *DBFriendStore) GetFriendship(ctx context.Context, userID1, userID2 
 	err := store.db.QueryRowContext(ctx, query, firstUserID, secondUserID).Scan(
 		&friendship.FirstUserID,
 		&friendship.SecondUserID,
+		&friendship.ActionUserID,
 		&friendship.Status,
 		&friendship.CreatedAt,
 		&friendship.UpdatedAt,
@@ -119,7 +122,10 @@ func (store *DBFriendStore) UpdateFriendshipStatus(ctx context.Context, userID1,
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start UpdateFriendshipStatus", zap.Int("userID1", userID1), zap.Int("userID2", userID2), zap.String("status", string(status)))
+	dbloggerCopy.Info("DB start UpdateFriendshipStatus",
+		zap.Int("userID1", userID1),
+		zap.Int("userID2", userID2),
+		zap.String("status", string(status)))
 
 	defer func() {
 		duration := time.Since(start)
@@ -253,7 +259,10 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetFriendshipRequests", zap.Int("userID", userID), zap.Int("page", page), zap.Int("limit", limit))
+	dbloggerCopy.Info("DB start GetFriendshipRequests",
+		zap.Int("userID", userID),
+		zap.Int("page", page),
+		zap.Int("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
@@ -264,14 +273,16 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	page, limit, _ = validatePaginationParams(page, limit)
 	offset := (page - 1) * limit
 
-	// Запросы где пользователь является second_user_id (получателем запроса)
+	// Запросы где пользователь НЕ является action_user_id (получатель запроса)
 	query := `
 		SELECT 
-			fr.first_user_id, fr.second_user_id, fr.status, fr.created_at, fr.updated_at,
+			fr.first_user_id, fr.second_user_id, fr.action_user_id, fr.status, fr.created_at, fr.updated_at,
 			p.user_id, p.first_name|| ' '||p.last_name, p.avatar_path
 		FROM friend_relationships fr
-		JOIN profiles p ON p.user_id = fr.first_user_id
-		WHERE fr.second_user_id = $1 AND fr.status = 'pending'
+		JOIN profiles p ON p.user_id = fr.action_user_id
+		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) 
+		AND fr.action_user_id != $1 
+		AND fr.status = 'pending'
 		ORDER BY fr.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -290,6 +301,7 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 		err := rows.Scan(
 			&request.FirstUserID,
 			&request.SecondUserID,
+			&request.ActionUserID,
 			&request.Status,
 			&request.CreatedAt,
 			&request.UpdatedAt,
@@ -313,7 +325,9 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	countQuery := `
 		SELECT COUNT(*)
 		FROM friend_relationships fr
-		WHERE fr.second_user_id = $1 AND fr.status = 'pending'
+		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) 
+		AND fr.action_user_id != $1 
+		AND fr.status = 'pending'
 	`
 
 	var total int
@@ -338,7 +352,10 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetSentRequests", zap.Int("userID", userID), zap.Int("page", page), zap.Int("limit", limit))
+	dbloggerCopy.Info("DB start GetSentRequests",
+		zap.Int("userID", userID),
+		zap.Int("page", page),
+		zap.Int("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
@@ -349,14 +366,17 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 	page, limit, _ = validatePaginationParams(page, limit)
 	offset := (page - 1) * limit
 
-	// Запросы где пользователь является first_user_id (отправителем запроса)
+	// Запросы где пользователь является action_user_id (отправителем запроса)
 	query := `
 		SELECT 
-			fr.first_user_id, fr.second_user_id, fr.status, fr.created_at, fr.updated_at,
+			fr.first_user_id, fr.second_user_id, fr.action_user_id, fr.status, fr.created_at, fr.updated_at,
 			p.user_id, p.first_name ||' '|| p.last_name, p.avatar_path
 		FROM friend_relationships fr
-		JOIN profiles p ON p.user_id = fr.second_user_id
-		WHERE fr.first_user_id = $1 AND fr.status = 'pending'
+		JOIN profiles p ON p.user_id = CASE 
+			WHEN fr.first_user_id = $1 THEN fr.second_user_id 
+			ELSE fr.first_user_id 
+		END
+		WHERE fr.action_user_id = $1 AND fr.status = 'pending'
 		ORDER BY fr.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -375,6 +395,7 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 		err := rows.Scan(
 			&request.FirstUserID,
 			&request.SecondUserID,
+			&request.ActionUserID,
 			&request.Status,
 			&request.CreatedAt,
 			&request.UpdatedAt,
@@ -398,7 +419,7 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 	countQuery := `
 		SELECT COUNT(*)
 		FROM friend_relationships fr
-		WHERE fr.first_user_id = $1 AND fr.status = 'pending'
+		WHERE fr.action_user_id = $1 AND fr.status = 'pending'
 	`
 
 	var total int

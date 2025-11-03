@@ -97,9 +97,11 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	auth := handler.NewAuthHandler(authService)
 	profile := handler.NewProfileHandler(profileService)
 	chat := handler.NewChatHandler(chatService)
-	posts := handler.NewPostsHandler(postStore, userStore)
+	postService := service.NewPostService(postStore, userStore)
+	posts := handler.NewPostsHandler(postService)
 	wshandler := handler.NewWSHandler(wsHub)
-	friend := handler.NewFriendHandler(friendStore, userStore)
+	friendService := service.NewFriendService(friendStore, userStore)
+	friend := handler.NewFriendHandler(friendService)
 
 	//hub := WS.NewHub()
 	//wsr := WS.NewRouter()

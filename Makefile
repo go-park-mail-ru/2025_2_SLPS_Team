@@ -5,9 +5,9 @@
 #	go tool cover -func=coverage.out
 #	go tool cover -html=coverage.out
 migrations-up:
-	migrate -path ./repository/migrations -database "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable" up
+	migrate -path ./db/migrations -database "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable" up
 migrations-down:
-	migrate -path ./repository/migrations -database "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable" down
+	migrate -path ./db/migrations -database "postgres://postgres:mysecretpassword@localhost:5432/vk?sslmode=disable" down
 wait-db:
 	powershell -Command "while (-not (Test-NetConnection -ComputerName localhost -Port 5432).TcpTestSucceeded) { Start-Sleep -Seconds 1 }"
 

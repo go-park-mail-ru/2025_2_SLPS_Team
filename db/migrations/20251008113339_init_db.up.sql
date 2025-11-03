@@ -40,16 +40,22 @@ CREATE TABLE friend_relationships
 (
     first_user_id  INT                    NOT NULL,
     second_user_id INT                    NOT NULL,
+    action_user_id INT                    NOT NULL, --кто отправил запрос
     status         friendship_status_enum NOT NULL DEFAULT 'pending',
-    CONSTRAINT status_length CHECK ( LENGTH(status::text) <= 64),
     created_at     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at     TIMESTAMP              NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    
     PRIMARY KEY (first_user_id, second_user_id),
     FOREIGN KEY (first_user_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (second_user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (action_user_id) REFERENCES users (id) ON DELETE CASCADE,
+    
+    -- Ограничения
     CONSTRAINT no_self_friendship CHECK (first_user_id != second_user_id),
-    CONSTRAINT ordered_friendship CHECK (first_user_id < second_user_id)
+    CONSTRAINT ordered_friendship CHECK (first_user_id < second_user_id),
+    CONSTRAINT action_user_in_relationship CHECK (action_user_id IN (first_user_id, second_user_id))
 );
+
 
 CREATE TABLE chats
 (

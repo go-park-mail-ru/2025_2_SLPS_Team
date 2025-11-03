@@ -15,8 +15,10 @@ const (
 )
 
 type Friendship struct {
+	ID           int              `json:"id"`
 	FirstUserID  int              `json:"firstUserID"`
 	SecondUserID int              `json:"secondUserID"`
+	ActionUserID int              `json:"actionUserID"` // Кто отправил запрос
 	Status       FriendshipStatus `json:"status"`
 	CreatedAt    time.Time        `json:"createdAt"`
 	UpdatedAt    time.Time        `json:"updatedAt"`
@@ -40,10 +42,10 @@ type FriendResponse struct {
 
 type FriendStore interface {
 	// Основные операции CRUD
-	CreateFriendship(ctx context.Context, firstUserID, secondUserID int) error
-	GetFriendship(ctx context.Context, firstUserID, secondUserID int) (*Friendship, error)
-	UpdateFriendshipStatus(ctx context.Context, firstUserID, secondUserID int, status FriendshipStatus) error
-	DeleteFriendship(ctx context.Context, firstUserID, secondUserID int) error
+	CreateFriendship(ctx context.Context, actionUserID, targetUserID int) error
+	GetFriendship(ctx context.Context, userID1, userID2 int) (*Friendship, error)
+	UpdateFriendshipStatus(ctx context.Context, userID1, userID2 int, status FriendshipStatus) error
+	DeleteFriendship(ctx context.Context, userID1, userID2 int) error
 
 	// Получение списков с пагинацией
 	GetUserFriends(ctx context.Context, userID int, page, limit int) ([]ShortProfile, int, error)
