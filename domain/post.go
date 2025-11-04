@@ -32,9 +32,18 @@ type PostUpdateRequest struct {
 	Photos      []string `json:"photos" valid:"optional"`
 }
 
+type PostService interface {
+	PostsPaginate(ctx context.Context, params PaginateQueryParams) ([]Post, error)
+	GetPost(ctx context.Context, postID uint) (*Post, error)
+	CreatePost(ctx context.Context, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*Post, error)
+	UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error
+	DeletePost(ctx context.Context, postID uint, userID int) error
+	GetUserPosts(ctx context.Context, userID uint, params PaginateQueryParams) ([]Post, error)
+}
+
 type PostStore interface {
 	// Получение постов с пагинацией
-	PostsPaginatedList(ctx context.Context, page, limit int) ([]Post, error)
+	PostsPaginatedList(ctx context.Context, limit, offset int) ([]Post, error)
 	// Получение поста по ID
 	GetPostByID(ctx context.Context, id uint) (*Post, error)
 	// Создание поста
@@ -44,15 +53,5 @@ type PostStore interface {
 	// Удаление поста
 	DeletePost(ctx context.Context, id uint, authorID uint) error
 	// Получение постов пользователя
-	GetPostsByUser(ctx context.Context, userID uint, page, limit int) ([]Post, error)
-}
-
-// Для тестов
-type PostService interface {
-	PostsPaginate(ctx context.Context, page, limit int) ([]Post, error)
-	GetPost(ctx context.Context, postID uint) (*Post, error)
-	CreatePost(ctx context.Context, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*Post, error)
-	UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error
-	DeletePost(ctx context.Context, postID uint, userID int) error
-	GetUserPosts(ctx context.Context, userID uint, page, limit int) ([]Post, error)
+	GetPostsByUser(ctx context.Context, userID uint, limit, offset int) ([]Post, error)
 }

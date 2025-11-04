@@ -31,7 +31,7 @@ type PostsRequest struct {
 // PostsResponse - ответ с постами и пагинацией
 // @Description Ответ с пагинированным списком постов
 type PostsResponse struct {
-	Posts []domain.Post `json:"posts"`            // Список постов
+	Posts []domain.Post `json:"posts"` // Список постов
 }
 
 // PostsPaginate возвращает посты с пагинацией
@@ -47,25 +47,20 @@ type PostsResponse struct {
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts [get]
 func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
-	var req PostsRequest
-	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
 		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
 
-	posts, err := h.postService.PostsPaginate(r.Context(), req.Page, req.Limit)
+	posts, err := h.postService.PostsPaginate(r.Context(), qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	response := PostsResponse{
-		Posts: posts,
-
-	}
-
-	if err := sendJSONData(r.Context(), w, response); err != nil {
+	if err := sendJSONData(r.Context(), w, posts); err != nil {
 		return
 	}
 }
@@ -285,24 +280,20 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req PostsRequest
-	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
 		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
 
-	posts, err := h.postService.GetUserPosts(r.Context(), uint(userID), req.Page, req.Limit)
+	posts, err := h.postService.GetUserPosts(r.Context(), uint(userID), qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	response := PostsResponse{
-		Posts:      posts,
-	}
-
-	if err := sendJSONData(r.Context(), w, response); err != nil {
+	if err := sendJSONData(r.Context(), w, posts); err != nil {
 		return
 	}
 }

@@ -23,17 +23,11 @@ func NewPostService(postStore domain.PostStore, userStore domain.UserStore) doma
 }
 
 // PostsPaginate возвращает посты с пагинацией
-func (s *PostService) PostsPaginate(ctx context.Context, page, limit int) ([]domain.Post, error) {
-	if page < 1 {
-		page = 1
-	}
-	if limit < 1 || limit > 100 {
-		limit = 20
-	}
+func (s *PostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.Post, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
+	domain.Info(ctx, "Getting paginated posts", zap.Int("offset", offset), zap.Int("limit", limit))
 
-	domain.Info(ctx, "Getting paginated posts", zap.Int("page", page), zap.Int("limit", limit))
-
-	posts, err := s.postStore.PostsPaginatedList(ctx, page, limit)
+	posts, err := s.postStore.PostsPaginatedList(ctx, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get posts", err)
 		return nil, domain.ErrDB
@@ -304,18 +298,13 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 }
 
 // GetUserPosts возвращает посты пользователя
-func (s *PostService) GetUserPosts(ctx context.Context, userID uint, page, limit int) ([]domain.Post, error) {
+func (s *PostService) GetUserPosts(ctx context.Context, userID uint, params domain.PaginateQueryParams) ([]domain.Post, error) {
 	// Валидация параметров
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 || limit > 100 {
-		limit = 20
-	}
+	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting user posts",
 		zap.Uint("userID", userID),
-		zap.Int("page", page),
+		zap.Int("offset", offset),
 		zap.Int("limit", limit))
 
 	// Проверяем существование пользователя
@@ -330,7 +319,7 @@ func (s *PostService) GetUserPosts(ctx context.Context, userID uint, page, limit
 	}
 
 	// Получаем посты
-	posts, err := s.postStore.GetPostsByUser(ctx, userID, page, limit)
+	posts, err := s.postStore.GetPostsByUser(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user posts", err, zap.Uint("userID", userID))
 		return nil, domain.ErrDB

@@ -21,23 +21,16 @@ func NewDBPostStore(db *sql.DB) domain.PostStore {
 }
 
 // Возвращает пагинированный слайс постов
-func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit int) ([]domain.Post, error) {
+func (store *DBPostStore) PostsPaginatedList(ctx context.Context, limit, offset int) ([]domain.Post, error) {
 	start := time.Now()                           //засекаем время начала операции
 	dblogger := domain.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start PostsPaginatedList", zap.Int("page", page), zap.Int("limit", limit))
+	dbloggerCopy.Info("DB start PostsPaginatedList", zap.Int("offset", offset), zap.Int("limit", limit))
 
 	defer func() { //время выполнения будет залогировано в любом случае.
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-
-	if page < 1 || limit < 1 { //У нас нет отрицательных или нулевых страниц, также я не могу отрисовать на странице -7 постов
-		dblogger.Warn("Invalid pagination parameters", zap.Int("page", page), zap.Int("limit", limit))
-		return nil, domain.ErrInvalidInput
-	}
-
-	offset := (page - 1) * limit //Смещенение для игнорирования первых offset постов
 
 	query := `
         SELECT p.id, p.author_id, p.text, p.created_at, p.updated_at
@@ -53,8 +46,8 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit in
 	}
 	defer rows.Close()
 
-	var posts []domain.Post //Слайс типа domain.Post, сюда мы будем добавлять считанные из rows посты post. Наша функция возвращает этот слайс
-	for rows.Next() {       //Начинаем считывать строки из sql запроса ПОСТРОЧНО!
+	posts := []domain.Post{} //Слайс типа domain.Post, сюда мы будем добавлять считанные из rows посты post. Наша функция возвращает этот слайс
+	for rows.Next() {        //Начинаем считывать строки из sql запроса ПОСТРОЧНО!
 		var post domain.Post //Структура нашего поста
 		err := rows.Scan(    //Scan записывает столбцы из sql запроса rows в поля нашей структуры post ПО УКАЗАТЕЛЮ. Возвращает ошибку
 			&post.ID,
@@ -84,20 +77,6 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit in
 		dblogger.Error("Rows iteration error", zap.Error(err))
 		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
-
-	// // Получаем общее количество для пагинации
-	// var total int
-	// countQuery := `
-	// SELECT COUNT(*)
-	// FROM posts
-	// `
-	// err = store.db.QueryRowContext(ctx, countQuery).Scan(&total)
-	// if err != nil {
-	// 	dblogger.Error("Failed to count posts", zap.Error(err))
-	// 	return nil, 0, fmt.Errorf("failed to count posts: %w", err)
-	// }
-
-	// totalPages := (total + limit - 1) / limit
 
 	dblogger.Info("Posts retrieved successfully",
 		zap.Int("postsCount", len(posts)),
@@ -354,23 +333,16 @@ func (store *DBPostStore) DeletePost(ctx context.Context, id uint, authorID uint
 }
 
 // Получение постов пользователя с пагинацией
-func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page, limit int) ([]domain.Post, error) {
+func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, limit, offset int) ([]domain.Post, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetPostsByUser", zap.Uint("userID", userID), zap.Int("page", page), zap.Int("limit", limit))
+	dbloggerCopy.Info("DB start GetPostsByUser", zap.Uint("userID", userID), zap.Int("offset", offset), zap.Int("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-
-	if userID == 0 || page < 1 || limit < 1 {
-		dblogger.Warn("Invalid input parameters")
-		return nil, domain.ErrInvalidInput
-	}
-
-	offset := (page - 1) * limit
 
 	query := `
         SELECT id, author_id, text, created_at, updated_at
@@ -388,7 +360,7 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page,
 	}
 	defer rows.Close()
 
-	var posts []domain.Post
+	posts := []domain.Post{}
 	for rows.Next() {
 		var post domain.Post
 		err := rows.Scan(
@@ -413,21 +385,6 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page,
 		posts = append(posts, post)
 	}
 
-	// // Count для пагинации
-	// var total int
-	// countQuery := `
-	// SELECT COUNT(*)
-	// FROM posts WHERE author_id = $1
-	// `
-	// err = store.db.QueryRowContext(ctx, countQuery, userID).Scan(
-	// 	&total,
-	// )
-	// if err != nil {
-	// 	dblogger.Error("Failed to count user posts", zap.Error(err))
-	// 	return nil, 0, fmt.Errorf("failed to count user posts: %w", err)
-	// }
-
-	// totalPages := (total + limit - 1) / limit
 	dblogger.Info("User posts retrieved successfully", zap.Int("postsCount", len(posts)))
 	return posts, nil
 }
