@@ -910,10 +910,8 @@ const docTemplate = `{
                 "summary": "Создать новый пост",
                 "parameters": [
                     {
-                        "maxLength": 4096,
-                        "minLength": 24,
                         "type": "string",
-                        "description": "Текст поста (24-4096 символов)",
+                        "description": "Текст поста",
                         "name": "text",
                         "in": "formData",
                         "required": true
@@ -941,25 +939,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Пост успешно создан",
+                        "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Неверные данные запроса",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "401": {
-                        "description": "Пользователь не авторизован",
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Внутренняя ошибка сервера",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -1044,10 +1042,8 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maxLength": 4096,
-                        "minLength": 24,
                         "type": "string",
-                        "description": "Текст поста (24-4096 символов)",
+                        "description": "Текст поста",
                         "name": "text",
                         "in": "formData",
                         "required": true
@@ -1827,27 +1823,12 @@ const docTemplate = `{
             "description": "Ответ с пагинированным списком постов",
             "type": "object",
             "properties": {
-                "hasNext": {
-                    "description": "Есть ли следующая страница",
-                    "type": "boolean",
-                    "example": true
-                },
-                "page": {
-                    "description": "Текущая страница",
-                    "type": "integer",
-                    "example": 1
-                },
                 "posts": {
                     "description": "Список постов",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/domain.Post"
                     }
-                },
-                "totalPages": {
-                    "description": "Общее количество страниц",
-                    "type": "integer",
-                    "example": 5
                 }
             }
         }

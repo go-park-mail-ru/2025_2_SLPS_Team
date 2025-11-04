@@ -4,7 +4,6 @@ import (
 	"mime/multipart"
 	"net/http"
 	"project/domain"
-	"project/internal/service"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -13,10 +12,10 @@ import (
 )
 
 type PostsHandler struct {
-	postService service.PostService
+	postService domain.PostService
 }
 
-func NewPostsHandler(postService service.PostService) *PostsHandler {
+func NewPostsHandler(postService domain.PostService) *PostsHandler {
 	return &PostsHandler{
 		postService: postService,
 	}
@@ -32,10 +31,7 @@ type PostsRequest struct {
 // PostsResponse - ответ с постами и пагинацией
 // @Description Ответ с пагинированным списком постов
 type PostsResponse struct {
-	Posts      []domain.Post `json:"posts"`                  // Список постов
-	Page       int           `json:"page" example:"1"`       // Текущая страница
-	TotalPages int           `json:"totalPages" example:"5"` // Общее количество страниц
-	HasNext    bool          `json:"hasNext" example:"true"` // Есть ли следующая страница
+	Posts []domain.Post `json:"posts"`            // Список постов
 }
 
 // PostsPaginate возвращает посты с пагинацией
@@ -58,17 +54,15 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, totalPages, err := h.postService.PostsPaginate(r.Context(), req.Page, req.Limit)
+	posts, err := h.postService.PostsPaginate(r.Context(), req.Page, req.Limit)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
 	response := PostsResponse{
-		Posts:      posts,
-		Page:       req.Page,
-		TotalPages: totalPages,
-		HasNext:    req.Page < totalPages,
+		Posts: posts,
+
 	}
 
 	if err := sendJSONData(r.Context(), w, response); err != nil {
@@ -298,7 +292,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, totalPages, err := h.postService.GetUserPosts(r.Context(), uint(userID), req.Page, req.Limit)
+	posts, err := h.postService.GetUserPosts(r.Context(), uint(userID), req.Page, req.Limit)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -306,9 +300,6 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 
 	response := PostsResponse{
 		Posts:      posts,
-		Page:       req.Page,
-		TotalPages: totalPages,
-		HasNext:    req.Page < totalPages,
 	}
 
 	if err := sendJSONData(r.Context(), w, response); err != nil {

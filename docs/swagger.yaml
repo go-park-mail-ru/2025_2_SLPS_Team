@@ -238,23 +238,11 @@ definitions:
   handler.PostsResponse:
     description: Ответ с пагинированным списком постов
     properties:
-      hasNext:
-        description: Есть ли следующая страница
-        example: true
-        type: boolean
-      page:
-        description: Текущая страница
-        example: 1
-        type: integer
       posts:
         description: Список постов
         items:
           $ref: '#/definitions/domain.Post'
         type: array
-      totalPages:
-        description: Общее количество страниц
-        example: 5
-        type: integer
     type: object
 host: localhost:8080
 info:
@@ -846,10 +834,8 @@ paths:
       description: Создает новый пост от имени текущего пользователя с возможностью
         загрузки файлов
       parameters:
-      - description: Текст поста (24-4096 символов)
+      - description: Текст поста
         in: formData
-        maxLength: 4096
-        minLength: 24
         name: text
         required: true
         type: string
@@ -871,19 +857,19 @@ paths:
       - application/json
       responses:
         "201":
-          description: Пост успешно создан
+          description: Created
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Неверные данные запроса
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "401":
-          description: Пользователь не авторизован
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Внутренняя ошибка сервера
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -980,10 +966,8 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Текст поста (24-4096 символов)
+      - description: Текст поста
         in: formData
-        maxLength: 4096
-        minLength: 24
         name: text
         required: true
         type: string

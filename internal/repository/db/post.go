@@ -21,7 +21,7 @@ func NewDBPostStore(db *sql.DB) domain.PostStore {
 }
 
 // Возвращает пагинированный слайс постов
-func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit int) ([]domain.Post, int, error) {
+func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit int) ([]domain.Post, error) {
 	start := time.Now()                           //засекаем время начала операции
 	dblogger := domain.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
 	dbloggerCopy := dblogger
@@ -34,7 +34,7 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit in
 
 	if page < 1 || limit < 1 { //У нас нет отрицательных или нулевых страниц, также я не могу отрисовать на странице -7 постов
 		dblogger.Warn("Invalid pagination parameters", zap.Int("page", page), zap.Int("limit", limit))
-		return nil, 0, domain.ErrInvalidInput
+		return nil, domain.ErrInvalidInput
 	}
 
 	offset := (page - 1) * limit //Смещенение для игнорирования первых offset постов
@@ -49,7 +49,7 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit in
 	rows, err := store.db.QueryContext(ctx, query, limit, offset) // Получаем посты с пагинацией
 	if err != nil {
 		dblogger.Error("Failed to query posts", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to query posts: %w", err)
+		return nil, fmt.Errorf("failed to query posts: %w", err)
 	}
 	defer rows.Close()
 
@@ -66,13 +66,13 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit in
 
 		if err != nil {
 			dblogger.Error("Failed to scan post", zap.Error(err))
-			return nil, 0, fmt.Errorf("failed to scan post: %w", err)
+			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
 
 		// Загружаем attachments и photos
 		attachments, photos, err := store.getPostMedia(ctx, post.ID)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 
 		post.Attachments = attachments
@@ -82,29 +82,27 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, page, limit in
 
 	if err := rows.Err(); err != nil {
 		dblogger.Error("Rows iteration error", zap.Error(err))
-		return nil, 0, fmt.Errorf("rows iteration error: %w", err)
+		return nil, fmt.Errorf("rows iteration error: %w", err)
 	}
 
-	// Получаем общее количество для пагинации
-	var total int
-	countQuery := `
-	SELECT COUNT(*) 
-	FROM posts
-	`
-	err = store.db.QueryRowContext(ctx, countQuery).Scan(&total)
-	if err != nil {
-		dblogger.Error("Failed to count posts", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to count posts: %w", err)
-	}
+	// // Получаем общее количество для пагинации
+	// var total int
+	// countQuery := `
+	// SELECT COUNT(*)
+	// FROM posts
+	// `
+	// err = store.db.QueryRowContext(ctx, countQuery).Scan(&total)
+	// if err != nil {
+	// 	dblogger.Error("Failed to count posts", zap.Error(err))
+	// 	return nil, 0, fmt.Errorf("failed to count posts: %w", err)
+	// }
 
-	totalPages := (total + limit - 1) / limit
+	// totalPages := (total + limit - 1) / limit
 
 	dblogger.Info("Posts retrieved successfully",
 		zap.Int("postsCount", len(posts)),
-		zap.Int("totalPages", totalPages),
-		zap.Int("totalPosts", total),
 	)
-	return posts, totalPages, nil
+	return posts, nil
 }
 
 // Возвращает пост по ID поста
@@ -356,7 +354,7 @@ func (store *DBPostStore) DeletePost(ctx context.Context, id uint, authorID uint
 }
 
 // Получение постов пользователя с пагинацией
-func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page, limit int) ([]domain.Post, int, error) {
+func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page, limit int) ([]domain.Post, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
@@ -369,7 +367,7 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page,
 
 	if userID == 0 || page < 1 || limit < 1 {
 		dblogger.Warn("Invalid input parameters")
-		return nil, 0, domain.ErrInvalidInput
+		return nil, domain.ErrInvalidInput
 	}
 
 	offset := (page - 1) * limit
@@ -386,7 +384,7 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page,
 
 	if err != nil {
 		dblogger.Error("Failed to query user posts", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to query user posts: %w", err)
+		return nil, fmt.Errorf("failed to query user posts: %w", err)
 	}
 	defer rows.Close()
 
@@ -402,12 +400,12 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan post", zap.Error(err))
-			return nil, 0, fmt.Errorf("failed to scan post: %w", err)
+			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
 
 		attachments, photos, err := store.getPostMedia(ctx, post.ID)
 		if err != nil {
-			return nil, 0, err
+			return nil, err
 		}
 
 		post.Attachments = attachments
@@ -415,25 +413,23 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, page,
 		posts = append(posts, post)
 	}
 
-	// Count для пагинации
-	var total int
-	countQuery := `
-	SELECT COUNT(*) 
-	FROM posts WHERE author_id = $1
-	`
-	err = store.db.QueryRowContext(ctx, countQuery, userID).Scan(
-		&total,
-	)
-	if err != nil {
-		dblogger.Error("Failed to count user posts", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to count user posts: %w", err)
-	}
+	// // Count для пагинации
+	// var total int
+	// countQuery := `
+	// SELECT COUNT(*)
+	// FROM posts WHERE author_id = $1
+	// `
+	// err = store.db.QueryRowContext(ctx, countQuery, userID).Scan(
+	// 	&total,
+	// )
+	// if err != nil {
+	// 	dblogger.Error("Failed to count user posts", zap.Error(err))
+	// 	return nil, 0, fmt.Errorf("failed to count user posts: %w", err)
+	// }
 
-	totalPages := (total + limit - 1) / limit
-	dblogger.Info("User posts retrieved successfully",
-		zap.Int("postsCount", len(posts)),
-		zap.Int("totalPages", totalPages))
-	return posts, totalPages, nil
+	// totalPages := (total + limit - 1) / limit
+	dblogger.Info("User posts retrieved successfully", zap.Int("postsCount", len(posts)))
+	return posts, nil
 }
 
 // НИЖЕ БУДУТ ПРИВЕДЕНЫ ВСПОМОГАТЕЛЬНЫЕ ФУКНЦИИ

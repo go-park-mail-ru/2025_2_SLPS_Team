@@ -73,8 +73,6 @@ func MapErrorToHTTP(err error) (int, string) {
 		return http.StatusConflict, AleradyExist
 	case errors.Is(err, ErrDB):
 		return http.StatusInternalServerError, ServerErr
-
-	// Добавляем обработку ошибок друзей
 	default:
 		return http.StatusInternalServerError, ServerErr
 	}
