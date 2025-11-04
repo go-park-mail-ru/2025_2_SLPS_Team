@@ -288,7 +288,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 	t.Run("Success", func(t *testing.T) {
 		userStore.EXPECT().
 			GetUserByID(ctx, int(userID)).
-			Return(&domain.User{ID: int(userID)}, nil)
+			Return(domain.User{ID: int(userID)}, nil)
 
 		posts := []domain.Post{
 			{ID: 1, AuthorID: userID, Text: "User post 1"},
@@ -310,7 +310,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 	t.Run("User not found", func(t *testing.T) {
 		userStore.EXPECT().
 			GetUserByID(ctx, int(userID)).
-			Return(nil, domain.ErrUserNotFound)
+			Return(domain.User{}, domain.ErrUserNotFound)
 
 		result, err := svc.GetUserPosts(ctx, userID, domain.PaginateQueryParams{
 			Page:  1,
@@ -324,7 +324,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 	t.Run("DB error on user check", func(t *testing.T) {
 		userStore.EXPECT().
 			GetUserByID(ctx, int(userID)).
-			Return(nil, errors.New("db error"))
+			Return(domain.User{}, errors.New("db error"))
 
 		result, err := svc.GetUserPosts(ctx, userID, domain.PaginateQueryParams{
 			Page:  1,
@@ -338,7 +338,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 	t.Run("DB error on posts get", func(t *testing.T) {
 		userStore.EXPECT().
 			GetUserByID(ctx, int(userID)).
-			Return(&domain.User{ID: int(userID)}, nil)
+			Return(domain.User{ID: int(userID)}, nil)
 
 		postStore.EXPECT().
 			GetPostsByUser(ctx, userID, 20, 0).
