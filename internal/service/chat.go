@@ -62,8 +62,8 @@ func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.P
 		domain.FromContext(ctx).Warn("User not a member of chat", zap.Int("chatID", chatID))
 		return nil, domain.ErrAccessDenied
 	}
-
-	messages, err := api.messageStore.GetMessagesByChatId(ctx, chatID, params.Limit, params.Offset)
+	offset, limit := domain.ValidatePaginationParams(params)
+	messages, err := api.messageStore.GetMessagesByChatId(ctx, chatID, limit, offset)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to get messages", zap.Error(err), zap.Int("chatID", chatID))
 		return nil, domain.ErrDB
@@ -89,7 +89,7 @@ func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.P
 		Messages: messages,
 		Authors:  authors,
 	}
-	domain.FromContext(ctx).Info("Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("limit", params.Limit), zap.Int("offset", params.Offset))
+	domain.FromContext(ctx).Info("Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("limit", limit), zap.Int("offset", offset))
 	return &messagesWithAuthors, nil
 }
 
@@ -151,13 +151,14 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int, chatID in
 }
 
 func (api *ChatService) GetUserChats(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FullChat, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
 
-	chats, err := api.chatStore.GetUserFullChats(ctx, userID, params.Limit, params.Offset)
+	chats, err := api.chatStore.GetUserFullChats(ctx, userID, limit, offset)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to get chats", zap.Error(err))
 		return nil, domain.ErrDB
 	}
 
-	domain.FromContext(ctx).Info("Chats retrieved successfully", zap.Int("limit", params.Limit), zap.Int("offset", params.Offset))
+	domain.FromContext(ctx).Info("Chats retrieved successfully", zap.Int("limit", limit), zap.Int("offset", offset))
 	return chats, nil
 }

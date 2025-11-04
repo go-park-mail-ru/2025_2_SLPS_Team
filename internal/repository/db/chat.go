@@ -141,7 +141,6 @@ func (store *DBChatStore) GetUserFullChats(ctx context.Context, userID int, limi
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-
 	query := `
 
 WITH last_messages AS (

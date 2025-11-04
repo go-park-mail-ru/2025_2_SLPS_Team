@@ -27,7 +27,6 @@ func InitGlobalConfig() {
 	if env == "" {
 		env = "prod"
 	}
-	println(env)
 	var envFile string
 	switch env {
 	case "prod":
