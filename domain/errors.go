@@ -59,7 +59,7 @@ const (
 
 func MapErrorToHTTP(err error) (int, string) {
 	switch {
-	case errors.Is(err, ErrNotFound):
+	case errors.Is(err, ErrNotFound) || errors.Is(err, ErrPostNotFound):
 		return http.StatusNotFound, NotFound
 	case errors.Is(err, ErrAccessDenied):
 		return http.StatusForbidden, Forbidden
