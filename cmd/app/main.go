@@ -48,8 +48,8 @@ func NewRedis(dataSourceName string) redis.Conn {
 	return redisConn
 }
 
-func NewLogger() *zap.Logger {
-	isDebug := config.GetConfig().Debug
+func NewLogger(config *config.Config) *zap.Logger {
+	isDebug := config.Debug
 	atom := zap.NewAtomicLevel()
 	incodeCfg := zap.NewProductionEncoderConfig()
 	var cfg zap.Config
@@ -76,12 +76,10 @@ func NewLogger() *zap.Logger {
 	if err != nil {
 		log.Println(err)
 	}
-	log.Println(logger)
 	return logger
 }
 
-// стоит переписать через структуру, чтобы передавать все сущности
-func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux.Router {
+func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn, config *config.Config) *mux.Router {
 
 	userStore := db.NewDBUserStore(dbConn)
 	sessionStore := dbRedis.NewRedisSessionStore(redisConn)
@@ -94,27 +92,24 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 	authService := service.NewAuthService(userStore, sessionStore)
 	profileService := service.NewProfileService(profileStore, userStore)
 	chatService := service.NewChatService(userStore, profileStore, chatStore, messageStore, wsHub)
-	auth := handler.NewAuthHandler(authService)
+	auth := handler.NewAuthHandler(authService, config)
 	profile := handler.NewProfileHandler(profileService)
 	chat := handler.NewChatHandler(chatService)
 	postService := service.NewPostService(postStore, userStore)
+	middleware := handler.NewMiddlewareHandler(config)
 	posts := handler.NewPostsHandler(postService)
 	wshandler := handler.NewWSHandler(wsHub)
 	friendService := service.NewFriendService(friendStore, userStore)
 	friend := handler.NewFriendHandler(friendService)
 
-	//hub := WS.NewHub()
-	//wsr := WS.NewRouter()
-	//message := WS.NewWebSocketHandler(userStore)
-	//wsr.Handle("send_message", )
 	r := mux.NewRouter()
 	r.PathPrefix("/uploads/").Handler(handler.UploadsHandler("./uploads", "/uploads/"))
 	r.PathPrefix("/docs/").Handler(httpSwagger.WrapHandler)
 	apiRouter := r.PathPrefix("/api").Subrouter()
 
-	apiRouter.Use(handler.SecureMiddleware)
-	apiRouter.Use(handler.CorsMiddleware)
-	apiRouter.Use(handler.LoggingMiddleware(logger))
+	apiRouter.Use(middleware.SecureMiddleware)
+	apiRouter.Use(middleware.CorsMiddleware)
+	apiRouter.Use(middleware.LoggingMiddleware(logger))
 	apiRouter.Use(auth.AuthMiddleware)
 	apiRouter.HandleFunc("/ws", wshandler.ServeWs)
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
@@ -171,19 +166,19 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn) *mux
 // @BasePath /api/
 func main() {
 
-	config.InitGlobalConfig()
-	if config.GetConfig().Debug {
+	config := config.NewConfig()
+	if config.Debug {
 		log.Println("Debug mode enabled")
 	}
-	logger := NewLogger()
+	logger := NewLogger(config)
 	defer logger.Sync()
-	dbConn := NewPostgres(config.GetConfig().PostgresURL)
+	dbConn := NewPostgres(config.PostgresURL)
 	defer dbConn.Close()
 
-	redisConn := NewRedis(config.GetConfig().RedisURL)
+	redisConn := NewRedis(config.RedisURL)
 	defer redisConn.Close()
 
-	apiRouter := NewApiRouter(logger, dbConn, redisConn)
+	apiRouter := NewApiRouter(logger, dbConn, redisConn, config)
 
 	if err := http.ListenAndServe(":8080", apiRouter); err != nil {
 		log.Fatalf("Server failed start: %v", err)

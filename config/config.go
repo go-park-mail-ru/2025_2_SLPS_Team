@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 
@@ -17,38 +18,40 @@ type Config struct {
 	MigrationsPath string
 }
 
-var Global *Config
+func NewConfig() *Config {
 
-func InitGlobalConfig() {
 	if err := godotenv.Load(".env"); err != nil {
-		log.Printf("Warning: cannot load using system env vars")
-	}
-	env := os.Getenv("APP_ENV")
-	if env == "" {
-		env = "prod"
-	}
-	var envFile string
-	switch env {
-	case "prod":
-		envFile = ".env.prod"
-	default:
-		envFile = ".env.dev"
+		log.Printf("Warning: cannot load env)")
 	}
 
-	if err := godotenv.Load(envFile); err != nil {
-		log.Printf("Warning: cannot load %s, using system env vars", envFile)
-	}
-	Global = &Config{
-		Env:            env,
-		PostgresURL:    os.Getenv("POSTGRES_URL"),
-		RedisURL:       os.Getenv("REDIS_URL"),
-		Debug:          env != "prod",
+	dbUser := os.Getenv("DB_USER")
+	dbPassword := os.Getenv("DB_PASSWORD")
+	dbHost := os.Getenv("DB_HOST")
+	dbPort := os.Getenv("DB_PORT")
+	dbName := os.Getenv("DB_NAME")
+	dbSSLMode := os.Getenv("DB_SSLMODE")
+
+	postgresURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
+		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode,
+	)
+	log.Println(postgresURL)
+	redisHost := os.Getenv("REDIS_HOST")
+	redisPort := os.Getenv("REDIS_PORT")
+	redisPassword := os.Getenv("REDIS_PASSWORD")
+	redisDB := os.Getenv("REDIS_DB")
+	redisURL := fmt.Sprintf("redis://:%s@%s:%s/%s", redisPassword, redisHost, redisPort, redisDB)
+
+	migrationsPath := os.Getenv("MIGRATIONS_PATH")
+	migrationsPath = fmt.Sprintf("file://%s", migrationsPath)
+
+	config := &Config{
+		Env:            os.Getenv("APP_ENV"),
+		PostgresURL:    postgresURL,
+		RedisURL:       redisURL,
+		Debug:          os.Getenv("APP_ENV") != "prod",
 		LogLevel:       os.Getenv("LOG_LEVEL"),
 		FrontendOrigin: os.Getenv("FRONTEND_ORIGIN"),
-		MigrationsPath: os.Getenv("MIGRATIONS_PATH"),
+		MigrationsPath: migrationsPath,
 	}
-}
-
-func GetConfig() *Config {
-	return Global
+	return config
 }

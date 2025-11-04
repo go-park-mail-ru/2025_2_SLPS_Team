@@ -3,6 +3,7 @@ package handler
 import (
 	"encoding/json"
 	"net/http"
+	"project/config"
 	"project/domain"
 	"time"
 
@@ -11,11 +12,13 @@ import (
 
 type AuthHandler struct {
 	authService domain.AuthService
+	config      *config.Config
 }
 
-func NewAuthHandler(authService domain.AuthService) *AuthHandler {
+func NewAuthHandler(authService domain.AuthService, config *config.Config) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
+		config:      config,
 	}
 }
 

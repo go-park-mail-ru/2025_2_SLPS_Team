@@ -16,9 +16,19 @@ import (
 	"go.uber.org/zap"
 )
 
-func CorsMiddleware(next http.Handler) http.Handler {
+type MiddlewareHandler struct {
+	config *config.Config
+}
+
+func NewMiddlewareHandler(config *config.Config) *MiddlewareHandler {
+	return &MiddlewareHandler{
+		config: config,
+	}
+}
+
+func (api *MiddlewareHandler) CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", config.GetConfig().FrontendOrigin)
+		w.Header().Set("Access-Control-Allow-Origin", api.config.FrontendOrigin)
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
@@ -32,7 +42,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func SecureMiddleware(next http.Handler) http.Handler {
+func (api *MiddlewareHandler) SecureMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
@@ -86,7 +96,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 				ctx = context.WithValue(ctx, domain.LoggerKey, newLogger)
 				domain.FromContext(ctx).Info("User logged in, add userID to context")
 
-				if !SafeMethods[r.Method] && !config.GetConfig().Debug {
+				if !SafeMethods[r.Method] && !api.config.Debug {
 					domain.FromContext(r.Context()).Info("in header", zap.String("scrf", r.Header.Get("X-CSRF-Token")))
 					domain.FromContext(r.Context()).Info("in session", zap.String("scrf", session.CSRFToken))
 					if r.Header.Get("X-CSRF-Token") != session.CSRFToken {
@@ -127,7 +137,7 @@ func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	}
 	return hj.Hijack()
 }
-func LoggingMiddleware(logger *zap.Logger) mux.MiddlewareFunc {
+func (api *MiddlewareHandler) LoggingMiddleware(logger *zap.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqID := uuid.New().String()

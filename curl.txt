@@ -91,6 +91,7 @@ curl -X 'PUT' \
   'http://localhost:8080/api/friends/1/accept' \
   -H 'accept: application/json' \
  -b cookies.txt
+
 mockgen -package=mocks project/domain \
     AuthService \
     ChatService \
