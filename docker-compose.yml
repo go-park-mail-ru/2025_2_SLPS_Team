@@ -1,9 +1,10 @@
 services:
   app:
-    build: .
+    image: ${APP_IMAGE:-local/myapp:latest}
+    build:
+      context: .
     env_file:
       - .env
-    container_name: app
     ports:
       - "8080:8080"
     depends_on:
