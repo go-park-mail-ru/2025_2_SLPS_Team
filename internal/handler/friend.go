@@ -179,6 +179,7 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 
 	sendJSONResponse(w, domain.FriendRemoved, http.StatusOK)
 }
+
 // GetFriends получает список друзей
 // @Summary Получить список друзей
 // @Description Возвращает список друзей пользователя с пагинацией
@@ -230,29 +231,29 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /friends/users/all [get]
 func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-    var qParams domain.PaginateQueryParams
-    if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-        sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-        domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
-        return
-    }
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		return
+	}
 
-    userID, ok := r.Context().Value(domain.UserIDKey).(int)
-    if !ok {
-        sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-        domain.Warn(r.Context(), "User ID not found in context")
-        return
-    }
+	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	if !ok {
+		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
+		domain.Warn(r.Context(), "User ID not found in context")
+		return
+	}
 
-    users, err := h.friendService.GetAllUsers(r.Context(), userID, qParams)
-    if err != nil {
-        sendJSONError(w, err)
-        return
-    }
+	users, err := h.friendService.GetAllUsers(r.Context(), userID, qParams)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
 
-    if err := sendJSONData(r.Context(), w, users); err != nil {
-        return
-    }
+	if err := sendJSONData(r.Context(), w, users); err != nil {
+		return
+	}
 }
 
 // GetFriendRequests получает входящие запросы в друзья
@@ -366,6 +367,53 @@ func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Reque
 
 	response := FriendshipStatusResponse{
 		Status: status,
+	}
+
+	if err := sendJSONData(r.Context(), w, response); err != nil {
+		return
+	}
+}
+
+// CountUserRelations получает количество отношений пользователя по типу
+// @Summary Получить количество отношений
+// @Description Возвращает количество отношений указанного пользователя по типу отношений
+// @Tags friends
+// @Produce json
+// @Param id path int true "ID пользователя" minimum(1)
+// @Param type query string false "Тип подсчета: all, accepted, pending, sent, received, blocked, rejected" default(accepted) Enums(all, accepted, pending, sent, received, blocked, rejected)
+// @Success 200 {object} domain.FriendsCountResponse "Успешный ответ с количеством отношений"
+// @Failure 400 {object} JSONResponse "Неверный ID пользователя или тип подсчета"
+// @Failure 404 {object} JSONResponse "Пользователь не найден"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Security ApiKeyAuth
+// @Router /friends/{id}/count [get]
+func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	userID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("userID", vars["id"]))
+		return
+	}
+
+	// Получаем тип подсчета из query параметра
+	countTypeStr := r.URL.Query().Get("type")
+	if countTypeStr == "" {
+		countTypeStr = string(domain.CountAccepted) // значение по умолчанию
+	}
+
+	countType := domain.FriendshipCountType(countTypeStr)
+
+	count, err := h.friendService.CountUserRelations(r.Context(), userID, countType)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	response := domain.FriendsCountResponse{
+		UserID:    userID,
+		Count:     count,
+		CountType: countType,
 	}
 
 	if err := sendJSONData(r.Context(), w, response); err != nil {

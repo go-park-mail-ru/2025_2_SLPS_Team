@@ -265,7 +265,7 @@ func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, 
 
 	dblogger.Info("All users retrieved successfully",
 		zap.Int("usersCount", len(users)))
-	
+
 	return users, nil
 }
 
@@ -492,4 +492,109 @@ func (store *DBFriendStore) GetFriendshipStatus(ctx context.Context, userID1, us
 		return "", err
 	}
 	return friendship.Status, nil
+}
+
+// CountUserRelations подсчитывает количество отношений пользователя по типу
+func (store *DBFriendStore) CountUserRelations(ctx context.Context, userID int, countType domain.FriendshipCountType) (int, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "friendStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start CountUserRelations",
+		zap.Int("userID", userID),
+		zap.String("countType", string(countType)))
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	var query string
+	var args []interface{}
+
+	switch countType {
+	case domain.CountAll:
+		query = `
+            SELECT COUNT(*)
+            FROM friend_relationships
+            WHERE (first_user_id = $1 OR second_user_id = $1)
+        `
+		args = []interface{}{userID}
+
+	case domain.CountAccepted:
+		query = `
+            SELECT COUNT(*)
+            FROM friend_relationships
+            WHERE (first_user_id = $1 OR second_user_id = $1)
+            AND status = 'accepted'
+        `
+		args = []interface{}{userID}
+
+	case domain.CountPending:
+		// Все pending запросы где пользователь является получателем
+		query = `
+            SELECT COUNT(*)
+            FROM friend_relationships
+            WHERE (first_user_id = $1 OR second_user_id = $1)
+            AND status = 'pending'
+            AND action_user_id != $1
+        `
+		args = []interface{}{userID}
+
+	case domain.CountSent:
+		// Все pending запросы где пользователь является отправителем
+		query = `
+            SELECT COUNT(*)
+            FROM friend_relationships
+            WHERE (first_user_id = $1 OR second_user_id = $1)
+            AND status = 'pending'
+            AND action_user_id = $1
+        `
+		args = []interface{}{userID}
+
+	case domain.CountReceived:
+		// Все pending запросы где пользователь является получателем
+		query = `
+            SELECT COUNT(*)
+            FROM friend_relationships
+            WHERE (first_user_id = $1 OR second_user_id = $1)
+            AND status = 'pending'
+            AND action_user_id != $1
+        `
+		args = []interface{}{userID}
+
+	case domain.CountBlocked:
+		query = `
+            SELECT COUNT(*)
+            FROM friend_relationships
+            WHERE (first_user_id = $1 OR second_user_id = $1)
+            AND status = 'blocked'
+        `
+		args = []interface{}{userID}
+
+	case domain.CountRejected:
+		query = `
+            SELECT COUNT(*)
+            FROM friend_relationships
+            WHERE (first_user_id = $1 OR second_user_id = $1)
+            AND status = 'rejected'
+        `
+		args = []interface{}{userID}
+
+	default:
+		dblogger.Error("Unknown count type", zap.String("countType", string(countType)))
+		return 0, domain.ErrInvalidInput
+	}
+
+	dblogger = dblogger.With(zap.String("query", query))
+	var count int
+	err := store.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	if err != nil {
+		dblogger.Error("Failed to count user relations", zap.Error(err))
+		return 0, fmt.Errorf("failed to count user relations: %w", err)
+	}
+
+	dblogger.Info("User relations counted successfully",
+		zap.Int("count", count),
+		zap.String("countType", string(countType)))
+	return count, nil
 }

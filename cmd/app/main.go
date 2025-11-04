@@ -152,6 +152,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn, conf
 	friendRouter.HandleFunc("/{id:[0-9]+}/reject", friend.RejectFriendRequest).Methods("PUT")
 	friendRouter.HandleFunc("/{id:[0-9]+}/status", friend.GetFriendshipStatus).Methods("GET")
 	friendRouter.HandleFunc("/{id:[0-9]+}", friend.RemoveFriend).Methods("DELETE")
+	friendRouter.HandleFunc("/{id:[0-9]+}/count", friend.CountUserRelations).Methods("GET")
 
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 

@@ -1,5 +1,32 @@
 basePath: /api/
 definitions:
+  domain.FriendsCountResponse:
+    properties:
+      count:
+        type: integer
+      countType:
+        $ref: '#/definitions/domain.FriendshipCountType'
+      userID:
+        type: integer
+    type: object
+  domain.FriendshipCountType:
+    enum:
+    - all
+    - accepted
+    - pending
+    - sent
+    - received
+    - blocked
+    - rejected
+    type: string
+    x-enum-varnames:
+    - CountAll
+    - CountAccepted
+    - CountPending
+    - CountSent
+    - CountReceived
+    - CountBlocked
+    - CountRejected
   domain.FriendshipStatus:
     enum:
     - pending
@@ -608,6 +635,55 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Принять запрос в друзья
+      tags:
+      - friends
+  /friends/{id}/count:
+    get:
+      description: Возвращает количество отношений указанного пользователя по типу
+        отношений
+      parameters:
+      - description: ID пользователя
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      - default: accepted
+        description: 'Тип подсчета: all, accepted, pending, sent, received, blocked,
+          rejected'
+        enum:
+        - all
+        - accepted
+        - pending
+        - sent
+        - received
+        - blocked
+        - rejected
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ с количеством отношений
+          schema:
+            $ref: '#/definitions/domain.FriendsCountResponse'
+        "400":
+          description: Неверный ID пользователя или тип подсчета
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить количество отношений
       tags:
       - friends
   /friends/{id}/reject:

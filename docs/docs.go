@@ -798,6 +798,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/friends/{id}/count": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает количество отношений указанного пользователя по типу отношений",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "friends"
+                ],
+                "summary": "Получить количество отношений",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "all",
+                            "accepted",
+                            "pending",
+                            "sent",
+                            "received",
+                            "blocked",
+                            "rejected"
+                        ],
+                        "type": "string",
+                        "default": "accepted",
+                        "description": "Тип подсчета: all, accepted, pending, sent, received, blocked, rejected",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешный ответ с количеством отношений",
+                        "schema": {
+                            "$ref": "#/definitions/domain.FriendsCountResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID пользователя или тип подсчета",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/friends/{id}/reject": {
             "put": {
                 "security": [
@@ -1539,6 +1608,41 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.FriendsCountResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "countType": {
+                    "$ref": "#/definitions/domain.FriendshipCountType"
+                },
+                "userID": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.FriendshipCountType": {
+            "type": "string",
+            "enum": [
+                "all",
+                "accepted",
+                "pending",
+                "sent",
+                "received",
+                "blocked",
+                "rejected"
+            ],
+            "x-enum-varnames": [
+                "CountAll",
+                "CountAccepted",
+                "CountPending",
+                "CountSent",
+                "CountReceived",
+                "CountBlocked",
+                "CountRejected"
+            ]
+        },
         "domain.FriendshipStatus": {
             "type": "string",
             "enum": [

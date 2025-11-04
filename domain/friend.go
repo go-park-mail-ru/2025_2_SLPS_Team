@@ -14,6 +14,18 @@ const (
 	FriendshipBlocked  FriendshipStatus = "blocked"
 )
 
+type FriendshipCountType string
+
+const (
+	CountAll      FriendshipCountType = "all"
+	CountAccepted FriendshipCountType = "accepted"
+	CountPending  FriendshipCountType = "pending"
+	CountSent     FriendshipCountType = "sent"
+	CountReceived FriendshipCountType = "received"
+	CountBlocked  FriendshipCountType = "blocked"
+	CountRejected FriendshipCountType = "rejected"
+)
+
 type Friendship struct {
 	ID           int              `json:"id"`
 	FirstUserID  int              `json:"firstUserID"`
@@ -40,6 +52,12 @@ type FriendResponse struct {
 	CreatedAt  time.Time        `json:"createdAt,omitempty"`
 }
 
+type FriendsCountResponse struct {
+    UserID    int                   `json:"userID"`
+    Count     int                   `json:"count"`
+    CountType FriendshipCountType   `json:"countType,omitempty"`
+}
+
 type FriendService interface {
 	SendFriendRequest(ctx context.Context, userID, friendID int) error
 	AcceptFriendRequest(ctx context.Context, userID, friendID int) error
@@ -50,6 +68,7 @@ type FriendService interface {
 	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]FriendshipWithProfile, error)
 	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]FriendshipWithProfile, error)
 	GetFriendshipStatus(ctx context.Context, userID, friendID int) (FriendshipStatus, error)
+	CountUserRelations(ctx context.Context, userID int, countType FriendshipCountType) (int, error)
 }
 
 type FriendStore interface {
@@ -68,4 +87,5 @@ type FriendStore interface {
 	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int) (bool, error)
 	GetFriendshipStatus(ctx context.Context, userID1, userID2 int) (FriendshipStatus, error)
+	CountUserRelations(ctx context.Context, userID int, countType FriendshipCountType) (int, error)
 }
