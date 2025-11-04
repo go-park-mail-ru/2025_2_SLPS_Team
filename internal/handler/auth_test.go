@@ -128,7 +128,7 @@ func TestAuthHandler_IsLoggedInHandler(t *testing.T) {
 	t.Run("Cookie missing", func(t *testing.T) {
 		r, w := newJSONRequest(http.MethodGet, "/auth/isloggedin", nil, t)
 		handler.IsLoggedInHandler(w, r)
-		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
+		assert.Equal(t, http.StatusNotFound, w.Result().StatusCode)
 	})
 
 	t.Run("Service returns error", func(t *testing.T) {

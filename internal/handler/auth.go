@@ -50,7 +50,7 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	w.Header().Set("Content-Type", "application/json")
 	sessionCookie, err := r.Cookie("session_id")
 	if err != nil {
-		sendJSONError(w, domain.ErrInvalidInput)
+		sendJSONError(w, domain.ErrNotFound)
 		return
 	}
 	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)

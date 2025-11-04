@@ -112,7 +112,7 @@ func TestPostsHandler_GetPost(t *testing.T) {
 	t.Run("Post not found", func(t *testing.T) {
 		mockPostService.EXPECT().
 			GetPost(gomock.Any(), uint(1)).
-			Return(nil, domain.ErrPostNotFound)
+			Return(nil, domain.ErrNotFound)
 
 		req := newRequestWithVars(t, "/posts/1", map[string]string{"id": "1"})
 		w := httptest.NewRecorder()
