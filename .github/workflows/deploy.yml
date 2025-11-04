@@ -45,10 +45,7 @@ jobs:
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
       
             mkdir -p /home/ubuntu/myapp
-            
-            cat > /home/ubuntu/myapp/docker-compose.yml <<'EOF'
-            $(cat docker-compose.yml)
-            EOF
+            cp docker-compose.yml /home/ubuntu/myapp/docker-compose.yml
             
             printf '%s\n' "${{ secrets.ENV_FILE }}" > /home/ubuntu/myapp/.env
             
