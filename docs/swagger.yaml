@@ -374,38 +374,37 @@ paths:
     get:
       consumes:
       - application/json
-      description: Возвращает постраничный список чатов для аутентифицированного пользователя.
+      description: Возвращает постраничный список чатов для текущего (аутентифицированного)
+        пользователя.
       parameters:
       - default: 20
-        description: Number of chats to return
+        description: Количество чатов для возврата
         in: query
         name: limit
         type: integer
       - default: 0
-        description: Offset for pagination
+        description: Номер страницы для пагинации
         in: query
-        name: offset
+        name: page
         type: integer
       produces:
       - application/json
       responses:
         "200":
-          description: List of chats
+          description: Список чатов
           schema:
             items:
               $ref: '#/definitions/domain.FullChat'
             type: array
         "400":
-          description: Invalid query parameters
+          description: Некорректные параметры запроса
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal server error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Получение чатов пользователя
+      summary: Получить список чатов пользователя
       tags:
       - chats
   /chats/{chatID}/message:
@@ -459,9 +458,9 @@ paths:
         name: limit
         type: integer
       - default: 0
-        description: Смещение для пагинации
+        description: страница для пагинации
         in: query
-        name: offset
+        name: page
         type: integer
       produces:
       - application/json
@@ -846,10 +845,8 @@ paths:
       description: Создает новый пост от имени текущего пользователя с возможностью
         загрузки файлов
       parameters:
-      - description: Текст поста (24-4096 символов)
+      - description: Текст поста
         in: formData
-        maxLength: 4096
-        minLength: 24
         name: text
         required: true
         type: string
@@ -871,19 +868,19 @@ paths:
       - application/json
       responses:
         "201":
-          description: Пост успешно создан
+          description: Created
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Неверные данные запроса
+          description: Bad Request
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "401":
-          description: Пользователь не авторизован
+          description: Unauthorized
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Внутренняя ошибка сервера
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/handler.JSONResponse'
       security:
@@ -980,10 +977,8 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Текст поста (24-4096 символов)
+      - description: Текст поста
         in: formData
-        maxLength: 4096
-        minLength: 24
         name: text
         required: true
         type: string

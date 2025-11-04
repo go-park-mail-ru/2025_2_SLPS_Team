@@ -148,7 +148,7 @@ func TestChatHandler_GetUserChats(t *testing.T) {
 		chats := []domain.FullChat{{ID: 1, Name: "Chat1"}}
 		mockChatService.EXPECT().GetUserChats(gomock.Any(), userID, gomock.Any()).Return(chats, nil)
 
-		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats?limit=10&offset=0", nil, userID, nil, t)
+		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats?limit=10&page=1", nil, userID, nil, t)
 		w := httptest.NewRecorder()
 		handler.GetUserChats(w, req)
 

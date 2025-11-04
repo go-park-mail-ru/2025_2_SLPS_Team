@@ -180,12 +180,7 @@ const docTemplate = `{
         },
         "/chats": {
             "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Возвращает постраничный список чатов для аутентифицированного пользователя.",
+                "description": "Возвращает постраничный список чатов для текущего (аутентифицированного) пользователя.",
                 "consumes": [
                     "application/json"
                 ],
@@ -195,26 +190,26 @@ const docTemplate = `{
                 "tags": [
                     "chats"
                 ],
-                "summary": "Получение чатов пользователя",
+                "summary": "Получить список чатов пользователя",
                 "parameters": [
                     {
                         "type": "integer",
                         "default": 20,
-                        "description": "Number of chats to return",
+                        "description": "Количество чатов для возврата",
                         "name": "limit",
                         "in": "query"
                     },
                     {
                         "type": "integer",
                         "default": 0,
-                        "description": "Offset for pagination",
-                        "name": "offset",
+                        "description": "Номер страницы для пагинации",
+                        "name": "page",
                         "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of chats",
+                        "description": "Список чатов",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -223,13 +218,13 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid query parameters",
+                        "description": "Некорректные параметры запроса",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -362,8 +357,8 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "default": 0,
-                        "description": "Смещение для пагинации",
-                        "name": "offset",
+                        "description": "страница для пагинации",
+                        "name": "page",
                         "in": "query"
                     }
                 ],
@@ -910,10 +905,8 @@ const docTemplate = `{
                 "summary": "Создать новый пост",
                 "parameters": [
                     {
-                        "maxLength": 4096,
-                        "minLength": 24,
                         "type": "string",
-                        "description": "Текст поста (24-4096 символов)",
+                        "description": "Текст поста",
                         "name": "text",
                         "in": "formData",
                         "required": true
@@ -941,25 +934,25 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Пост успешно создан",
+                        "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Неверные данные запроса",
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "401": {
-                        "description": "Пользователь не авторизован",
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Внутренняя ошибка сервера",
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -1044,10 +1037,8 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "maxLength": 4096,
-                        "minLength": 24,
                         "type": "string",
-                        "description": "Текст поста (24-4096 символов)",
+                        "description": "Текст поста",
                         "name": "text",
                         "in": "formData",
                         "required": true

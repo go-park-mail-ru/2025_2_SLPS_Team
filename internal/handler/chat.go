@@ -68,7 +68,7 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 // @Produce json
 // @Param id path int true "ID чата"
 // @Param limit query int false "Лимит количества сообщений" default(20)
-// @Param offset query int false "Смещение для пагинации" default(0)
+// @Param page query int false "страница для пагинации" default(0)
 // @Success 200 {object} domain.MessagesWithAuthors
 // @Failure 400 {object} JSONResponse
 // @Failure 403 {object} JSONResponse
@@ -103,7 +103,7 @@ func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	domain.FromContext(r.Context()).Info("Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("limit", qParams.Limit), zap.Int("offset", qParams.Offset))
+	domain.FromContext(r.Context()).Info("Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("limit", qParams.Limit), zap.Int("page", qParams.Page))
 }
 
 type MessageIDResponse struct {
@@ -152,21 +152,21 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// GetUserChats получает список чатов для текущего пользователя, включая
-// последнее сообщение и его автора.
+// GetUserChats получает список чатов для текущего пользователя,
+// включая последнее сообщение и его автора.
 //
-// @Summary Получение чатов пользователя
-// @Description Возвращает постраничный список чатов для аутентифицированного пользователя.
-// Каждый чат содержит его ID, имя, аватар, тип (групповой/приватный), последнее сообщение и автора последнего сообщения.
+// @Summary Получить список чатов пользователя
+// @Description Возвращает постраничный список чатов для текущего (аутентифицированного) пользователя.
+// Каждый чат содержит свой ID, имя, аватар, тип (групповой или приватный),
+// последнее сообщение и информацию об авторе этого сообщения.
 // @Tags chats
 // @Accept json
 // @Produce json
-// @Param limit query int false "Number of chats to return" default(20)
-// @Param offset query int false "Offset for pagination" default(0)
-// @Success 200 {array} domain.FullChat "List of chats"
-// @Failure 400 {object} JSONResponse "Invalid query parameters"
-// @Failure 500 {object} JSONResponse "Internal server error"
-// @Security ApiKeyAuth
+// @Param limit query int false "Количество чатов для возврата" default(20)
+// @Param page query int false "Номер страницы для пагинации" default(0)
+// @Success 200 {array} domain.FullChat "Список чатов"
+// @Failure 400 {object} JSONResponse "Некорректные параметры запроса"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /chats [get]
 func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
 	userID, _ := r.Context().Value(domain.UserIDKey).(int)
@@ -185,6 +185,6 @@ func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
 
 	err = sendJSONData(r.Context(), w, chats)
 	if err == nil {
-		domain.FromContext(r.Context()).Info("Chats retrieved successfully", zap.Int("limit", qParams.Limit), zap.Int("offset", qParams.Offset))
+		domain.FromContext(r.Context()).Info("Chats retrieved successfully", zap.Int("limit", qParams.Limit), zap.Int("page", qParams.Page))
 	}
 }
