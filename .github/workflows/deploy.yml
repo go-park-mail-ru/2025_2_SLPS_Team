@@ -54,8 +54,8 @@ jobs:
             
             cd /home/ubuntu/myapp
             
-            docker compose down -v || true
+            docker-compose down -v || true
             
-            docker compose pull
+            docker-compose pull
             
-            docker compose up -d
+            docker-compose up -d
