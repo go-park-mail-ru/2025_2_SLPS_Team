@@ -251,15 +251,39 @@ func TestPostService_DeletePost(t *testing.T) {
 		assert.NoError(t, err)
 	})
 
-	//t.Run("Post not found", func(t *testing.T) {
-	//    postStore.EXPECT().
-	//        GetPostByID(ctx, postID).
-	//        Return(nil, domain.ErrPostNotFound)
-	//
-	//    err := svc.DeletePost(ctx, postID, userID)
-	//
-	//    assert.ErrorIs(t, err, domain.ErrPostNotFound)
-	//})
+	t.Run("Post not found", func(t *testing.T) {
+		postStore.EXPECT().
+			GetPostByID(ctx, postID).
+			Return(nil, domain.ErrPostNotFound)
+
+		err := svc.DeletePost(ctx, postID, userID)
+
+		assert.ErrorIs(t, err, domain.ErrPostNotFound)
+	})
+
+	t.Run("Not author", func(t *testing.T) {
+		existingPost := &domain.Post{
+			ID:       postID,
+			AuthorID: 999, // Different author
+			Text:     "Post to delete",
+		}
+
+		postStore.EXPECT().
+			GetPostByID(ctx, postID).
+			Return(existingPost, nil)
+
+		err := svc.DeletePost(ctx, postID, userID)
+
+		assert.ErrorIs(t, err, domain.ErrAccessDenied)
+	})
+}
+
+func TestPostService_GetUserPosts(t *testing.T) {
+	svc, postStore, userStore, ctrl := newPostServiceMocks(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	userID := uint(1)
 
 	t.Run("Success", func(t *testing.T) {
 		userStore.EXPECT().
