@@ -35,6 +35,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Copy docker-compose.yml
+        uses: appleboy/scp-action@v0.1.4
+        with:
+            host: ${{ secrets.SSH_HOST }}
+            username: ${{ secrets.SSH_USER }}
+            key: ${{ secrets.SSH_KEY }}
+            source: "docker-compose.yml"
+            target: "/home/ubuntu/myapp/docker-compose.yml"
       - name: Deploy to server via SSH
         uses: appleboy/ssh-action@v1.0.0
         with:
@@ -45,7 +53,6 @@ jobs:
             echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
       
             mkdir -p /home/ubuntu/myapp
-            cp docker-compose.yml /home/ubuntu/myapp/docker-compose.yml
             
             printf '%s\n' "${{ secrets.ENV_FILE }}" > /home/ubuntu/myapp/.env
             
@@ -55,4 +62,4 @@ jobs:
             
             docker-compose pull
             
-            docker-compose up -d
+            docker-compose --env-file .env up -d
