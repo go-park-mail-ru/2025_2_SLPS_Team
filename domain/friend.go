@@ -40,6 +40,17 @@ type FriendResponse struct {
 	CreatedAt  time.Time        `json:"createdAt,omitempty"`
 }
 
+type FriendService interface {
+	SendFriendRequest(ctx context.Context, userID, friendID int) error
+	AcceptFriendRequest(ctx context.Context, userID, friendID int) error
+	RejectFriendRequest(ctx context.Context, userID, friendID int) error
+	RemoveFriend(ctx context.Context, userID, friendID int) error
+	GetFriends(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
+	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]FriendshipWithProfile, error)
+	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]FriendshipWithProfile, error)
+	GetFriendshipStatus(ctx context.Context, userID, friendID int) (FriendshipStatus, error)
+}
+
 type FriendStore interface {
 	// Основные операции CRUD
 	CreateFriendship(ctx context.Context, actionUserID, targetUserID int) error
@@ -48,9 +59,9 @@ type FriendStore interface {
 	DeleteFriendship(ctx context.Context, userID1, userID2 int) error
 
 	// Получение списков с пагинацией
-	GetUserFriends(ctx context.Context, userID int, page, limit int) ([]ShortProfile, int, error)
-	GetFriendshipRequests(ctx context.Context, userID int, page, limit int) ([]FriendshipWithProfile, int, error)
-	GetSentRequests(ctx context.Context, userID int, page, limit int) ([]FriendshipWithProfile, int, error)
+	GetUserFriends(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
+	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]FriendshipWithProfile, error)
+	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]FriendshipWithProfile, error)
 
 	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int) (bool, error)

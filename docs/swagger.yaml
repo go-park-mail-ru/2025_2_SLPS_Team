@@ -162,48 +162,6 @@ definitions:
       chatID:
         type: integer
     type: object
-  handler.FriendRequestsResponse:
-    description: Ответ с пагинированным списком запросов в друзья
-    properties:
-      hasNext:
-        description: Есть ли следующая страница
-        example: true
-        type: boolean
-      page:
-        description: Текущая страница
-        example: 1
-        type: integer
-      requests:
-        description: Список запросов
-        items:
-          $ref: '#/definitions/domain.FriendshipWithProfile'
-        type: array
-      totalPages:
-        description: Общее количество страниц
-        example: 3
-        type: integer
-    type: object
-  handler.FriendsResponse:
-    description: Ответ с пагинированным списком друзей
-    properties:
-      friends:
-        description: Список друзей
-        items:
-          $ref: '#/definitions/domain.ShortProfile'
-        type: array
-      hasNext:
-        description: Есть ли следующая страница
-        example: true
-        type: boolean
-      page:
-        description: Текущая страница
-        example: 1
-        type: integer
-      totalPages:
-        description: Общее количество страниц
-        example: 5
-        type: integer
-    type: object
   handler.FriendshipStatusResponse:
     description: Ответ с текущим статусом дружбы между пользователями
     properties:
@@ -525,7 +483,9 @@ paths:
         "200":
           description: Успешный ответ со списком друзей
           schema:
-            $ref: '#/definitions/handler.FriendsResponse'
+            items:
+              $ref: '#/definitions/domain.ShortProfile'
+            type: array
         "400":
           description: Неверные параметры пагинации
           schema:
@@ -739,7 +699,9 @@ paths:
         "200":
           description: Успешный ответ со списком запросов
           schema:
-            $ref: '#/definitions/handler.FriendRequestsResponse'
+            items:
+              $ref: '#/definitions/domain.FriendshipWithProfile'
+            type: array
         "400":
           description: Неверные параметры пагинации
           schema:
@@ -776,7 +738,9 @@ paths:
         "200":
           description: Успешный ответ со списком отправленных запросов
           schema:
-            $ref: '#/definitions/handler.FriendRequestsResponse'
+            items:
+              $ref: '#/definitions/domain.FriendshipWithProfile'
+            type: array
         "400":
           description: Неверные параметры пагинации
           schema:

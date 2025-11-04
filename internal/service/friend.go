@@ -13,8 +13,8 @@ type FriendService struct {
 	userStore   domain.UserStore
 }
 
-func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore) FriendService {
-	return FriendService{
+func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore) domain.FriendService {
+	return &FriendService{
 		friendStore: friendStore,
 		userStore:   userStore,
 	}
@@ -68,7 +68,7 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 			return domain.ErrAlreadyExists
 		} else {
 			domain.Warn(ctx, "Friend request to user who already sent request")
-			return domain.ErrAlreadyExists 
+			return domain.ErrAlreadyExists
 		}
 	case domain.FriendshipBlocked:
 		domain.Warn(ctx, "Friend request to blocked user")
@@ -182,75 +182,60 @@ func (s *FriendService) RemoveFriend(ctx context.Context, userID, friendID int) 
 }
 
 // GetFriends получает список друзей
-func (s *FriendService) GetFriends(ctx context.Context, userID, page, limit int) ([]domain.ShortProfile, int, error) {
+func (s *FriendService) GetFriends(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 || limit > 100 {
-		limit = 20
-	}
+	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting user friends",
 		zap.Int("userID", userID),
-		zap.Int("page", page),
+		zap.Int("offset", offset),
 		zap.Int("limit", limit))
 
-	friends, totalPages, err := s.friendStore.GetUserFriends(ctx, userID, page, limit)
+	friends, err := s.friendStore.GetUserFriends(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user friends", err)
-		return nil, 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
-	return friends, totalPages, nil
+	return friends, nil
 }
 
 // GetFriendRequests получает входящие запросы в друзья
-func (s *FriendService) GetFriendRequests(ctx context.Context, userID, page, limit int) ([]domain.FriendshipWithProfile, int, error) {
+func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FriendshipWithProfile, error) {
 	// Валидация параметров
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 || limit > 100 {
-		limit = 20
-	}
+	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting friendship requests",
 		zap.Int("userID", userID),
-		zap.Int("page", page),
+		zap.Int("offset", offset),
 		zap.Int("limit", limit))
 
-	requests, totalPages, err := s.friendStore.GetFriendshipRequests(ctx, userID, page, limit)
+	requests, err := s.friendStore.GetFriendshipRequests(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get friendship requests", err)
-		return nil, 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
-	return requests, totalPages, nil
+	return requests, nil
 }
 
 // GetSentRequests получает отправленные запросы в друзья
-func (s *FriendService) GetSentRequests(ctx context.Context, userID, page, limit int) ([]domain.FriendshipWithProfile, int, error) {
+func (s *FriendService) GetSentRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FriendshipWithProfile, error) {
 	// Валидация параметров
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 || limit > 100 {
-		limit = 20
-	}
+	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting sent friend requests",
 		zap.Int("userID", userID),
-		zap.Int("page", page),
+		zap.Int("offset", offset),
 		zap.Int("limit", limit))
 
-	requests, totalPages, err := s.friendStore.GetSentRequests(ctx, userID, page, limit)
+	requests, err := s.friendStore.GetSentRequests(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get sent requests", err)
-		return nil, 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
-	return requests, totalPages, nil
+	return requests, nil
 }
 
 // GetFriendshipStatus получает статус дружбы с пользователем

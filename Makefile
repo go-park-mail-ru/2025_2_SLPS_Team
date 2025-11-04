@@ -28,6 +28,7 @@ generate-mocks:
 	mockgen -source=domain/auth.go -destination=internal/service/mocks/mock_auth.go -package=mocks AuthService
 	mockgen -source=domain/chat.go -destination=internal/service/mocks/mock_chat.go -package=mocks ChatService
 	mockgen -source=domain/profile.go -destination=internal/service/mocks/mock_profile.go -package=mocks ProfileService
+	
 	mockgen -source=domain/post.go -destination=internal/service/mocks/mock_post.go -package=mocks PostService
 	mockgen -source=domain/friend.go -destination=internal/service/mocks/mock_friend.go -package=mocks FriendService
 	
@@ -37,9 +38,9 @@ generate-mocks:
 	mockgen -source=domain/session.go -destination=internal/repository/mocks/mock_session.go -package=mocks SessionStore
 	mockgen -source=domain/user.go -destination=internal/repository/mocks/mock_user.go -package=mocks UserStore
 
-	
 	mockgen -source=domain/post.go -destination=internal/repository/mocks/mock_post.go -package=mocks PostStore
 	mockgen -source=domain/friend.go -destination=internal/repository/mocks/mock_friend.go -package=mocks FriendStore
+	
 test-coverage:
 	@rm -f coverage.out coverage_filtered.out
 	go clean -testcache

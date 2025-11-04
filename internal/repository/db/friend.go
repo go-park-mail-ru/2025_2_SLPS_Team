@@ -27,17 +27,6 @@ func ensureUserOrder(userID1, userID2 int) (int, int) {
 	return userID2, userID1
 }
 
-// validatePaginationParams валидирует параметры пагинации
-func validatePaginationParams(page, limit int) (int, int, error) {
-	if page < 1 {
-		return 1, 20, nil // значения по умолчанию
-	}
-	if limit < 1 || limit > 100 {
-		return page, 20, nil // лимит по умолчанию
-	}
-	return page, limit, nil
-}
-
 // CreateFriendship создает запрос в друзья
 func (store *DBFriendStore) CreateFriendship(ctx context.Context, actionUserID, targetUserID int) error {
 	start := time.Now()
@@ -162,20 +151,16 @@ func (store *DBFriendStore) UpdateFriendshipStatus(ctx context.Context, userID1,
 }
 
 // GetUserFriends получает список друзей пользователя с профилями (с пагинацией)
-func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, page, limit int) ([]domain.ShortProfile, int, error) {
+func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, limit, offset int) ([]domain.ShortProfile, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetUserFriends", zap.Int("userID", userID), zap.Int("page", page), zap.Int("limit", limit))
+	dbloggerCopy.Info("DB start GetUserFriends", zap.Int("userID", userID), zap.Int("offset", offset), zap.Int("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-
-	// Валидация параметров пагинации
-	page, limit, _ = validatePaginationParams(page, limit)
-	offset := (page - 1) * limit
 
 	// Запрос для получения друзей с пагинацией
 	query := `
@@ -198,11 +183,11 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, page
 	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
 		dblogger.Error("Failed to query user friends", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to query user friends: %w", err)
+		return nil, fmt.Errorf("failed to query user friends: %w", err)
 	}
 	defer rows.Close()
 
-	var friends []domain.ShortProfile
+	friends := []domain.ShortProfile{}
 	for rows.Next() {
 		var friend domain.ShortProfile
 		err := rows.Scan(
@@ -212,66 +197,36 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, page
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan friend profile", zap.Error(err))
-			return nil, 0, fmt.Errorf("failed to scan friend profile: %w", err)
+			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
 		friends = append(friends, friend)
 	}
 
 	if err = rows.Err(); err != nil {
 		dblogger.Error("Error iterating friend rows", zap.Error(err))
-		return nil, 0, fmt.Errorf("Error iterating friend rows:%w", err)
+		return nil, fmt.Errorf("Error iterating friend rows:%w", err)
 	}
-
-	// Получаем общее количество друзей для пагинации
-	countQuery := `
-		SELECT COUNT(*)
-		FROM profiles p
-		WHERE p.user_id IN (
-			SELECT CASE 
-				WHEN fr.first_user_id = $1 THEN fr.second_user_id 
-				ELSE fr.first_user_id
-			END as friend_id
-			FROM friend_relationships fr
-			WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
-			AND fr.status = 'accepted'
-		)
-	`
-
-	var total int
-	err = store.db.QueryRowContext(ctx, countQuery, userID).Scan(&total)
-	if err != nil {
-		dblogger.Error("Failed to count user friends", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to count user friends: %w", err)
-	}
-
-	totalPages := (total + limit - 1) / limit
 
 	dblogger.Info("User friends retrieved successfully",
-		zap.Int("friendsCount", len(friends)),
-		zap.Int("totalPages", totalPages),
-		zap.Int("totalFriends", total))
+		zap.Int("friendsCount", len(friends)))
 
-	return friends, totalPages, nil
+	return friends, nil
 }
 
 // GetFriendshipRequests получает входящие запросы в друзья с профилями (с пагинацией)
-func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID int, page, limit int) ([]domain.FriendshipWithProfile, int, error) {
+func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID int, limit, offset int) ([]domain.FriendshipWithProfile, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetFriendshipRequests",
 		zap.Int("userID", userID),
-		zap.Int("page", page),
+		zap.Int("offset", offset),
 		zap.Int("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-
-	// Валидация параметров пагинации
-	page, limit, _ = validatePaginationParams(page, limit)
-	offset := (page - 1) * limit
 
 	// Запросы где пользователь НЕ является action_user_id (получатель запроса)
 	query := `
@@ -291,11 +246,11 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
 		dblogger.Error("Failed to query friendship requests", zap.Error(err))
-		return nil, 0, fmt.Errorf("Failed to query friendship requests:%w", err)
+		return nil, fmt.Errorf("Failed to query friendship requests:%w", err)
 	}
 	defer rows.Close()
 
-	var requests []domain.FriendshipWithProfile
+	requests := []domain.FriendshipWithProfile{}
 	for rows.Next() {
 		var request domain.FriendshipWithProfile
 		err := rows.Scan(
@@ -311,60 +266,36 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan friendship request", zap.Error(err))
-			return nil, 0, fmt.Errorf("failed to scan friendship request: %w", err)
+			return nil, fmt.Errorf("failed to scan friendship request: %w", err)
 		}
 		requests = append(requests, request)
 	}
 
 	if err = rows.Err(); err != nil {
 		dblogger.Error("Error iterating request rows", zap.Error(err))
-		return nil, 0, fmt.Errorf("error iterating request rows: %w", err)
+		return nil, fmt.Errorf("error iterating request rows: %w", err)
 	}
-
-	// Получаем общее количество входящих запросов
-	countQuery := `
-		SELECT COUNT(*)
-		FROM friend_relationships fr
-		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) 
-		AND fr.action_user_id != $1 
-		AND fr.status = 'pending'
-	`
-
-	var total int
-	err = store.db.QueryRowContext(ctx, countQuery, userID).Scan(&total)
-	if err != nil {
-		dblogger.Error("Failed to count friendship requests", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to count friendship requests: %w", err)
-	}
-
-	totalPages := (total + limit - 1) / limit
 
 	dblogger.Info("Friendship requests retrieved successfully",
-		zap.Int("requestsCount", len(requests)),
-		zap.Int("totalPages", totalPages),
-		zap.Int("totalRequests", total))
+		zap.Int("requestsCount", len(requests)))
 
-	return requests, totalPages, nil
+	return requests, nil
 }
 
 // GetSentRequests получает отправленные запросы в друзья (с пагинацией)
-func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, page, limit int) ([]domain.FriendshipWithProfile, int, error) {
+func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, limit, offset int) ([]domain.FriendshipWithProfile, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetSentRequests",
 		zap.Int("userID", userID),
-		zap.Int("page", page),
+		zap.Int("offset", offset),
 		zap.Int("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-
-	// Валидация параметров пагинации
-	page, limit, _ = validatePaginationParams(page, limit)
-	offset := (page - 1) * limit
 
 	// Запросы где пользователь является action_user_id (отправителем запроса)
 	query := `
@@ -385,11 +316,11 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
 	if err != nil {
 		dblogger.Error("Failed to query sent requests", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to query sent requests: %w", err)
+		return nil, fmt.Errorf("failed to query sent requests: %w", err)
 	}
 	defer rows.Close()
 
-	var requests []domain.FriendshipWithProfile
+	requests := []domain.FriendshipWithProfile{}
 	for rows.Next() {
 		var request domain.FriendshipWithProfile
 		err := rows.Scan(
@@ -405,38 +336,20 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, pag
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan sent request", zap.Error(err))
-			return nil, 0, fmt.Errorf("failed to scan sent request: %w", err)
+			return nil, fmt.Errorf("failed to scan sent request: %w", err)
 		}
 		requests = append(requests, request)
 	}
 
 	if err = rows.Err(); err != nil {
 		dblogger.Error("Error iterating sent request rows", zap.Error(err))
-		return nil, 0, fmt.Errorf("error iterating sent request rows: %w", err)
+		return nil, fmt.Errorf("error iterating sent request rows: %w", err)
 	}
-
-	// Получаем общее количество отправленных запросов
-	countQuery := `
-		SELECT COUNT(*)
-		FROM friend_relationships fr
-		WHERE fr.action_user_id = $1 AND fr.status = 'pending'
-	`
-
-	var total int
-	err = store.db.QueryRowContext(ctx, countQuery, userID).Scan(&total)
-	if err != nil {
-		dblogger.Error("Failed to count sent requests", zap.Error(err))
-		return nil, 0, fmt.Errorf("failed to count sent requests: %w", err)
-	}
-
-	totalPages := (total + limit - 1) / limit
 
 	dblogger.Info("Sent requests retrieved successfully",
-		zap.Int("requestsCount", len(requests)),
-		zap.Int("totalPages", totalPages),
-		zap.Int("totalSentRequests", total))
+		zap.Int("requestsCount", len(requests)))
 
-	return requests, totalPages, nil
+	return requests, nil
 }
 
 // DeleteFriendship удаляет запись о дружбе

@@ -428,7 +428,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Успешный ответ со списком друзей",
                         "schema": {
-                            "$ref": "#/definitions/handler.FriendsResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortProfile"
+                            }
                         }
                     },
                     "400": {
@@ -484,7 +487,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Успешный ответ со списком запросов",
                         "schema": {
-                            "$ref": "#/definitions/handler.FriendRequestsResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.FriendshipWithProfile"
+                            }
                         }
                     },
                     "400": {
@@ -540,7 +546,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Успешный ответ со списком отправленных запросов",
                         "schema": {
-                            "$ref": "#/definitions/handler.FriendRequestsResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.FriendshipWithProfile"
+                            }
                         }
                     },
                     "400": {
@@ -1707,62 +1716,6 @@ const docTemplate = `{
             "properties": {
                 "chatID": {
                     "type": "integer"
-                }
-            }
-        },
-        "handler.FriendRequestsResponse": {
-            "description": "Ответ с пагинированным списком запросов в друзья",
-            "type": "object",
-            "properties": {
-                "hasNext": {
-                    "description": "Есть ли следующая страница",
-                    "type": "boolean",
-                    "example": true
-                },
-                "page": {
-                    "description": "Текущая страница",
-                    "type": "integer",
-                    "example": 1
-                },
-                "requests": {
-                    "description": "Список запросов",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.FriendshipWithProfile"
-                    }
-                },
-                "totalPages": {
-                    "description": "Общее количество страниц",
-                    "type": "integer",
-                    "example": 3
-                }
-            }
-        },
-        "handler.FriendsResponse": {
-            "description": "Ответ с пагинированным списком друзей",
-            "type": "object",
-            "properties": {
-                "friends": {
-                    "description": "Список друзей",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.ShortProfile"
-                    }
-                },
-                "hasNext": {
-                    "description": "Есть ли следующая страница",
-                    "type": "boolean",
-                    "example": true
-                },
-                "page": {
-                    "description": "Текущая страница",
-                    "type": "integer",
-                    "example": 1
-                },
-                "totalPages": {
-                    "description": "Общее количество страниц",
-                    "type": "integer",
-                    "example": 5
                 }
             }
         },

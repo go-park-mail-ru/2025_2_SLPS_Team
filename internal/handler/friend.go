@@ -3,7 +3,7 @@ package handler
 import (
 	"net/http"
 	"project/domain"
-	"project/internal/service"
+
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -12,38 +12,13 @@ import (
 )
 
 type FriendHandler struct {
-	friendService service.FriendService
+	friendService domain.FriendService
 }
 
-func NewFriendHandler(friendService service.FriendService) *FriendHandler {
+func NewFriendHandler(friendService domain.FriendService) *FriendHandler {
 	return &FriendHandler{
 		friendService: friendService,
 	}
-}
-
-// FriendsRequest - запрос для пагинации друзей
-// @Description Параметры пагинации для списков друзей
-type FriendsRequest struct {
-	Page  int `schema:"page" example:"1"`   // Номер страницы
-	Limit int `schema:"limit" example:"20"` // Количество элементов на странице
-}
-
-// FriendsResponse - ответ со списком друзей и пагинацией
-// @Description Ответ с пагинированным списком друзей
-type FriendsResponse struct {
-	Friends    []domain.ShortProfile `json:"friends"`                // Список друзей
-	Page       int                   `json:"page" example:"1"`       // Текущая страница
-	TotalPages int                   `json:"totalPages" example:"5"` // Общее количество страниц
-	HasNext    bool                  `json:"hasNext" example:"true"` // Есть ли следующая страница
-}
-
-// FriendRequestsResponse - ответ со списком запросов и пагинацией
-// @Description Ответ с пагинированным списком запросов в друзья
-type FriendRequestsResponse struct {
-	Requests   []domain.FriendshipWithProfile `json:"requests"`               // Список запросов
-	Page       int                            `json:"page" example:"1"`       // Текущая страница
-	TotalPages int                            `json:"totalPages" example:"3"` // Общее количество страниц
-	HasNext    bool                           `json:"hasNext" example:"true"` // Есть ли следующая страница
 }
 
 // FriendshipStatusResponse - ответ со статусом дружбы
@@ -204,7 +179,6 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 
 	sendJSONResponse(w, domain.FriendRemoved, http.StatusOK)
 }
-
 // GetFriends получает список друзей
 // @Summary Получить список друзей
 // @Description Возвращает список друзей пользователя с пагинацией
@@ -212,14 +186,14 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество друзей на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {object} FriendsResponse "Успешный ответ со списком друзей"
+// @Success 200 {array} domain.ShortProfile "Успешный ответ со списком друзей"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
 // @Router /friends [get]
 func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
-	var req FriendsRequest
-	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
 		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
@@ -232,20 +206,13 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	friends, totalPages, err := h.friendService.GetFriends(r.Context(), userID, req.Page, req.Limit)
+	friends, err := h.friendService.GetFriends(r.Context(), userID, qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	response := FriendsResponse{
-		Friends:    friends,
-		Page:       req.Page,
-		TotalPages: totalPages,
-		HasNext:    req.Page < totalPages,
-	}
-
-	if err := sendJSONData(r.Context(), w, response); err != nil {
+	if err := sendJSONData(r.Context(), w, friends); err != nil {
 		return
 	}
 }
@@ -257,14 +224,14 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество запросов на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {object} FriendRequestsResponse "Успешный ответ со списком запросов"
+// @Success 200 {array} domain.FriendshipWithProfile "Успешный ответ со списком запросов"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
 // @Router /friends/requests [get]
 func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request) {
-	var req FriendsRequest
-	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
 		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
@@ -277,20 +244,13 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	requests, totalPages, err := h.friendService.GetFriendRequests(r.Context(), userID, req.Page, req.Limit)
+	requests, err := h.friendService.GetFriendRequests(r.Context(), userID, qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	response := FriendRequestsResponse{
-		Requests:   requests,
-		Page:       req.Page,
-		TotalPages: totalPages,
-		HasNext:    req.Page < totalPages,
-	}
-
-	if err := sendJSONData(r.Context(), w, response); err != nil {
+	if err := sendJSONData(r.Context(), w, requests); err != nil {
 		return
 	}
 }
@@ -302,14 +262,14 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество запросов на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {object} FriendRequestsResponse "Успешный ответ со списком отправленных запросов"
+// @Success 200 {array} domain.FriendshipWithProfile "Успешный ответ со списком отправленных запросов"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
 // @Router /friends/sent [get]
 func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) {
-	var req FriendsRequest
-	if err := schema.NewDecoder().Decode(&req, r.URL.Query()); err != nil {
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
 		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
 		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
@@ -322,20 +282,13 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	requests, totalPages, err := h.friendService.GetSentRequests(r.Context(), userID, req.Page, req.Limit)
+	requests, err := h.friendService.GetSentRequests(r.Context(), userID, qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	response := FriendRequestsResponse{
-		Requests:   requests,
-		Page:       req.Page,
-		TotalPages: totalPages,
-		HasNext:    req.Page < totalPages,
-	}
-
-	if err := sendJSONData(r.Context(), w, response); err != nil {
+	if err := sendJSONData(r.Context(), w, requests); err != nil {
 		return
 	}
 }
