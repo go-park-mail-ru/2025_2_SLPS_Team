@@ -34,7 +34,7 @@ func NewConfig() *Config {
 	postgresURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode,
 	)
-
+	log.Println(postgresURL)
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
 	redisPassword := os.Getenv("REDIS_PASSWORD")
