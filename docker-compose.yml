@@ -17,9 +17,9 @@ services:
     ports:
       - "5432:5432"
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: mysecretpassword
-      POSTGRES_DB: vk
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -31,13 +31,13 @@ services:
       - network
   redis:
     image: redis:alpine
-    command: redis-server --bind 0.0.0.0 --port 6380 --requirepass password
+    command: redis-server --bind 0.0.0.0 --port 6380 --requirepass ${REDIS_PASSWORD}
     ports:
       - "6380:6380"
     environment:
-      REDIS_PASSWORD: password
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
     healthcheck:
-      test: [ "CMD-SHELL", "redis-cli -h localhost -p 6380 -a password ping | grep PONG" ]
+      test: [ "CMD-SHELL", "redis-cli -h localhost -p 6380 -a ${REDIS_PASSWORD} ping | grep PONG" ]
       interval: 5s
       timeout: 5s
       retries: 5

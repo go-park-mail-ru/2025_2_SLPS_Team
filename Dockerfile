@@ -27,7 +27,6 @@ COPY --from=builder /app/main .
 COPY --from=builder /app/migrate .
 COPY --from=builder /app/db/migrations ./db/migrations
 COPY --from=builder /app/.env .
-COPY --from=builder /app/.env.prod .
 COPY --from=builder /app/logs ./logs
 EXPOSE 8080
 

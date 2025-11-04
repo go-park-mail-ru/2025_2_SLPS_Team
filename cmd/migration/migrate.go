@@ -12,13 +12,14 @@ import (
 )
 
 func main() {
-	config.InitGlobalConfig()
-	if config.GetConfig().Debug {
+	config := config.NewConfig()
+	if config.Debug {
 		log.Println("Debug mode enabled")
 	}
+
 	m, err := migrate.New(
-		config.GetConfig().MigrationsPath,
-		config.GetConfig().PostgresURL,
+		config.MigrationsPath,
+		config.PostgresURL,
 	)
 	if err != nil {
 		log.Panicf("Error initializing migrations: %v", err)
