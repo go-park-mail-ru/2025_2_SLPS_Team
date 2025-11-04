@@ -49,7 +49,7 @@ jobs:
             docker stop myapp || true
             docker rm myapp || true
 
-            docker pull mydockerhubuser/myapp:latest
+            docker pull ${{ secrets.DOCKER_USERNAME }}/myapp:latest
 
             docker run -d --env-file /home/ubuntu/myapp/.env \
-              --name myapp -p 8080:8080 mydockerhubuser/myapp:latest
+              --name myapp -p 8080:8080 ${{ secrets.DOCKER_USERNAME }}/myapp:latest
