@@ -15,31 +15,25 @@ type PostService struct {
 	userStore domain.UserStore
 }
 
-func NewPostService(postStore domain.PostStore, userStore domain.UserStore) PostService {
-	return PostService{
+func NewPostService(postStore domain.PostStore, userStore domain.UserStore) domain.PostService {
+	return &PostService{
 		postStore: postStore,
 		userStore: userStore,
 	}
 }
 
 // PostsPaginate возвращает посты с пагинацией
-func (s *PostService) PostsPaginate(ctx context.Context, page, limit int) ([]domain.Post, int, error) {
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 || limit > 100 {
-		limit = 20
-	}
+func (s *PostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.Post, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
+	domain.Info(ctx, "Getting paginated posts", zap.Int("offset", offset), zap.Int("limit", limit))
 
-	domain.Info(ctx, "Getting paginated posts", zap.Int("page", page), zap.Int("limit", limit))
-
-	posts, totalPages, err := s.postStore.PostsPaginatedList(ctx, page, limit)
+	posts, err := s.postStore.PostsPaginatedList(ctx, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get posts", err)
-		return nil, 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
-	return posts, totalPages, nil
+	return posts, nil
 }
 
 // GetPost возвращает пост по ID
@@ -304,18 +298,13 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 }
 
 // GetUserPosts возвращает посты пользователя
-func (s *PostService) GetUserPosts(ctx context.Context, userID uint, page, limit int) ([]domain.Post, int, error) {
+func (s *PostService) GetUserPosts(ctx context.Context, userID uint, params domain.PaginateQueryParams) ([]domain.Post, error) {
 	// Валидация параметров
-	if page <= 0 {
-		page = 1
-	}
-	if limit <= 0 || limit > 100 {
-		limit = 20
-	}
+	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting user posts",
 		zap.Uint("userID", userID),
-		zap.Int("page", page),
+		zap.Int("offset", offset),
 		zap.Int("limit", limit))
 
 	// Проверяем существование пользователя
@@ -323,20 +312,20 @@ func (s *PostService) GetUserPosts(ctx context.Context, userID uint, page, limit
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			domain.Warn(ctx, "User not found", zap.Uint("userID", userID))
-			return nil, 0, domain.ErrUserNotFound
+			return nil, domain.ErrUserNotFound
 		}
 		domain.Error(ctx, "Failed to get user", err, zap.Uint("userID", userID))
-		return nil, 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
 	// Получаем посты
-	posts, totalPages, err := s.postStore.GetPostsByUser(ctx, userID, page, limit)
+	posts, err := s.postStore.GetPostsByUser(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user posts", err, zap.Uint("userID", userID))
-		return nil, 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
-	return posts, totalPages, nil
+	return posts, nil
 }
 
 // convertToPointerSlice вспомогательная функция для конвертации

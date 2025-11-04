@@ -238,23 +238,11 @@ definitions:
   handler.PostsResponse:
     description: Ответ с пагинированным списком постов
     properties:
-      hasNext:
-        description: Есть ли следующая страница
-        example: true
-        type: boolean
-      page:
-        description: Текущая страница
-        example: 1
-        type: integer
       posts:
         description: Список постов
         items:
           $ref: '#/definitions/domain.Post'
         type: array
-      totalPages:
-        description: Общее количество страниц
-        example: 5
-        type: integer
     type: object
 host: localhost:8080
 info:

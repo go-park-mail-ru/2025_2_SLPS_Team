@@ -1818,27 +1818,12 @@ const docTemplate = `{
             "description": "Ответ с пагинированным списком постов",
             "type": "object",
             "properties": {
-                "hasNext": {
-                    "description": "Есть ли следующая страница",
-                    "type": "boolean",
-                    "example": true
-                },
-                "page": {
-                    "description": "Текущая страница",
-                    "type": "integer",
-                    "example": 1
-                },
                 "posts": {
                     "description": "Список постов",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/domain.Post"
                     }
-                },
-                "totalPages": {
-                    "description": "Общее количество страниц",
-                    "type": "integer",
-                    "example": 5
                 }
             }
         }
