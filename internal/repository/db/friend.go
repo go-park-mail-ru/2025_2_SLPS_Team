@@ -213,6 +213,62 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, limi
 	return friends, nil
 }
 
+func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]domain.ShortProfile, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "friendStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetAllUsers",
+		zap.Int("userID", userID),
+		zap.Int("offset", offset),
+		zap.Int("limit", limit))
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	query := `
+        SELECT user_id, first_name || ' ' || last_name as full_name, avatar_path
+        FROM profiles
+        WHERE user_id != $1
+        ORDER BY user_id
+        LIMIT $2 OFFSET $3
+    `
+
+	dblogger = dblogger.With(zap.String("query", query))
+	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
+	if err != nil {
+		dblogger.Error("Failed to query all users", zap.Error(err))
+		return nil, fmt.Errorf("failed to query all users: %w", err)
+	}
+	defer rows.Close()
+
+	users := []domain.ShortProfile{}
+	for rows.Next() {
+		var user domain.ShortProfile
+		err := rows.Scan(
+			&user.UserID,
+			&user.FullName,
+			&user.AvatarPath,
+		)
+		if err != nil {
+			dblogger.Error("Failed to scan user profile", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan user profile: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		dblogger.Error("Error iterating user rows", zap.Error(err))
+		return nil, fmt.Errorf("error iterating user rows: %w", err)
+	}
+
+	dblogger.Info("All users retrieved successfully",
+		zap.Int("usersCount", len(users)))
+	
+	return users, nil
+}
+
 // GetFriendshipRequests получает входящие запросы в друзья с профилями (с пагинацией)
 func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID int, limit, offset int) ([]domain.FriendshipWithProfile, error) {
 	start := time.Now()

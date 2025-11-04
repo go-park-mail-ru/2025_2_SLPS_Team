@@ -200,6 +200,25 @@ func (s *FriendService) GetFriends(ctx context.Context, userID int, params domai
 	return friends, nil
 }
 
+// GetAllUsers получает всех пользователей с пагинацией
+func (s *FriendService) GetAllUsers(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
+	// Валидация параметров
+	offset, limit := domain.ValidatePaginationParams(params)
+
+	domain.Info(ctx, "Getting all users except current",
+		zap.Int("currentUserID", userID),
+		zap.Int("offset", offset),
+		zap.Int("limit", limit))
+
+	users, err := s.friendStore.GetAllUsers(ctx, userID, limit, offset)
+	if err != nil {
+		domain.Error(ctx, "Failed to get all users", err)
+		return nil, domain.ErrDB
+	}
+
+	return users, nil
+}
+
 // GetFriendRequests получает входящие запросы в друзья
 func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FriendshipWithProfile, error) {
 	// Валидация параметров

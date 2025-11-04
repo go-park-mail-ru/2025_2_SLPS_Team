@@ -217,6 +217,44 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetAllUsers получает всех пользователей кроме текущего
+// @Summary Получить всех пользователей (кроме себя)
+// @Description Возвращает список всех пользователей кроме текущего пользователя с пагинацией
+// @Tags friends
+// @Produce json
+// @Param page query int false "Номер страницы" default(1) minimum(1)
+// @Param limit query int false "Количество пользователей на странице" default(20) minimum(1) maximum(100)
+// @Success 200 {array} domain.ShortProfile "Успешный ответ со списком пользователей"
+// @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Security ApiKeyAuth
+// @Router /friends/users/all [get]
+func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
+    var qParams domain.PaginateQueryParams
+    if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
+        sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
+        domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+        return
+    }
+
+    userID, ok := r.Context().Value(domain.UserIDKey).(int)
+    if !ok {
+        sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
+        domain.Warn(r.Context(), "User ID not found in context")
+        return
+    }
+
+    users, err := h.friendService.GetAllUsers(r.Context(), userID, qParams)
+    if err != nil {
+        sendJSONError(w, err)
+        return
+    }
+
+    if err := sendJSONData(r.Context(), w, users); err != nil {
+        return
+    }
+}
+
 // GetFriendRequests получает входящие запросы в друзья
 // @Summary Получить входящие запросы в друзья
 // @Description Возвращает список входящих запросов на дружбу с пагинацией

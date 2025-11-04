@@ -46,6 +46,7 @@ type FriendService interface {
 	RejectFriendRequest(ctx context.Context, userID, friendID int) error
 	RemoveFriend(ctx context.Context, userID, friendID int) error
 	GetFriends(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
+	GetAllUsers(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
 	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]FriendshipWithProfile, error)
 	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]FriendshipWithProfile, error)
 	GetFriendshipStatus(ctx context.Context, userID, friendID int) (FriendshipStatus, error)
@@ -60,6 +61,7 @@ type FriendStore interface {
 
 	// Получение списков с пагинацией
 	GetUserFriends(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
+	GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]ShortProfile, error)
 	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]FriendshipWithProfile, error)
 	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]FriendshipWithProfile, error)
 

@@ -144,6 +144,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn, conf
 	friendRouter := apiRouter.PathPrefix("/friends").Subrouter()
 	friendRouter.Use(auth.AuthMiddleware)
 	friendRouter.HandleFunc("", friend.GetFriends).Methods("GET")
+	friendRouter.HandleFunc("/users/all", friend.GetAllUsers).Methods("GET")
 	friendRouter.HandleFunc("/requests", friend.GetFriendRequests).Methods("GET")
 	friendRouter.HandleFunc("/sent", friend.GetSentRequests).Methods("GET")
 	friendRouter.HandleFunc("/{id:[0-9]+}", friend.SendFriendRequest).Methods("POST")
