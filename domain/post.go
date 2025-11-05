@@ -17,6 +17,10 @@ type Post struct {
 	PhotosPath  []string `json:"photos"`      //в БД табличка post_photos называется
 
 }
+type PostWithShortUser struct {
+	Post   Post         `json:"post"`
+	Author ShortProfile `json:"author"`
+}
 
 // PostCreateRequest - запрос на создание поста для валидации
 type PostCreateRequest struct {
@@ -33,7 +37,7 @@ type PostUpdateRequest struct {
 }
 
 type PostService interface {
-	PostsPaginate(ctx context.Context, params PaginateQueryParams) ([]Post, error)
+	PostsPaginate(ctx context.Context, params PaginateQueryParams) ([]PostWithShortUser, error)
 	GetPost(ctx context.Context, postID uint) (*Post, error)
 	CreatePost(ctx context.Context, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*Post, error)
 	UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error
@@ -43,7 +47,7 @@ type PostService interface {
 
 type PostStore interface {
 	// Получение постов с пагинацией
-	PostsPaginatedList(ctx context.Context, limit, offset int) ([]Post, error)
+	PostsPaginatedList(ctx context.Context, limit, offset int) ([]PostWithShortUser, error)
 	// Получение поста по ID
 	GetPostByID(ctx context.Context, id uint) (*Post, error)
 	// Создание поста

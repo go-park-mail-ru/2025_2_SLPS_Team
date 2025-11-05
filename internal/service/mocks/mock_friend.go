@@ -80,10 +80,10 @@ func (mr *MockFriendServiceMockRecorder) GetAllUsers(ctx, userID, params interfa
 }
 
 // GetFriendRequests mocks base method.
-func (m *MockFriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FriendshipWithProfile, error) {
+func (m *MockFriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFriendRequests", ctx, userID, params)
-	ret0, _ := ret[0].([]domain.FriendshipWithProfile)
+	ret0, _ := ret[0].([]domain.ShortProfile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -125,10 +125,10 @@ func (mr *MockFriendServiceMockRecorder) GetFriendshipStatus(ctx, userID, friend
 }
 
 // GetSentRequests mocks base method.
-func (m *MockFriendService) GetSentRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FriendshipWithProfile, error) {
+func (m *MockFriendService) GetSentRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSentRequests", ctx, userID, params)
-	ret0, _ := ret[0].([]domain.FriendshipWithProfile)
+	ret0, _ := ret[0].([]domain.ShortProfile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -168,17 +168,17 @@ func (mr *MockFriendServiceMockRecorder) RemoveFriend(ctx, userID, friendID inte
 }
 
 // SendFriendRequest mocks base method.
-func (m *MockFriendService) SendFriendRequest(ctx context.Context, userID, friendID int) error {
+func (m *MockFriendService) SendFriendRequest(ctx context.Context, actionUserID, targetUserID int) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "SendFriendRequest", ctx, userID, friendID)
+	ret := m.ctrl.Call(m, "SendFriendRequest", ctx, actionUserID, targetUserID)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // SendFriendRequest indicates an expected call of SendFriendRequest.
-func (mr *MockFriendServiceMockRecorder) SendFriendRequest(ctx, userID, friendID interface{}) *gomock.Call {
+func (mr *MockFriendServiceMockRecorder) SendFriendRequest(ctx, actionUserID, targetUserID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendFriendRequest", reflect.TypeOf((*MockFriendService)(nil).SendFriendRequest), ctx, userID, friendID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendFriendRequest", reflect.TypeOf((*MockFriendService)(nil).SendFriendRequest), ctx, actionUserID, targetUserID)
 }
 
 // MockFriendStore is a mock of FriendStore interface.
@@ -293,10 +293,10 @@ func (mr *MockFriendStoreMockRecorder) GetFriendship(ctx, userID1, userID2 inter
 }
 
 // GetFriendshipRequests mocks base method.
-func (m *MockFriendStore) GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]domain.FriendshipWithProfile, error) {
+func (m *MockFriendStore) GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]domain.ShortProfile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFriendshipRequests", ctx, userID, limit, offset)
-	ret0, _ := ret[0].([]domain.FriendshipWithProfile)
+	ret0, _ := ret[0].([]domain.ShortProfile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -323,10 +323,10 @@ func (mr *MockFriendStoreMockRecorder) GetFriendshipStatus(ctx, userID1, userID2
 }
 
 // GetSentRequests mocks base method.
-func (m *MockFriendStore) GetSentRequests(ctx context.Context, userID, limit, offset int) ([]domain.FriendshipWithProfile, error) {
+func (m *MockFriendStore) GetSentRequests(ctx context.Context, userID, limit, offset int) ([]domain.ShortProfile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSentRequests", ctx, userID, limit, offset)
-	ret0, _ := ret[0].([]domain.FriendshipWithProfile)
+	ret0, _ := ret[0].([]domain.ShortProfile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -353,15 +353,15 @@ func (mr *MockFriendStoreMockRecorder) GetUserFriends(ctx, userID, limit, offset
 }
 
 // UpdateFriendshipStatus mocks base method.
-func (m *MockFriendStore) UpdateFriendshipStatus(ctx context.Context, userID1, userID2 int, status domain.FriendshipStatus) error {
+func (m *MockFriendStore) UpdateFriendshipStatus(ctx context.Context, actionUserID, targetUserID int, status domain.FriendshipStatus) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "UpdateFriendshipStatus", ctx, userID1, userID2, status)
+	ret := m.ctrl.Call(m, "UpdateFriendshipStatus", ctx, actionUserID, targetUserID, status)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // UpdateFriendshipStatus indicates an expected call of UpdateFriendshipStatus.
-func (mr *MockFriendStoreMockRecorder) UpdateFriendshipStatus(ctx, userID1, userID2, status interface{}) *gomock.Call {
+func (mr *MockFriendStoreMockRecorder) UpdateFriendshipStatus(ctx, actionUserID, targetUserID, status interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFriendshipStatus", reflect.TypeOf((*MockFriendStore)(nil).UpdateFriendshipStatus), ctx, userID1, userID2, status)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateFriendshipStatus", reflect.TypeOf((*MockFriendStore)(nil).UpdateFriendshipStatus), ctx, actionUserID, targetUserID, status)
 }

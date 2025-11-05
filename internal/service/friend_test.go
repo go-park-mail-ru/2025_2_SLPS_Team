@@ -111,7 +111,11 @@ func TestFriendService_RejectFriendRequest(t *testing.T) {
 			Status:       domain.FriendshipPending,
 			ActionUserID: 2,
 		}, nil)
-		friendStore.EXPECT().DeleteFriendship(ctx, 1, 2).Return(nil)
+
+		friendStore.EXPECT().
+			UpdateFriendshipStatus(ctx, 1, 2, domain.FriendshipRejected).
+			Return(nil)
+
 		err := svc.RejectFriendRequest(ctx, 1, 2)
 		assert.NoError(t, err)
 	})
@@ -169,8 +173,9 @@ func TestFriendService_CountUserRelations(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{ID: 1}, nil)
-		friendStore.EXPECT().CountUserRelations(ctx, 1, domain.CountAll).Return(5, nil)
-		count, err := svc.CountUserRelations(ctx, 1, domain.CountAll)
+		friendStore.EXPECT().CountUserRelations(ctx, 1, domain.FriendshipCountType("friends")).Return(5, nil)
+
+		count, err := svc.CountUserRelations(ctx, 1, domain.FriendshipCountType("friends"))
 		assert.NoError(t, err)
 		assert.Equal(t, 5, count)
 	})
@@ -183,7 +188,7 @@ func TestFriendService_CountUserRelations(t *testing.T) {
 
 	t.Run("User not found", func(t *testing.T) {
 		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{}, domain.ErrNotFound)
-		count, err := svc.CountUserRelations(ctx, 1, domain.CountAll)
+		count, err := svc.CountUserRelations(ctx, 1, domain.FriendshipCountType(""))
 		assert.ErrorIs(t, err, domain.ErrNotFound)
 		assert.Equal(t, 0, count)
 	})

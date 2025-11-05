@@ -24,9 +24,33 @@ func TestPostsHandler_PostsPaginate(t *testing.T) {
 	handler := NewPostsHandler(mockPostService)
 
 	t.Run("Success", func(t *testing.T) {
-		posts := []domain.Post{
-			{ID: 1, AuthorID: 1, Text: "First post"},
-			{ID: 2, AuthorID: 1, Text: "Second post"},
+		avatar := "avatar1.png"
+
+		posts := []domain.PostWithShortUser{
+			{
+				Post: domain.Post{
+					ID:       1,
+					AuthorID: 1,
+					Text:     "First post",
+				},
+				Author: domain.ShortProfile{
+					UserID:     1,
+					FullName:   "John Doe",
+					AvatarPath: &avatar,
+				},
+			},
+			{
+				Post: domain.Post{
+					ID:       2,
+					AuthorID: 2,
+					Text:     "Second post",
+				},
+				Author: domain.ShortProfile{
+					UserID:     2,
+					FullName:   "Jane Smith",
+					AvatarPath: nil,
+				},
+			},
 		}
 
 		mockPostService.EXPECT().
@@ -43,11 +67,14 @@ func TestPostsHandler_PostsPaginate(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response []domain.Post
+		var response []domain.PostWithShortUser
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Len(t, response, 2)
-		assert.Equal(t, posts[0].ID, response[0].ID)
+
+		assert.Equal(t, posts[0].Post.ID, response[0].Post.ID)
+		assert.Equal(t, posts[0].Author.FullName, response[0].Author.FullName)
+		assert.Equal(t, posts[1].Post.Text, response[1].Post.Text)
 	})
 
 	t.Run("Invalid query params", func(t *testing.T) {

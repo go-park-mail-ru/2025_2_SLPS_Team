@@ -21,67 +21,79 @@ func NewDBPostStore(db *sql.DB) domain.PostStore {
 }
 
 // Возвращает пагинированный слайс постов
-func (store *DBPostStore) PostsPaginatedList(ctx context.Context, limit, offset int) ([]domain.Post, error) {
-	start := time.Now()                           //засекаем время начала операции
-	dblogger := domain.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
+func (store *DBPostStore) PostsPaginatedList(ctx context.Context, limit, offset int) ([]domain.PostWithShortUser, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start PostsPaginatedList", zap.Int("offset", offset), zap.Int("limit", limit))
 
-	defer func() { //время выполнения будет залогировано в любом случае.
+	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
 	query := `
-        SELECT p.id, p.author_id, p.text, p.created_at, p.updated_at
+        SELECT 
+            p.id, p.author_id, p.text, p.created_at, p.updated_at,
+            u.user_id, u.first_name ||' '|| u.last_name, u.avatar_path
         FROM posts p
+        JOIN profiles u ON p.author_id = u.user_id
         ORDER BY p.created_at DESC
         LIMIT $1 OFFSET $2
     `
 
-	rows, err := store.db.QueryContext(ctx, query, limit, offset) // Получаем посты с пагинацией
+	rows, err := store.db.QueryContext(ctx, query, limit, offset)
 	if err != nil {
-		dblogger.Error("Failed to query posts", zap.Error(err))
+		dblogger.Error("Failed to query posts with authors", zap.Error(err))
 		return nil, fmt.Errorf("failed to query posts: %w", err)
 	}
 	defer rows.Close()
 
-	posts := []domain.Post{} //Слайс типа domain.Post, сюда мы будем добавлять считанные из rows посты post. Наша функция возвращает этот слайс
-	for rows.Next() {        //Начинаем считывать строки из sql запроса ПОСТРОЧНО!
-		var post domain.Post //Структура нашего поста
-		err := rows.Scan(    //Scan записывает столбцы из sql запроса rows в поля нашей структуры post ПО УКАЗАТЕЛЮ. Возвращает ошибку
+	var postsWithAuthors []domain.PostWithShortUser
+
+	for rows.Next() {
+		var (
+			post   domain.Post
+			author domain.ShortProfile
+		)
+
+		err := rows.Scan(
 			&post.ID,
 			&post.AuthorID,
 			&post.Text,
 			&post.CreatedAt,
 			&post.UpdatedAt,
+			&author.UserID,
+			&author.FullName,
+			&author.AvatarPath,
 		)
-
 		if err != nil {
-			dblogger.Error("Failed to scan post", zap.Error(err))
-			return nil, fmt.Errorf("failed to scan post: %w", err)
+			dblogger.Error("Failed to scan post with author", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan post with author: %w", err)
 		}
 
-		// Загружаем attachments и photos
+		// Загружаем вложения и фото для поста
 		attachments, photos, err := store.getPostMedia(ctx, post.ID)
 		if err != nil {
+			dblogger.Error("Failed to load post media", zap.Error(err))
 			return nil, err
 		}
 
 		post.Attachments = attachments
 		post.PhotosPath = photos
-		posts = append(posts, post)
+
+		postsWithAuthors = append(postsWithAuthors, domain.PostWithShortUser{
+			Post:   post,
+			Author: author,
+		})
 	}
 
 	if err := rows.Err(); err != nil {
 		dblogger.Error("Rows iteration error", zap.Error(err))
-		return nil, fmt.Errorf("rows iteration error: %w", err)
+		return nil, err
 	}
 
-	dblogger.Info("Posts retrieved successfully",
-		zap.Int("postsCount", len(posts)),
-	)
-	return posts, nil
+	return postsWithAuthors, nil
 }
 
 // Возвращает пост по ID поста

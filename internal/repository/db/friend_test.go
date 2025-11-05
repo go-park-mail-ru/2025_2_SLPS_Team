@@ -85,7 +85,7 @@ func TestCountUserRelations(t *testing.T) {
 	mock.ExpectQuery(`SELECT COUNT\(\*\)`).
 		WithArgs(1).
 		WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
-	count, err := store.CountUserRelations(context.Background(), 1, domain.CountAll)
+	count, err := store.CountUserRelations(context.Background(), 1, domain.FriendshipCountType(""))
 	assert.NoError(t, err)
 	assert.Equal(t, 5, count)
 }

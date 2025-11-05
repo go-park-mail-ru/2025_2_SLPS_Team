@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"project/domain"
+	"regexp"
 	"testing"
 	"time"
 
@@ -21,9 +22,17 @@ func setupMockPostDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock, *DBPostStore) {
 
 func TestPostsPaginatedList(t *testing.T) {
 	_, mock, store := setupMockPostDB(t)
-	rows := sqlmock.NewRows([]string{"id", "author_id", "text", "created_at", "updated_at"}).
-		AddRow(1, 10, "Post text here that is long enough", time.Now(), time.Now())
-	mock.ExpectQuery(`SELECT p.id, p.author_id, p.text, p.created_at, p.updated_at FROM posts`).
+	rows := sqlmock.NewRows([]string{"id", "author_id", "text", "created_at", "updated_at", "user_id", "full_name", "avatar_path"}).
+		AddRow(1, 10, "Post text here that is long enough", time.Now(), time.Now(), 10, "John Doe", "avatar.png")
+	mock.ExpectQuery(regexp.QuoteMeta(`
+	SELECT
+	p.id, p.author_id, p.text, p.created_at, p.updated_at,
+		u.user_id, u.first_name ||' '|| u.last_name, u.avatar_path
+	FROM posts p
+	JOIN profiles u ON p.author_id = u.user_id
+	ORDER BY p.created_at DESC
+	LIMIT $1 OFFSET $2
+	`)).
 		WithArgs(10, 0).WillReturnRows(rows)
 	mock.ExpectQuery(`SELECT file_path FROM post_attachments`).WillReturnRows(sqlmock.NewRows([]string{"file_path"}))
 	mock.ExpectQuery(`SELECT file_path FROM post_photos`).WillReturnRows(sqlmock.NewRows([]string{"file_path"}))
