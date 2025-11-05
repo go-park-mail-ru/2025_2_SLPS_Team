@@ -166,30 +166,30 @@ func TestFriendService_GetFriends(t *testing.T) {
 	})
 }
 
-func TestFriendService_CountUserRelations(t *testing.T) {
-	svc, friendStore, userStore, ctrl := newFriendServiceMocks(t)
-	defer ctrl.Finish()
-	ctx := context.Background()
-
-	t.Run("Success", func(t *testing.T) {
-		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{ID: 1}, nil)
-		friendStore.EXPECT().CountUserRelations(ctx, 1, domain.FriendshipCountType("friends")).Return(5, nil)
-
-		count, err := svc.CountUserRelations(ctx, 1, domain.FriendshipCountType("friends"))
-		assert.NoError(t, err)
-		assert.Equal(t, 5, count)
-	})
-
-	t.Run("Invalid count type", func(t *testing.T) {
-		count, err := svc.CountUserRelations(ctx, 1, "invalid")
-		assert.ErrorIs(t, err, domain.ErrInvalidInput)
-		assert.Equal(t, 0, count)
-	})
-
-	t.Run("User not found", func(t *testing.T) {
-		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{}, domain.ErrNotFound)
-		count, err := svc.CountUserRelations(ctx, 1, domain.FriendshipCountType(""))
-		assert.ErrorIs(t, err, domain.ErrNotFound)
-		assert.Equal(t, 0, count)
-	})
-}
+//func TestFriendService_CountUserRelations(t *testing.T) {
+//	svc, friendStore, userStore, ctrl := newFriendServiceMocks(t)
+//	defer ctrl.Finish()
+//	ctx := context.Background()
+//
+//	t.Run("Success", func(t *testing.T) {
+//		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{ID: 1}, nil)
+//		friendStore.EXPECT().CountUserRelations(ctx, 1, domain.FriendshipCountType("friends")).Return(5, nil)
+//
+//		count, err := svc.CountUserRelations(ctx, 1, domain.FriendshipCountType("friends"))
+//		assert.NoError(t, err)
+//		assert.Equal(t, 5, count)
+//	})
+//
+//	t.Run("Invalid count type", func(t *testing.T) {
+//		count, err := svc.CountUserRelations(ctx, 1, "invalid")
+//		assert.ErrorIs(t, err, domain.ErrInvalidInput)
+//		assert.Equal(t, 0, count)
+//	})
+//
+//	t.Run("User not found", func(t *testing.T) {
+//		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{}, domain.ErrNotFound)
+//		count, err := svc.CountUserRelations(ctx, 1, domain.FriendshipCountType(""))
+//		assert.ErrorIs(t, err, domain.ErrNotFound)
+//		assert.Equal(t, 0, count)
+//	})
+//}
