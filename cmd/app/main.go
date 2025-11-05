@@ -111,8 +111,8 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, con
 	r.PathPrefix("/docs/").Handler(httpSwagger.WrapHandler)
 	apiRouter := r.PathPrefix("/api").Subrouter()
 
-	apiRouter.Use(middleware.SecureMiddleware)
 	apiRouter.Use(middleware.CorsMiddleware)
+	apiRouter.Use(middleware.SecureMiddleware)
 	apiRouter.Use(middleware.LoggingMiddleware(logger))
 	apiRouter.Use(auth.AuthMiddleware)
 	apiRouter.HandleFunc("/ws", wshandler.ServeWs)
