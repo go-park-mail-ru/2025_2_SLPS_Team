@@ -96,10 +96,10 @@ func (mr *MockPostServiceMockRecorder) GetUserPosts(ctx, userID, params interfac
 }
 
 // PostsPaginate mocks base method.
-func (m *MockPostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.Post, error) {
+func (m *MockPostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.PostWithShortUser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PostsPaginate", ctx, params)
-	ret0, _ := ret[0].([]domain.Post)
+	ret0, _ := ret[0].([]domain.PostWithShortUser)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -206,10 +206,10 @@ func (mr *MockPostStoreMockRecorder) GetPostsByUser(ctx, userID, limit, offset i
 }
 
 // PostsPaginatedList mocks base method.
-func (m *MockPostStore) PostsPaginatedList(ctx context.Context, limit, offset int) ([]domain.Post, error) {
+func (m *MockPostStore) PostsPaginatedList(ctx context.Context, limit, offset int) ([]domain.PostWithShortUser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PostsPaginatedList", ctx, limit, offset)
-	ret0, _ := ret[0].([]domain.Post)
+	ret0, _ := ret[0].([]domain.PostWithShortUser)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

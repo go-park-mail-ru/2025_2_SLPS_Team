@@ -29,9 +29,33 @@ func TestPostService_PostsPaginate(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
-		posts := []domain.Post{
-			{ID: 1, Text: "Post 1"},
-			{ID: 2, Text: "Post 2"},
+		avatar := "avatar.png"
+		posts := []domain.PostWithShortUser{
+			{
+				Post: domain.Post{
+					ID:       1,
+					AuthorID: 1,
+					Text:     "Test post",
+				},
+				Author: domain.ShortProfile{
+					UserID:     1,
+					FullName:   "John Doe",
+					AvatarPath: &avatar,
+				},
+			},
+
+			{
+				Post: domain.Post{
+					ID:       1,
+					AuthorID: 1,
+					Text:     "Test post",
+				},
+				Author: domain.ShortProfile{
+					UserID:     1,
+					FullName:   "John Doe",
+					AvatarPath: &avatar,
+				},
+			},
 		}
 
 		postStore.EXPECT().
@@ -48,7 +72,7 @@ func TestPostService_PostsPaginate(t *testing.T) {
 	})
 
 	t.Run("Default pagination", func(t *testing.T) {
-		posts := []domain.Post{}
+		posts := []domain.PostWithShortUser{}
 
 		postStore.EXPECT().
 			PostsPaginatedList(ctx, 20, 0).

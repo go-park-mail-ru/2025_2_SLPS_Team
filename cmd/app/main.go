@@ -107,11 +107,13 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, con
 	friend := handler.NewFriendHandler(friendService)
 
 	r := mux.NewRouter()
+
+	r.Use(middleware.CorsMiddleware)
 	r.PathPrefix("/uploads/").Handler(handler.UploadsHandler("./uploads", "/uploads/"))
+
 	r.PathPrefix("/docs/").Handler(httpSwagger.WrapHandler)
 	apiRouter := r.PathPrefix("/api").Subrouter()
 
-	apiRouter.Use(middleware.CorsMiddleware)
 	apiRouter.Use(middleware.SecureMiddleware)
 	apiRouter.Use(middleware.LoggingMiddleware(logger))
 	apiRouter.Use(auth.AuthMiddleware)

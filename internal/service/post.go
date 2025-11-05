@@ -23,17 +23,17 @@ func NewPostService(postStore domain.PostStore, userStore domain.UserStore) doma
 }
 
 // PostsPaginate возвращает посты с пагинацией
-func (s *PostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.Post, error) {
+func (s *PostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.PostWithShortUser, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting paginated posts", zap.Int("offset", offset), zap.Int("limit", limit))
 
-	posts, err := s.postStore.PostsPaginatedList(ctx, limit, offset)
+	postsWithAuthor, err := s.postStore.PostsPaginatedList(ctx, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get posts", err)
 		return nil, domain.ErrDB
 	}
 
-	return posts, nil
+	return postsWithAuthor, nil
 }
 
 // GetPost возвращает пост по ID
