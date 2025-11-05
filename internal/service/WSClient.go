@@ -110,6 +110,7 @@ func (hub *Hub) writePump(ctx context.Context, c *Client) {
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
+		c.conn.Close()
 		hub.RemoveClient(ctx, c.userID)
 		domain.FromContext(ctx).Info("WS connection closed", zap.Int("userID", c.userID))
 	}()
