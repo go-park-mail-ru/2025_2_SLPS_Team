@@ -1,16 +1,37 @@
 package handler
 
 import (
+	"bufio"
+	"context"
+	"errors"
+	"fmt"
+	"net"
 	"net/http"
-	"os"
+	"project/config"
+	"project/domain"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 )
 
-func CorsMiddleware(next http.Handler) http.Handler {
+type MiddlewareHandler struct {
+	config *config.Config
+}
+
+func NewMiddlewareHandler(config *config.Config) *MiddlewareHandler {
+	return &MiddlewareHandler{
+		config: config,
+	}
+}
+
+func (api *MiddlewareHandler) CorsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", os.Getenv("FRONTEND_ORIGIN"))
+		w.Header().Set("Access-Control-Allow-Origin", api.config.FrontendOrigin)
 		w.Header().Set("Access-Control-Allow-Credentials", "true")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-CSRF-Token, X-Requested-With")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE")
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -21,7 +42,7 @@ func CorsMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func SecureMiddleware(next http.Handler) http.Handler {
+func (api *MiddlewareHandler) SecureMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
@@ -43,6 +64,7 @@ var AllowedPathsWithOutAuth = map[string]bool{
 	"/api/auth/register":   true,
 	"/api/auth/isloggedin": true,
 }
+var SafeMethods = map[string]bool{"GET": true, "HEAD": true, "OPTIONS": true, "TRACE": true}
 
 func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -50,18 +72,92 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+
 		path := r.URL.Path
-		if api.IsLoggedIn(r) {
+		session, err := api.IsLoggedIn(r)
+		isLoggedIn := true
+		if err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				isLoggedIn = false
+			} else {
+				sendJSONResponse(w, domain.ServerErr, http.StatusInternalServerError)
+				domain.FromContext(r.Context()).Error("Fail to get IsLoggedIn", zap.Error(err))
+				return
+			}
+		}
+		if isLoggedIn {
 			if ForbiddenPathsWithAuth[path] {
-				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
+				sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
+				domain.FromContext(r.Context()).Warn("Try get access to forbidden path")
+				return
+			} else {
+				ctx := context.WithValue(r.Context(), domain.UserIDKey, session.UserID)
+				newLogger := domain.FromContext(ctx).With(zap.Int("selfUserID", session.UserID))
+				ctx = context.WithValue(ctx, domain.LoggerKey, newLogger)
+				domain.FromContext(ctx).Info("User logged in, add userID to context")
+
+				if !SafeMethods[r.Method] && !api.config.Debug {
+					domain.FromContext(r.Context()).Info("in header", zap.String("scrf", r.Header.Get("X-CSRF-Token")))
+					domain.FromContext(r.Context()).Info("in session", zap.String("scrf", session.CSRFToken))
+					if r.Header.Get("X-CSRF-Token") != session.CSRFToken {
+						sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
+						domain.FromContext(r.Context()).Warn("Try do somthing without CSRF token")
+						return
+					}
+				}
+
+				next.ServeHTTP(w, r.WithContext(ctx))
 				return
 			}
 		} else {
 			if !AllowedPathsWithOutAuth[path] {
-				sendJSONSuccess(w, "Forbidden", http.StatusForbidden)
+				sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
+				domain.FromContext(r.Context()).Warn("Try get access to forbidden path")
 				return
 			}
 		}
 		next.ServeHTTP(w, r)
+		return
 	})
+}
+
+type responseWriter struct {
+	http.ResponseWriter
+	statusCode int
+}
+
+func (rw *responseWriter) WriteHeader(code int) {
+	rw.statusCode = code
+	rw.ResponseWriter.WriteHeader(code)
+}
+func (rw *responseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hj, ok := rw.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
+	}
+	return hj.Hijack()
+}
+func (api *MiddlewareHandler) LoggingMiddleware(logger *zap.Logger) mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			reqID := uuid.New().String()
+
+			reqLogger := logger.With(zap.String("requestID", reqID))
+			//if userID, ok := r.Context().Value(domain.UserIDKey).(int); ok {
+			//    reqLogger = reqLogger.With(zap.Int("selfUserID", userID))
+			//}
+			ctx := context.WithValue(r.Context(), domain.LoggerKey, reqLogger)
+
+			reqLogger.Info("incoming request",
+				zap.String("method", r.Method),
+				zap.String("path", r.URL.Path),
+				zap.String("remote_addr", r.RemoteAddr),
+			)
+			start := time.Now()
+			ww := &responseWriter{ResponseWriter: w, statusCode: http.StatusOK}
+			next.ServeHTTP(ww, r.WithContext(ctx))
+			duration := time.Since(start)
+			reqLogger.Info("request completed", zap.Duration("duration", duration), zap.Int("status", ww.statusCode))
+		})
+	}
 }

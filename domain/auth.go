@@ -1,0 +1,25 @@
+package domain
+
+import (
+	"context"
+	"net/http"
+	"time"
+)
+
+type RegisterRequest struct {
+	FirstName       string    `json:"firstName" valid:"required"`
+	LastName        string    `json:"lastName" valid:"required"`
+	Email           string    `json:"email" valid:"email, required" example:"example@example.ru"`
+	Password        string    `json:"password" valid:"required, stringlength(5|20)" example:"123123"`
+	ConfirmPassword string    `json:"confirmPassword" valid:"required, stringlength(5|20)" example:"123123"`
+	Dob             time.Time `json:"dob" valid:"-" example:"1990-01-01T00:00:00Z"`
+	Gender          string    `json:"gender" valid:"-"`
+}
+
+type AuthService interface {
+	IsLoggedIn(ctx context.Context, sessionCookie *http.Cookie) (*Session, error)
+	AddSession(ctx context.Context, userID int) (*SIDAndSCRFToken, error)
+	Login(ctx context.Context, req User) (int, error)
+	Logout(ctx context.Context, session *http.Cookie) error
+	Register(ctx context.Context, req RegisterRequest) (int, error)
+}

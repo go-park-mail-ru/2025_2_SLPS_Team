@@ -1,0 +1,105 @@
+curl -X PUT http://localhost:8080/api/profile \
+  -F 'profile={"firstName":"John","lastName":"Doe","gender":"male","aboutMyself":"Test","dob":"1990-01-01T00:00:00Z"}' \
+  -F 'avatar=@/c/Users/misha/Downloads/beaver-head.png' \
+  -H "Content-Type: multipart/form-data" \
+  -b cookies.txt
+
+  curl -i -X POST http://localhost:8080/api/auth/register     -H "Content-Type: application/json"     -d '{
+        "firstName": "Alice",
+        "lastName": "Smith",
+        "email": "alice@example.com",
+        "password": "password123",
+        "confirmPassword": "password123",
+        "dob": "1990-01-01T00:00:00Z",
+        "gender": "female"
+    }'     \
+    -c cookies.txt
+
+
+curl -i -X PATCH http://localhost:8080/api/profile/avatar \
+  -F 'avatar=@/c/Users/misha/Downloads/beaver-head.png' \
+  -H "Content-Type: multipart/form-data" \
+  -b cookies.txt
+
+curl -i -X PATCH http://localhost:8080/api/profile/header \
+  -F 'header=@/c/Users/misha/Downloads/beaver-head.png' \
+  -H "Content-Type: multipart/form-data" \
+  -b cookies.txt
+
+curl -i -X GET http://localhost:8080/api/auth/isloggedin \
+    -b cookies.txt
+
+curl -i -X POST http://localhost:8080/api/auth/login \
+    -H "Content-Type: application/json" \
+    -d '{"email":"alice@example.com","password":"password123"}' \
+    -c cookies.txt
+
+curl -i -X GET http://localhost:8080/api/profile/1     -H "Content-Type: application/json"     -b cookies.txt
+
+curl -i -X GET http://localhost:8080/api/chat/get-chat-user/1 \
+  -b cookies.txt
+
+curl -i -X POST http://localhost:8080/api/auth/logout \
+    -b cookies.txt
+
+curl -X 'GET' \
+  'http://localhost:8080/api/chats/1/messages?limit=20&offset=0' \
+  -H 'accept: application/json' \
+  -b cookies.txt
+
+curl -X 'POST' \
+  'http://localhost:8080/api/chats/1/message' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -H 'X-CSRF-Token: b4ce098c45f999818c10dd60048eb1c4d5bed41c7b64e1e0f27ae93a7ac44f40' \
+  -b cookies.txt \
+  -d '{
+
+  "text": "ну новое сообщение"
+}'
+curl -i -X POST http://localhost:8080/api/auth/logout \
+    -b cookies.txt
+
+curl -i -X POST http://localhost:8080/api/auth/register     -H "Content-Type: application/json"     -d '{
+    "firstName": "Alice",
+    "lastName": "Smith",
+    "email": "alice@example.com",
+    "password": "password123",
+    "confirmPassword": "password123",
+    "dob": "1990-01-01T00:00:00Z",
+    "gender": "female"
+}'     \
+-c cookies.txt
+
+curl -X 'POST' \
+  'http://localhost:8080/api/chats/1/message' \
+  -H 'accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{
+
+  "text": "string"
+}' \
+-b cookies.txt
+
+curl -X 'POST' \
+  'http://localhost:8080/api/friends/1' \
+  -H 'accept: application/json' \
+  -d '' \
+-b cookies.txt
+
+curl -X 'PUT' \
+  'http://localhost:8080/api/friends/1/accept' \
+  -H 'accept: application/json' \
+ -b cookies.txt
+
+mockgen -package=mocks project/domain \
+    AuthService \
+    ChatService \
+    ProfileService \
+    > service/mocks/mock_services.go
+
+curl -X POST "http://localhost:8080/api/posts" \
+  -F "text=1231231231231231231231231231231231231233123" \
+  -F "photos=@/c/123.png" \
+  -F "photos=@/c/123.png" \
+  -b cookies.txt

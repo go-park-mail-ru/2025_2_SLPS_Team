@@ -1,203 +1,210 @@
 package handler
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
-	"fmt"
-	"log"
 	"net/http"
-	"project/repository"
+	"project/config"
+	"project/domain"
 	"time"
 
-	"github.com/asaskevich/govalidator"
-	"golang.org/x/crypto/bcrypt"
+	"go.uber.org/zap"
 )
 
-type SuccessResponse struct {
-	Message string `json:"message"`
-	Code    int    `json:"code"`
-}
-
-func sendJSONSuccess(w http.ResponseWriter, message string, statusCode int) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
-
-	if err := json.NewEncoder(w).Encode(SuccessResponse{
-		Message: message,
-		Code:    statusCode,
-	}); err != nil {
-		log.Printf("failed to write JSON response: %v", err)
-	}
-}
-
-var NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
-	sendJSONSuccess(w, "Not found", http.StatusNotFound)
-}
-
 type AuthHandler struct {
-	sessionStore *repository.SessionStore
-	userStore    *repository.UserStore
+	authService domain.AuthService
+	config      *config.Config
 }
 
-func NewAuthHandler(users map[string]repository.User, sessions map[string]repository.Session) *AuthHandler {
+func NewAuthHandler(authService domain.AuthService, config *config.Config) *AuthHandler {
 	return &AuthHandler{
-		sessionStore: repository.NewSessionStore(sessions),
-		userStore:    repository.NewUserStore(users),
+		authService: authService,
+		config:      config,
 	}
 }
 
-func (api *AuthHandler) IsLoggedIn(r *http.Request) bool {
-	authorized := false
-	session, err := r.Cookie("session_id")
-	if err == nil && session != nil {
-		_, authorized = api.sessionStore.GetSessionByID(session.Value)
+func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
+	sessionCookie, err := r.Cookie("session_id")
+	if err != nil {
+		domain.FromContext(r.Context()).Info("Cookie session_id not found:", zap.Error(err))
+		return nil, domain.ErrNotFound
 	}
-	return authorized
+	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)
+
+	return session, err
 }
 
 type IsLoggedInResponse struct {
-	IsLoggedIn bool `json:"isloggedin"`
+	UserID int `json:"userID"`
 }
 
+// IsLoggedInHandler проверяет, авторизован ли пользователь по cookie сессии.
+// @Summary Проверить авторизацию пользователя
+// @Description Возвращает ID пользователя, если сессия валидна
+// @Tags auth
+// @Produce json
+// @Success 200 {object} IsLoggedInResponse "Пользователь авторизован"
+// @Failure 404 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
+// @Router /auth/isloggedin [get]
 func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	var res = IsLoggedInResponse{
-		IsLoggedIn: api.IsLoggedIn(r),
+	sessionCookie, err := r.Cookie("session_id")
+	if err != nil {
+		sendJSONError(w, domain.ErrNotFound)
+		return
+	}
+	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	res := IsLoggedInResponse{
+		UserID: session.UserID,
 	}
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
-		log.Printf("failed to write JSON response: %v", err)
+		domain.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", domain.StructName(res)))
 	}
+	domain.FromContext(r.Context()).Info("registration success")
 }
 
-func generateSessionID() (string, error) {
-	bytes := make([]byte, 31)
-
-	cryptoReader := rand.Reader
-	_, err := cryptoReader.Read(bytes)
+func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userID int) error {
+	tokens, err := api.authService.AddSession(r.Context(), userID)
 	if err != nil {
-		return "", fmt.Errorf("failed to read random bytes: %w", err)
+		return err
 	}
-
-	return hex.EncodeToString(bytes), nil
-}
-
-type LoginRequest struct {
-	Email    string `json:"email" valid:"required"`
-	Password string `json:"password" valid:"required, stringlength(6|20)"`
-}
-
-func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	user, ok := api.userStore.GetUserByEmail(req.Email)
-	if !ok {
-		sendJSONSuccess(w, "User doesn't exist", http.StatusBadRequest)
-		return
-	}
-
-	if err := bcrypt.CompareHashAndPassword([]byte(user.HashedPassword), []byte(req.Password)); err != nil {
-		sendJSONSuccess(w, "Incorrect password", http.StatusBadRequest)
-		return
-	}
-
-	SID, err := generateSessionID()
-	if err != nil {
-		sendJSONSuccess(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	api.sessionStore.AddSession(user.ID, SID)
-
-	cookie := &http.Cookie{
+	sessionCookie := &http.Cookie{
 		Name:     "session_id",
-		Value:    SID,
+		Value:    tokens.SID,
+		Path:     "/",
 		Expires:  time.Now().Add(10 * time.Hour),
 		HttpOnly: true,
 	}
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, sessionCookie)
 
-	sendJSONSuccess(w, "User logged in", http.StatusOK)
+	CSRFCookie := &http.Cookie{
+		Name:     "CSRF_token",
+		Value:    tokens.CSRFToken,
+		Path:     "/",
+		Expires:  time.Now().Add(10 * time.Hour),
+		HttpOnly: false,
+	}
+	http.SetCookie(w, CSRFCookie)
+	return nil
 }
 
+// Login выполняет авторизацию пользователя и создает сессию.
+// @Summary Авторизация пользователя
+// @Description Логин с email и паролем, возвращает cookie сессии
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param loginRequest body domain.User true "Данные для входа"
+// @Success 200 {object} JSONResponse
+// @Failure 400 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
+// @Router /auth/login [post]
+func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+	var req domain.User
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
+		return
+	}
+	userID, err := api.authService.Login(r.Context(), req)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	err = api.AddSession(w, r, userID)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONResponse(w, "User logged in", http.StatusOK)
+	domain.FromContext(r.Context()).Info("User logged in", zap.Int("userID", userID))
+}
+
+// Logout удаляет текущую сессию пользователя.
+// @Summary Выход пользователя
+// @Description Удаляет cookie сессии, разлогинивает пользователя
+// @Tags auth
+// @Produce json
+// @Success 200 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
+// @Failure 403 {object} JSONResponse
+// @Router /auth/logout [post]
 func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
-	session, _ := r.Cookie("session_id")
-	api.sessionStore.DeleteSession(session.Value)
-
-	session.Expires = time.Now().AddDate(0, 0, -1)
-	http.SetCookie(w, session)
-
-	sendJSONSuccess(w, "User logged out", http.StatusOK)
-}
-
-type RegisterRequest struct {
-	Username        string `json:"username" valid:"required"`
-	Email           string `json:"email" valid:"email, required"`
-	Password        string `json:"password" valid:"required, stringlength(5|20)"`
-	ConfirmPassword string `json:"confirm_password" valid:"required, stringlength(5|20)"`
-	Age             int    `json:"age" valid:"-"`
-	Gender          string `json:"gender" valid:"-"`
-}
-
-func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONSuccess(w, "Invalid JSON", http.StatusBadRequest)
-		return
-	}
-
-	ok, err := govalidator.ValidateStruct(req)
-	if !ok || err != nil {
-		sendJSONSuccess(w, "Invalid data", http.StatusBadRequest)
-		return
-	}
-
-	_, ok = api.userStore.GetUserByEmail(req.Email)
-	if ok {
-		sendJSONSuccess(w, "User already exist", http.StatusBadRequest)
-		return
-	}
-
-	if req.Password != req.ConfirmPassword {
-		sendJSONSuccess(w, "Password field doesn't match", http.StatusBadRequest)
-		return
-	}
-
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	session, err := r.Cookie("session_id")
 	if err != nil {
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error("Failed to logout", zap.Error(err))
 		return
 	}
-
-	username := api.userStore.AddUser(req.Username, req.Email, req.Gender, string(hashedPassword), req.Age)
-	user, _ := api.userStore.GetUserByEmail(username)
-
-	SID, err := generateSessionID()
+	err = api.authService.Logout(r.Context(), session)
 	if err != nil {
-		sendJSONSuccess(w, "Server error", http.StatusInternalServerError)
+		sendJSONError(w, err)
 		return
 	}
 
-	api.sessionStore.AddSession(user.ID, SID)
-	if err != nil {
-		sendJSONSuccess(w, "Internal server error", http.StatusInternalServerError)
-		return
-	}
-
-	cookie := &http.Cookie{
+	sessionCookie := &http.Cookie{
 		Name:     "session_id",
-		Value:    SID,
-		Expires:  time.Now().Add(10 * time.Hour),
+		Value:    session.Value,
+		Path:     "/",
+		Expires:  time.Now().AddDate(0, 0, -1),
 		HttpOnly: true,
 	}
-	http.SetCookie(w, cookie)
+	http.SetCookie(w, sessionCookie)
 
-	log.Println(user)
-	sendJSONSuccess(w, "User created", http.StatusOK)
+	CSRFTokenCookie, _ := r.Cookie("CSRF_token")
+	CSRFToken := &http.Cookie{
+		Name:     "CSRF_token",
+		Value:    CSRFTokenCookie.Value,
+		Path:     "/",
+		Expires:  time.Now().AddDate(0, 0, -1),
+		HttpOnly: false,
+	}
+	http.SetCookie(w, CSRFToken)
+
+	sendJSONResponse(w, "User logged out", http.StatusOK)
+	domain.FromContext(r.Context()).Info("User loggged out")
+}
+
+// Register регистрирует нового пользователя.
+// @Summary Регистрация пользователя
+// @Description Создает нового пользователя с профилем и устанавливает сессию
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param registerRequest body domain.RegisterRequest true "Данные для регистрации"
+// @Success 200 {object} JSONResponse
+// @Failure 400 {object} JSONResponse
+// @Failure 500 {object} JSONResponse
+// @Failure 403 {object} JSONResponse
+// @Router /auth/register [post]
+func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	var req domain.RegisterRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
+		return
+	}
+	userID, err := api.authService.Register(r.Context(), req)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	err = api.AddSession(w, r, userID)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONResponse(w, "User created", http.StatusOK)
+	domain.FromContext(r.Context()).Info("User created, registration complete", zap.Int("userID", userID))
 }

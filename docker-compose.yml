@@ -1,0 +1,55 @@
+services:
+  app:
+    image: ${APP_IMAGE:-local/myapp:latest}
+    build:
+      context: .
+    env_file:
+      - .env
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - network
+    command: sh -c "./migrate && ./main"
+  postgres:
+    image: postgres:15
+    container_name: vk_postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d vk" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - network
+  redis:
+    image: redis:alpine
+    command: redis-server --bind 0.0.0.0 --port 6380 --requirepass ${REDIS_PASSWORD}
+    ports:
+      - "6380:6380"
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    healthcheck:
+      test: [ "CMD-SHELL", "redis-cli -h localhost -p 6380 -a ${REDIS_PASSWORD} ping | grep PONG" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - network
+networks:
+  network:
+    driver: bridge
+volumes:
+  pg_data:
+
+

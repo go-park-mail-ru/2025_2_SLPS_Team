@@ -1,0 +1,1287 @@
+basePath: /api/
+definitions:
+  domain.FriendsCountResponse:
+    properties:
+      count:
+        type: integer
+      countType:
+        $ref: '#/definitions/domain.FriendshipCountType'
+      userID:
+        type: integer
+    type: object
+  domain.FriendshipCountType:
+    enum:
+    - pending
+    - accepted
+    - rejected
+    - blocked
+    - sent
+    type: string
+    x-enum-varnames:
+    - CountPending
+    - CountAccepted
+    - CountRejected
+    - CountBlocked
+    - CountSent
+  domain.FriendshipStatus:
+    enum:
+    - pending
+    - accepted
+    - rejected
+    - blocked
+    type: string
+    x-enum-varnames:
+    - FriendshipPending
+    - FriendshipAccepted
+    - FriendshipRejected
+    - FriendshipBlocked
+  domain.FriendshipWithProfile:
+    properties:
+      actionUserID:
+        description: Кто отправил запрос
+        type: integer
+      createdAt:
+        type: string
+      firstUserID:
+        type: integer
+      friend:
+        $ref: '#/definitions/domain.ShortProfile'
+      id:
+        type: integer
+      secondUserID:
+        type: integer
+      status:
+        $ref: '#/definitions/domain.FriendshipStatus'
+      updatedAt:
+        type: string
+    type: object
+  domain.FullChat:
+    properties:
+      avatarPath:
+        type: string
+      id:
+        type: integer
+      isGroup:
+        type: boolean
+      lastMessage:
+        $ref: '#/definitions/domain.Message'
+      lastMessageAuthor:
+        $ref: '#/definitions/domain.ShortProfile'
+      name:
+        type: string
+    type: object
+  domain.Message:
+    properties:
+      authorID:
+        type: integer
+      chatID:
+        type: integer
+      createdAt:
+        type: string
+      id:
+        type: integer
+      text:
+        type: string
+    type: object
+  domain.MessagesWithAuthors:
+    properties:
+      authors:
+        additionalProperties:
+          $ref: '#/definitions/domain.ShortProfile'
+        type: object
+      messages:
+        items:
+          $ref: '#/definitions/domain.Message'
+        type: array
+    type: object
+  domain.Post:
+    properties:
+      attachments:
+        description: в БД табличка post_attachments называется
+        items:
+          type: string
+        type: array
+      authorID:
+        description: в БД табличка posts называется
+        type: integer
+      created_at:
+        description: в БД табличка posts называется
+        type: string
+      id:
+        description: в БД табличка posts называется
+        type: integer
+      photos:
+        description: в БД табличка post_photos называется
+        items:
+          type: string
+        type: array
+      text:
+        description: в БД табличка posts называется
+        type: string
+      updated_at:
+        description: в БД табличка posts называется
+        type: string
+    type: object
+  domain.Profile:
+    properties:
+      aboutMyself:
+        type: string
+      avatarPath:
+        type: string
+      dob:
+        type: string
+      firstName:
+        type: string
+      gender:
+        type: string
+      headerPath:
+        type: string
+      lastName:
+        type: string
+      userID:
+        type: integer
+    type: object
+  domain.RegisterRequest:
+    properties:
+      confirmPassword:
+        example: "123123"
+        type: string
+      dob:
+        example: "1990-01-01T00:00:00Z"
+        type: string
+      email:
+        example: example@example.ru
+        type: string
+      firstName:
+        type: string
+      gender:
+        type: string
+      lastName:
+        type: string
+      password:
+        example: "123123"
+        type: string
+    type: object
+  domain.ShortProfile:
+    properties:
+      avatarPath:
+        type: string
+      fullName:
+        type: string
+      userID:
+        type: integer
+    type: object
+  domain.User:
+    properties:
+      email:
+        type: string
+      id:
+        type: integer
+      password:
+        type: string
+    type: object
+  handler.ChatIDResponse:
+    properties:
+      chatID:
+        type: integer
+    type: object
+  handler.FriendshipStatusResponse:
+    description: Ответ с текущим статусом дружбы между пользователями
+    properties:
+      status:
+        allOf:
+        - $ref: '#/definitions/domain.FriendshipStatus'
+        description: Статус дружбы
+        enum:
+        - pending
+        - accepted
+        - rejected
+        - blocked
+        example: pending
+    type: object
+  handler.IsLoggedInResponse:
+    properties:
+      userID:
+        type: integer
+    type: object
+  handler.JSONResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+    type: object
+  handler.MessageIDResponse:
+    properties:
+      messageID:
+        type: integer
+    type: object
+  handler.PostsResponse:
+    description: Ответ с пагинированным списком постов
+    properties:
+      posts:
+        description: Список постов
+        items:
+          $ref: '#/definitions/domain.Post'
+        type: array
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a VK API.
+  termsOfService: http://swagger.io/terms/
+  title: VK API
+  version: "1.0"
+paths:
+  /auth/isloggedin:
+    get:
+      description: Возвращает ID пользователя, если сессия валидна
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь авторизован
+          schema:
+            $ref: '#/definitions/handler.IsLoggedInResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Проверить авторизацию пользователя
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Логин с email и паролем, возвращает cookie сессии
+      parameters:
+      - description: Данные для входа
+        in: body
+        name: loginRequest
+        required: true
+        schema:
+          $ref: '#/definitions/domain.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Авторизация пользователя
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Удаляет cookie сессии, разлогинивает пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Выход пользователя
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Создает нового пользователя с профилем и устанавливает сессию
+      parameters:
+      - description: Данные для регистрации
+        in: body
+        name: registerRequest
+        required: true
+        schema:
+          $ref: '#/definitions/domain.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Регистрация пользователя
+      tags:
+      - auth
+  /chats:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает постраничный список чатов для текущего (аутентифицированного)
+        пользователя.
+      parameters:
+      - default: 20
+        description: Количество чатов для возврата
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: Номер страницы для пагинации
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список чатов
+          schema:
+            items:
+              $ref: '#/definitions/domain.FullChat'
+            type: array
+        "400":
+          description: Некорректные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить список чатов пользователя
+      tags:
+      - chats
+  /chats/{chatID}/message:
+    post:
+      consumes:
+      - application/json
+      description: Создает новое сообщение в указанном чате
+      parameters:
+      - description: ID чата
+        in: path
+        name: chatID
+        required: true
+        type: integer
+      - description: Тело сообщения
+        in: body
+        name: message
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Message'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.MessageIDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Создать сообщение
+      tags:
+      - messages
+  /chats/{id}/messages:
+    get:
+      description: Возвращает сообщения из чата с пагинацией и краткую информацию
+        об авторах
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 20
+        description: Лимит количества сообщений
+        in: query
+        name: limit
+        type: integer
+      - default: 0
+        description: страница для пагинации
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/domain.MessagesWithAuthors'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить сообщения чата с авторами
+      tags:
+      - messages
+  /chats/user/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает ID чата между текущим пользователем и указанным userID,
+        создавая чат при отсутствии
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ChatIDResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить или создать чат с пользователем
+      tags:
+      - chats
+  /friends:
+    get:
+      description: Возвращает список друзей пользователя с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество друзей на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ со списком друзей
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortProfile'
+            type: array
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить список друзей
+      tags:
+      - friends
+  /friends/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет пользователя из списка друзей
+      parameters:
+      - description: ID пользователя
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пользователь успешно удален из друзей
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID пользователя
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователи не являются друзьями
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить из друзей
+      tags:
+      - friends
+    post:
+      consumes:
+      - application/json
+      description: Отправляет запрос на дружбу другому пользователю
+      parameters:
+      - description: ID пользователя, которому отправляется запрос
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Запрос успешно отправлен
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID пользователя или попытка добавить самого себя
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "409":
+          description: Запрос уже существует или пользователи уже друзья
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Отправить запрос в друзья
+      tags:
+      - friends
+  /friends/{id}/accept:
+    put:
+      consumes:
+      - application/json
+      description: Принимает входящий запрос на дружбу
+      parameters:
+      - description: ID пользователя (отправителя запроса)
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Запрос успешно принят
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID пользователя
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Запрос не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Принять запрос в друзья
+      tags:
+      - friends
+  /friends/{id}/count:
+    get:
+      description: Возвращает количество отношений указанного пользователя по типу
+        отношений
+      parameters:
+      - description: ID пользователя
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      - default: accepted
+        description: 'Тип подсчета: accepted, pending, sent, blocked'
+        enum:
+        - accepted
+        - pending
+        - sent
+        - blocked
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ с количеством отношений
+          schema:
+            $ref: '#/definitions/domain.FriendsCountResponse'
+        "400":
+          description: Неверный ID пользователя или тип подсчета
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить количество отношений
+      tags:
+      - friends
+  /friends/{id}/reject:
+    put:
+      consumes:
+      - application/json
+      description: Отклоняет входящий запрос на дружбу
+      parameters:
+      - description: ID пользователя (отправителя запроса)
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Запрос успешно отклонен
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID пользователя
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Запрос не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Отклонить запрос в друзья
+      tags:
+      - friends
+  /friends/{id}/status:
+    get:
+      description: Возвращает текущий статус дружбы с указанным пользователем
+      parameters:
+      - description: ID пользователя
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ со статусом дружбы
+          schema:
+            $ref: '#/definitions/handler.FriendshipStatusResponse'
+        "400":
+          description: Неверный ID пользователя
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить статус дружбы
+      tags:
+      - friends
+  /friends/requests:
+    get:
+      description: Возвращает список входящих запросов на дружбу с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество запросов на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ со списком запросов
+          schema:
+            items:
+              $ref: '#/definitions/domain.FriendshipWithProfile'
+            type: array
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить входящие запросы в друзья
+      tags:
+      - friends
+  /friends/sent:
+    get:
+      description: Возвращает список отправленных запросов на дружбу с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество запросов на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ со списком отправленных запросов
+          schema:
+            items:
+              $ref: '#/definitions/domain.FriendshipWithProfile'
+            type: array
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить отправленные запросы в друзья
+      tags:
+      - friends
+  /friends/users/all:
+    get:
+      description: Возвращает список всех пользователей кроме текущего пользователя
+        с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество пользователей на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ со списком пользователей
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortProfile'
+            type: array
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить всех пользователей (кроме себя)
+      tags:
+      - friends
+  /posts:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список постов с поддержкой пагинации
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество постов на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ с постами
+          schema:
+            $ref: '#/definitions/handler.PostsResponse'
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить посты с пагинацией
+      tags:
+      - posts
+    post:
+      consumes:
+      - multipart/form-data
+      description: Создает новый пост от имени текущего пользователя с возможностью
+        загрузки файлов
+      parameters:
+      - description: Текст поста
+        in: formData
+        name: text
+        required: true
+        type: string
+      - collectionFormat: multi
+        description: Вложения
+        in: formData
+        items:
+          type: file
+        name: attachments
+        type: array
+      - collectionFormat: multi
+        description: Фотографии
+        in: formData
+        items:
+          type: file
+        name: photos
+        type: array
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Создать новый пост
+      tags:
+      - posts
+  /posts/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет пост (только автор)
+      parameters:
+      - description: ID поста
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пост успешно удален
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID поста
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Доступ запрещен (не автор поста)
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пост не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить пост
+      tags:
+      - posts
+    get:
+      consumes:
+      - application/json
+      description: Возвращает пост по его идентификатору
+      parameters:
+      - description: ID поста
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пост найден
+          schema:
+            $ref: '#/definitions/domain.Post'
+        "400":
+          description: Неверный ID поста
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пост не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить пост по ID
+      tags:
+      - posts
+    put:
+      consumes:
+      - multipart/form-data
+      description: Обновляет существующий пост (только автор) с возможностью замены
+        файлов
+      parameters:
+      - description: ID поста
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      - description: Текст поста
+        in: formData
+        name: text
+        required: true
+        type: string
+      - collectionFormat: multi
+        description: Новые вложения
+        in: formData
+        items:
+          type: file
+        name: attachments
+        type: array
+      - collectionFormat: multi
+        description: Новые фотографии
+        in: formData
+        items:
+          type: file
+        name: photos
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Пост успешно обновлен
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Доступ запрещен (не автор поста)
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пост не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Обновить пост
+      tags:
+      - posts
+  /profile:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Обновляет данные пользователя и загружает новый аватар, если он
+        передан.
+      parameters:
+      - description: JSON с данными профиля
+        in: formData
+        name: profile
+        required: true
+        type: string
+      - description: Новый аватар пользователя
+        in: formData
+        name: avatar
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Profile updated
+          schema:
+            type: string
+        "400":
+          description: Invalid data / missing fields
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Обновление профиля
+      tags:
+      - profile
+  /profile/{id}:
+    get:
+      description: Возвращает профиль пользователя по его ID.
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Профиль пользователя
+          schema:
+            $ref: '#/definitions/domain.Profile'
+        "400":
+          description: Invalid user ID / User does not exist
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Получение профиля по ID
+      tags:
+      - profile
+  /profile/avatar:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Загружает новый аватар пользователя.
+      parameters:
+      - description: Новый аватар пользователя
+        in: formData
+        name: avatar
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Avatar updated
+          schema:
+            type: string
+        "400":
+          description: Missing avatar field
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Обновление аватара
+      tags:
+      - profile
+  /profile/header:
+    put:
+      consumes:
+      - multipart/form-data
+      description: Загружает новый header пользователя.
+      parameters:
+      - description: Новый header пользователя
+        in: formData
+        name: header
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Header updated
+          schema:
+            type: string
+        "400":
+          description: Missing header field
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Обновление header
+      tags:
+      - profile
+  /users/{userID}/posts:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает посты конкретного пользователя с пагинацией
+      parameters:
+      - description: ID пользователя
+        in: path
+        minimum: 1
+        name: userID
+        required: true
+        type: integer
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество постов на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ с постами пользователя
+          schema:
+            $ref: '#/definitions/handler.PostsResponse'
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить посты пользователя
+      tags:
+      - posts
+  /ws:
+    get:
+      consumes:
+      - application/json
+      description: Устанавливает WebSocket соединение для текущего пользователя и
+        регистрирует его в WSHub
+      produces:
+      - application/json
+      responses:
+        "101":
+          description: Switching Protocols
+        "400":
+          description: Неверный запрос или отсутствует userID в контексте
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Ошибка сервера при апгрейде соединения
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Подключение к WebSocket
+      tags:
+      - WS
+swagger: "2.0"
