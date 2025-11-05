@@ -17,13 +17,11 @@ const (
 type FriendshipCountType string
 
 const (
-	CountAll      FriendshipCountType = "all"
-	CountAccepted FriendshipCountType = "accepted"
 	CountPending  FriendshipCountType = "pending"
-	CountSent     FriendshipCountType = "sent"
-	CountReceived FriendshipCountType = "received"
-	CountBlocked  FriendshipCountType = "blocked"
+	CountAccepted FriendshipCountType = "accepted"
 	CountRejected FriendshipCountType = "rejected"
+	CountBlocked  FriendshipCountType = "blocked"
+	CountSent     FriendshipCountType = "sent"
 )
 
 type Friendship struct {
@@ -53,20 +51,22 @@ type FriendResponse struct {
 }
 
 type FriendsCountResponse struct {
-    UserID    int                   `json:"userID"`
-    Count     int                   `json:"count"`
-    CountType FriendshipCountType   `json:"countType,omitempty"`
+	UserID    int                 `json:"userID"`
+	Count     int                 `json:"count"`
+	CountType FriendshipCountType `json:"countType,omitempty"`
 }
 
 type FriendService interface {
-	SendFriendRequest(ctx context.Context, userID, friendID int) error
+	SendFriendRequest(ctx context.Context, actionUserID, targetUserID int) error
 	AcceptFriendRequest(ctx context.Context, userID, friendID int) error
 	RejectFriendRequest(ctx context.Context, userID, friendID int) error
 	RemoveFriend(ctx context.Context, userID, friendID int) error
 	GetFriends(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
 	GetAllUsers(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
-	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]FriendshipWithProfile, error)
-	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]FriendshipWithProfile, error)
+
+	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
+	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
+
 	GetFriendshipStatus(ctx context.Context, userID, friendID int) (FriendshipStatus, error)
 	CountUserRelations(ctx context.Context, userID int, countType FriendshipCountType) (int, error)
 }
@@ -75,14 +75,15 @@ type FriendStore interface {
 	// Основные операции CRUD
 	CreateFriendship(ctx context.Context, actionUserID, targetUserID int) error
 	GetFriendship(ctx context.Context, userID1, userID2 int) (*Friendship, error)
-	UpdateFriendshipStatus(ctx context.Context, userID1, userID2 int, status FriendshipStatus) error
+	UpdateFriendshipStatus(ctx context.Context, actionUserID, targetUserID int, status FriendshipStatus) error
 	DeleteFriendship(ctx context.Context, userID1, userID2 int) error
 
 	// Получение списков с пагинацией
 	GetUserFriends(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
 	GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]ShortProfile, error)
-	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]FriendshipWithProfile, error)
-	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]FriendshipWithProfile, error)
+
+	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
+	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
 
 	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int) (bool, error)

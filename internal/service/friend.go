@@ -21,30 +21,30 @@ func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore
 }
 
 // SendFriendRequest отправляет запрос в друзья
-func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID int) error {
+func (s *FriendService) SendFriendRequest(ctx context.Context, actionUserID, targetUserID int) error {
 	// Нельзя отправить запрос самому себе
-	if userID == friendID {
+	if actionUserID == targetUserID {
 		domain.Warn(ctx, "User tried to send friend request to themselves")
 		return domain.ErrInvalidInput
 	}
 
 	domain.Info(ctx, "Sending friend request",
-		zap.Int("userID", userID),
-		zap.Int("friendID", friendID))
+		zap.Int("actionUserID", actionUserID),
+		zap.Int("targetUserID", targetUserID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, friendID)
+	_, err := s.userStore.GetUserByID(ctx, targetUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Friend user not found", zap.Int("friendID", friendID))
+			domain.Warn(ctx, "Friend user not found", zap.Int("targetUserID", targetUserID))
 			return domain.ErrNotFound
 		}
-		domain.Error(ctx, "Failed to get user", err, zap.Int("friendID", friendID))
+		domain.Error(ctx, "Failed to get user", err, zap.Int("targetUserID", targetUserID))
 		return domain.ErrDB
 	}
 
 	// Проверяем текущий статус дружбы
-	currentStatus, err := s.friendStore.GetFriendshipStatus(ctx, userID, friendID)
+	currentStatus, err := s.friendStore.GetFriendshipStatus(ctx, actionUserID, targetUserID)
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
 		domain.Error(ctx, "Failed to check friendship status", err)
 		return domain.ErrDB
@@ -57,13 +57,13 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 		return domain.ErrAlreadyExists
 	case domain.FriendshipPending:
 		// Определяем кто отправитель запроса
-		friendship, err := s.friendStore.GetFriendship(ctx, userID, friendID)
+		friendship, err := s.friendStore.GetFriendship(ctx, actionUserID, targetUserID)
 		if err != nil {
 			domain.Error(ctx, "Failed to get friendship details", err)
 			return domain.ErrDB
 		}
 
-		if friendship.FirstUserID == userID {
+		if friendship.FirstUserID == actionUserID {
 			domain.Warn(ctx, "Duplicate friend request")
 			return domain.ErrAlreadyExists
 		} else {
@@ -76,7 +76,7 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, userID, friendID 
 	}
 
 	// Создаем запрос в друзья
-	err = s.friendStore.CreateFriendship(ctx, userID, friendID)
+	err = s.friendStore.CreateFriendship(ctx, actionUserID, targetUserID)
 	if err != nil {
 		domain.Error(ctx, "Failed to send friend request", err)
 		return domain.ErrDB
@@ -143,12 +143,12 @@ func (s *FriendService) RejectFriendRequest(ctx context.Context, userID, friendI
 	}
 
 	// Удаляем запись вместо установки статуса rejected
-	err = s.friendStore.DeleteFriendship(ctx, userID, friendID)
+
+	err = s.friendStore.UpdateFriendshipStatus(ctx, userID, friendID, domain.FriendshipRejected)
 	if err != nil {
 		domain.Error(ctx, "Failed to reject friend request", err)
 		return domain.ErrDB
 	}
-
 	domain.Info(ctx, "Friend request rejected successfully")
 	return nil
 }
@@ -220,7 +220,7 @@ func (s *FriendService) GetAllUsers(ctx context.Context, userID int, params doma
 }
 
 // GetFriendRequests получает входящие запросы в друзья
-func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FriendshipWithProfile, error) {
+func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
@@ -239,7 +239,7 @@ func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, param
 }
 
 // GetSentRequests получает отправленные запросы в друзья
-func (s *FriendService) GetSentRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FriendshipWithProfile, error) {
+func (s *FriendService) GetSentRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
@@ -312,11 +312,9 @@ func (s *FriendService) CountUserRelations(ctx context.Context, userID int, coun
 // isValidCountType проверяет валидность типа подсчета
 func (s *FriendService) isValidCountType(countType domain.FriendshipCountType) bool {
 	validTypes := map[domain.FriendshipCountType]bool{
-		domain.CountAll:      true,
 		domain.CountAccepted: true,
 		domain.CountPending:  true,
 		domain.CountSent:     true,
-		domain.CountReceived: true,
 		domain.CountBlocked:  true,
 		domain.CountRejected: true,
 	}
