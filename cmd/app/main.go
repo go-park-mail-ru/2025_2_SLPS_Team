@@ -10,6 +10,7 @@ import (
 	"project/internal/repository/db"
 	"project/internal/repository/dbRedis"
 	"project/internal/service"
+	"time"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
@@ -32,20 +33,23 @@ func NewPostgres(dataSourceName string) *sql.DB {
 	return db
 }
 
-func NewRedis(dataSourceName string) redis.Conn {
-	var err error
-	redisConn, err := redis.DialURL(dataSourceName)
-	if err != nil {
-		log.Fatalf("cant connect to dbRedis: %v", err)
+func NewRedisPool(dataSourceName string) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:   10,
+		MaxActive: 50, // 0 = без лимита
+		Dial: func() (redis.Conn, error) {
+			c, err := redis.DialURL(dataSourceName)
+			if err != nil {
+				log.Fatalf("Can't connect to Redis: %v", err)
+			}
+			return c, nil
+		},
+		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+			_, err := c.Do("PING")
+			return err
+		},
+		IdleTimeout: 240 * time.Second,
 	}
-
-	pong, err := redis.String(redisConn.Do("PING"))
-	if err != nil {
-		log.Fatalf("Error PING: %v", err)
-	}
-
-	log.Println("Redis connected:", pong)
-	return redisConn
 }
 
 func NewLogger(config *config.Config) *zap.Logger {
@@ -79,10 +83,10 @@ func NewLogger(config *config.Config) *zap.Logger {
 	return logger
 }
 
-func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisConn redis.Conn, config *config.Config) *mux.Router {
+func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, config *config.Config) *mux.Router {
 
 	userStore := db.NewDBUserStore(dbConn)
-	sessionStore := dbRedis.NewRedisSessionStore(redisConn)
+	sessionStore := dbRedis.NewRedisSessionStore(redisPool)
 	profileStore := db.NewDBProfileStore(dbConn)
 	chatStore := db.NewDBChatStore(dbConn)
 	messageStore := db.NewDBMessageStore(dbConn)
@@ -177,7 +181,7 @@ func main() {
 	dbConn := NewPostgres(config.PostgresURL)
 	defer dbConn.Close()
 
-	redisConn := NewRedis(config.RedisURL)
+	redisConn := NewRedisPool(config.RedisURL)
 	defer redisConn.Close()
 
 	apiRouter := NewApiRouter(logger, dbConn, redisConn, config)

@@ -15,12 +15,12 @@ import (
 )
 
 type RedisSessionStore struct {
-	redisConn redis.Conn
+	redisPool *redis.Pool
 }
 
-func NewRedisSessionStore(conn redis.Conn) domain.SessionStore {
+func NewRedisSessionStore(pool *redis.Pool) domain.SessionStore {
 	return &RedisSessionStore{
-		redisConn: conn,
+		redisPool: pool,
 	}
 }
 
@@ -48,6 +48,10 @@ func (store *RedisSessionStore) AddSession(ctx context.Context, userID int) (*do
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
+
+	conn := store.redisPool.Get()
+	defer conn.Close()
+
 	ID, err := generateRandomToken()
 	if err != nil {
 		dblogger.Error("Failed to to generate session ID", zap.Error(err))
@@ -65,7 +69,7 @@ func (store *RedisSessionStore) AddSession(ctx context.Context, userID int) (*do
 		return nil, err
 	}
 	mkey := "sessions:" + ID
-	result, err := redis.String(store.redisConn.Do("SET", mkey, dataSerialized, "EX", sessionTTL))
+	result, err := redis.String(conn.Do("SET", mkey, dataSerialized, "EX", sessionTTL))
 	if err != nil {
 		dblogger.Error("Failed to add session", zap.Error(err))
 		return nil, err
@@ -93,9 +97,10 @@ func (store *RedisSessionStore) GetSessionBySessionID(ctx context.Context, sessi
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-
+	conn := store.redisPool.Get()
+	defer conn.Close()
 	mkey := "sessions:" + sessionID
-	data, err := redis.Bytes(store.redisConn.Do("GET", mkey))
+	data, err := redis.Bytes(conn.Do("GET", mkey))
 	if err != nil {
 		if errors.Is(err, redis.ErrNil) {
 			dblogger.Info("session not found")
@@ -123,8 +128,12 @@ func (store *RedisSessionStore) DeleteSession(ctx context.Context, sessionID str
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
+
+	conn := store.redisPool.Get()
+	defer conn.Close()
+
 	mkey := "sessions:" + sessionID
-	_, err := redis.Int(store.redisConn.Do("DEL", mkey))
+	_, err := redis.Int(conn.Do("DEL", mkey))
 	if err != nil {
 		dblogger.Error("Failed to delete session from dbRedis", zap.Error(err))
 		return err
