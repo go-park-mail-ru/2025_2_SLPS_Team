@@ -41,6 +41,7 @@ func (h *Hub) AddClient(ctx context.Context, userID int, conn *websocket.Conn) {
 	h.mu.Unlock()
 
 	go h.writePump(ctx, client)
+	go h.readPump(ctx, client)
 
 	domain.FromContext(ctx).Info("WS client added", zap.Int("userID", userID))
 }
@@ -143,6 +144,31 @@ func (hub *Hub) writePump(ctx context.Context, c *Client) {
 				}
 				return
 			}
+		}
+	}
+}
+
+func (hub *Hub) readPump(ctx context.Context, c *Client) {
+	defer func() {
+		hub.RemoveClient(ctx, c.userID)
+		_ = c.conn.Close()
+		domain.FromContext(ctx).Info("WS readPump closed", zap.Int("userID", c.userID))
+	}()
+
+	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
+
+	c.conn.SetPongHandler(func(string) error {
+		_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
+
+	for {
+		_, _, err := c.conn.ReadMessage()
+		if err != nil {
+			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
+				domain.FromContext(ctx).Error("Unexpected WS close", zap.Error(err))
+			}
+			break
 		}
 	}
 }
