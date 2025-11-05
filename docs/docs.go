@@ -824,17 +824,14 @@ const docTemplate = `{
                     },
                     {
                         "enum": [
-                            "all",
                             "accepted",
                             "pending",
                             "sent",
-                            "received",
-                            "blocked",
-                            "rejected"
+                            "blocked"
                         ],
                         "type": "string",
                         "default": "accepted",
-                        "description": "Тип подсчета: all, accepted, pending, sent, received, blocked, rejected",
+                        "description": "Тип подсчета: accepted, pending, sent, blocked",
                         "name": "type",
                         "in": "query"
                     }
@@ -1625,22 +1622,18 @@ const docTemplate = `{
         "domain.FriendshipCountType": {
             "type": "string",
             "enum": [
-                "all",
-                "accepted",
                 "pending",
-                "sent",
-                "received",
+                "accepted",
+                "rejected",
                 "blocked",
-                "rejected"
+                "sent"
             ],
             "x-enum-varnames": [
-                "CountAll",
-                "CountAccepted",
                 "CountPending",
-                "CountSent",
-                "CountReceived",
+                "CountAccepted",
+                "CountRejected",
                 "CountBlocked",
-                "CountRejected"
+                "CountSent"
             ]
         },
         "domain.FriendshipStatus": {

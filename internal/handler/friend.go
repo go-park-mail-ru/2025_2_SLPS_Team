@@ -380,7 +380,7 @@ func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Reque
 // @Tags friends
 // @Produce json
 // @Param id path int true "ID пользователя" minimum(1)
-// @Param type query string false "Тип подсчета: all, accepted, pending, sent, received, blocked, rejected" default(accepted) Enums(all, accepted, pending, sent, received, blocked, rejected)
+// @Param type query string false "Тип подсчета: accepted, pending, sent, blocked" default(accepted) Enums(accepted, pending, sent, blocked)
 // @Success 200 {object} domain.FriendsCountResponse "Успешный ответ с количеством отношений"
 // @Failure 400 {object} JSONResponse "Неверный ID пользователя или тип подсчета"
 // @Failure 404 {object} JSONResponse "Пользователь не найден"

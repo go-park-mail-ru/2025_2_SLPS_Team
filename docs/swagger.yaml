@@ -11,22 +11,18 @@ definitions:
     type: object
   domain.FriendshipCountType:
     enum:
-    - all
-    - accepted
     - pending
-    - sent
-    - received
-    - blocked
+    - accepted
     - rejected
+    - blocked
+    - sent
     type: string
     x-enum-varnames:
-    - CountAll
-    - CountAccepted
     - CountPending
-    - CountSent
-    - CountReceived
-    - CountBlocked
+    - CountAccepted
     - CountRejected
+    - CountBlocked
+    - CountSent
   domain.FriendshipStatus:
     enum:
     - pending
@@ -649,16 +645,12 @@ paths:
         required: true
         type: integer
       - default: accepted
-        description: 'Тип подсчета: all, accepted, pending, sent, received, blocked,
-          rejected'
+        description: 'Тип подсчета: accepted, pending, sent, blocked'
         enum:
-        - all
         - accepted
         - pending
         - sent
-        - received
         - blocked
-        - rejected
         in: query
         name: type
         type: string
