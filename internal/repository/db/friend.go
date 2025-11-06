@@ -228,12 +228,17 @@ func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, 
 	}()
 
 	query := `
-        SELECT user_id, first_name || ' ' || last_name as full_name, avatar_path
-        FROM profiles
-        WHERE user_id != $1
-        ORDER BY user_id
-        LIMIT $2 OFFSET $3
-    `
+    SELECT p.user_id, p.first_name || ' ' || p.last_name as full_name, p.avatar_path
+    FROM profiles p
+    LEFT JOIN friend_relationships fr ON (
+        (fr.first_user_id = $1 AND fr.second_user_id = p.user_id) OR 
+        (fr.first_user_id = p.user_id AND fr.second_user_id = $1)
+    ) AND fr.status IN ('accepted', 'blocked')
+    WHERE p.user_id != $1
+    AND fr.first_user_id IS NULL
+    ORDER BY p.user_id
+    LIMIT $2 OFFSET $3
+`
 
 	dblogger = dblogger.With(zap.String("query", query))
 	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
@@ -284,7 +289,6 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	// Упрощенный запрос - выбираем только данные профиля отправителя
 	query := `
 		SELECT 
 			p.user_id, 
