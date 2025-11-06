@@ -1154,6 +1154,27 @@ paths:
       tags:
       - profile
   /profile/avatar:
+    delete:
+      consumes:
+      - application/json
+      description: Очищает поле avatar_path в профиле текущего пользователя и возвращает
+        сообщение об успешном удалении.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Avatar deleted
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить аватар пользователя
+      tags:
+      - profile
     put:
       consumes:
       - multipart/form-data

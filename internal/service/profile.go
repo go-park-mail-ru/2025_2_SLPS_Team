@@ -136,3 +136,19 @@ func (api *ProfileService) GetProfileByUserID(ctx context.Context, userID int) (
 	domain.FromContext(ctx).Info("return profile successfully")
 	return &profile, nil
 }
+
+func (api *ProfileService) DeleteAvatarByUserID(ctx context.Context, userID int) error {
+	avatar_path, err := api.profileStore.DeleteAvatarByUserID(ctx, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail to delete avatar path", zap.Error(err))
+		return domain.ErrDB
+	}
+
+	err = DeleteFile(*avatar_path)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail to delete avatar file", zap.Error(err))
+		return domain.ErrDB
+	}
+
+	return nil
+}

@@ -28,6 +28,7 @@ type ProfileService interface {
 	UpdateAvatar(ctx context.Context, userID int, files []*multipart.FileHeader) error
 	UpdateHeader(ctx context.Context, userID int, files []*multipart.FileHeader) error
 	GetProfileByUserID(ctx context.Context, userID int) (*Profile, error)
+	DeleteAvatarByUserID(ctx context.Context, userID int) error
 }
 
 type ProfileStore interface {
@@ -38,6 +39,7 @@ type ProfileStore interface {
 	GetShortProfileByUserIDs(ctx context.Context, userIDs []int) (map[int]ShortProfile, error)
 	GetAvatarByUserID(ctx context.Context, userID int) (*string, error)
 	GetHeaderByUserID(ctx context.Context, userID int) (*string, error)
+	DeleteAvatarByUserID(ctx context.Context, userID int) (*string, error)
 	//DeleteAvatar
 	//DeleteHeader
 }

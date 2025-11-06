@@ -236,3 +236,52 @@ func (store *DBProfileStore) GetHeaderByUserID(ctx context.Context, userID int) 
 	dblogger.Info("Header found and return")
 	return header, nil
 }
+
+func (store *DBProfileStore) DeleteAvatarByUserID(ctx context.Context, userID int) (*string, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "profileStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start DeleteAvatarByUserID")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	var oldAvatarPath string
+
+	tx, err := store.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	getQuery := `SELECT avatar_path FROM profiles WHERE user_id = $1 FOR UPDATE`
+	dblogger = dblogger.With(zap.Int("userID", userID), zap.String("query", getQuery))
+
+	if err := tx.QueryRow(getQuery, userID).
+		Scan(&oldAvatarPath); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			dblogger.Error("Avatar does not exist", zap.Error(err))
+			return nil, domain.ErrNotFound
+		}
+
+		dblogger.Error("Fail to get avatar", zap.Error(err))
+		return nil, err
+	}
+	updateQuery := `UPDATE profiles SET avatar_path = NULL WHERE user_id = $1`
+	if _, err := tx.Exec(updateQuery, userID); err != nil {
+		dblogger.Error("Fail to update avatar", zap.Error(err))
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		dblogger.Error("Fail to commit", zap.Error(err))
+		return nil, err
+	}
+
+	dblogger.Info("Avatar deleted")
+	return &oldAvatarPath, nil
+}

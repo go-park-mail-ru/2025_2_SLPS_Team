@@ -172,3 +172,23 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 		domain.FromContext(r.Context()).Info("Profile return successfully")
 	}
 }
+
+// DeleteAvatar Удаление аватара
+// @Summary      Удалить аватар пользователя
+// @Description  Очищает поле avatar_path в профиле текущего пользователя и возвращает сообщение об успешном удалении.
+// @Tags         profile
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} JSONResponse "Avatar deleted"
+// @Failure      500 {object} JSONResponse "Internal Server Error"
+// @Security     BearerAuth
+// @Router       /profile/avatar [delete]
+func (api *ProfileHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	err := api.profileService.DeleteAvatarByUserID(r.Context(), userID)
+	if err != nil {
+		sendJSONError(w, err)
+	}
+
+	sendJSONResponse(w, "Avatar deleted", http.StatusOK)
+}

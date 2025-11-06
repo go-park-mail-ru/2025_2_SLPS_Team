@@ -127,6 +127,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, con
 	apiRouter.HandleFunc("/profile/{id:[0-9]+}", profile.GetProfileByUserID).Methods("GET")
 	apiRouter.HandleFunc("/profile", profile.UpdateProfile).Methods("PUT", "OPTIONS")
 	apiRouter.HandleFunc("/profile/avatar", profile.UpdateAvatar).Methods("PUT", "OPTIONS")
+	apiRouter.HandleFunc("/profile/avatar", profile.DeleteAvatar).Methods("DELETE", "OPTIONS")
 	apiRouter.HandleFunc("/profile/header", profile.UpdateHeader).Methods("PUT", "OPTIONS")
 
 	chatRouter := apiRouter.PathPrefix("/chats").Subrouter()
