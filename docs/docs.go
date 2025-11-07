@@ -430,7 +430,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.ShortProfile"
+                                "$ref": "#/definitions/domain.ShortProfileAndDOB"
                             }
                         }
                     },
@@ -489,7 +489,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.FriendshipWithProfile"
+                                "$ref": "#/definitions/domain.ShortProfileAndDOB"
                             }
                         }
                     },
@@ -548,7 +548,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.FriendshipWithProfile"
+                                "$ref": "#/definitions/domain.ShortProfileAndDOB"
                             }
                         }
                     },
@@ -607,7 +607,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.ShortProfile"
+                                "$ref": "#/definitions/domain.ShortProfileWithStatusAndDOB"
                             }
                         }
                     },
@@ -1674,44 +1674,16 @@ const docTemplate = `{
                 "pending",
                 "accepted",
                 "rejected",
-                "blocked"
+                "blocked",
+                "none"
             ],
             "x-enum-varnames": [
                 "FriendshipPending",
                 "FriendshipAccepted",
                 "FriendshipRejected",
-                "FriendshipBlocked"
+                "FriendshipBlocked",
+                "FriendshipNone"
             ]
-        },
-        "domain.FriendshipWithProfile": {
-            "type": "object",
-            "properties": {
-                "actionUserID": {
-                    "description": "Кто отправил запрос",
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "firstUserID": {
-                    "type": "integer"
-                },
-                "friend": {
-                    "$ref": "#/definitions/domain.ShortProfile"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "secondUserID": {
-                    "type": "integer"
-                },
-                "status": {
-                    "$ref": "#/definitions/domain.FriendshipStatus"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
         },
         "domain.FullChat": {
             "type": "object",
@@ -1879,6 +1851,48 @@ const docTemplate = `{
                 },
                 "fullName": {
                     "type": "string"
+                },
+                "userID": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.ShortProfileAndDOB": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "dob": {
+                    "type": "string"
+                },
+                "fullName": {
+                    "type": "string"
+                },
+                "userID": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.ShortProfileWithStatusAndDOB": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "dob": {
+                    "type": "string"
+                },
+                "fullName": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "Указатель",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/domain.FriendshipStatus"
+                        }
+                    ]
                 },
                 "userID": {
                     "type": "integer"

@@ -36,15 +36,21 @@ type Friendship struct {
 	UpdatedAt    time.Time        `json:"updatedAt"`
 }
 
-type ShortProfileWithStatus struct {
+type ShortProfileWithStatusAndDOB struct {
 	ShortProfile
 	Status *FriendshipStatus `json:"status"` // Указатель
+	Dob    time.Time         `json:"dob"`
 }
 
 // FriendshipWithProfile добавляет информацию о профиле друга
 type FriendshipWithProfile struct {
 	Friendship
 	Friend ShortProfile `json:"friend"`
+}
+
+type ShortProfileAndDOB struct {
+	ShortProfile
+	Dob time.Time `json:"dob"`
 }
 
 // FriendResponse - ответ для API с информацией о друге
@@ -68,11 +74,11 @@ type FriendService interface {
 	AcceptFriendRequest(ctx context.Context, userID, friendID int) error
 	RejectFriendRequest(ctx context.Context, userID, friendID int) error
 	RemoveFriend(ctx context.Context, userID, friendID int) error
-	GetFriends(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
-	GetAllUsers(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileWithStatus, error)
+	GetFriends(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileAndDOB, error)
+	GetAllUsers(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileWithStatusAndDOB, error)
 
-	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
-	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
+	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileAndDOB, error)
+	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileAndDOB, error)
 
 	GetFriendshipStatus(ctx context.Context, userID, friendID int) (FriendshipStatus, error)
 	CountUserRelations(ctx context.Context, userID int, countType FriendshipCountType) (int, error)
@@ -86,11 +92,11 @@ type FriendStore interface {
 	DeleteFriendship(ctx context.Context, userID1, userID2 int) error
 
 	// Получение списков с пагинацией
-	GetUserFriends(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
-	GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]ShortProfileWithStatus, error)
+	GetUserFriends(ctx context.Context, userID, limit, offset int) ([]ShortProfileAndDOB, error)
+	GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]ShortProfileWithStatusAndDOB, error)
 
-	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
-	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
+	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfileAndDOB, error)
+	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfileAndDOB, error)
 
 	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int) (bool, error)

@@ -187,7 +187,7 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество друзей на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {array} domain.ShortProfile "Успешный ответ со списком друзей"
+// @Success 200 {array} domain.ShortProfileAndDOB "Успешный ответ со списком друзей"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
@@ -225,7 +225,7 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество пользователей на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {array} domain.ShortProfile "Успешный ответ со списком пользователей"
+// @Success 200 {array} domain.ShortProfileWithStatusAndDOB "Успешный ответ со списком пользователей"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
@@ -263,7 +263,7 @@ func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество запросов на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {array} domain.FriendshipWithProfile "Успешный ответ со списком запросов"
+// @Success 200 {array} domain.ShortProfileAndDOB "Успешный ответ со списком запросов"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
@@ -301,7 +301,7 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество запросов на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {array} domain.FriendshipWithProfile "Успешный ответ со списком отправленных запросов"
+// @Success 200 {array} domain.ShortProfileAndDOB "Успешный ответ со списком отправленных запросов"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
