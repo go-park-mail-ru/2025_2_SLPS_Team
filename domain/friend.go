@@ -2,6 +2,7 @@ package domain
 
 import (
 	"context"
+
 	"time"
 )
 
@@ -12,6 +13,7 @@ const (
 	FriendshipAccepted FriendshipStatus = "accepted"
 	FriendshipRejected FriendshipStatus = "rejected"
 	FriendshipBlocked  FriendshipStatus = "blocked"
+	FriendshipNone     FriendshipStatus = "none"
 )
 
 type FriendshipCountType string
@@ -32,6 +34,11 @@ type Friendship struct {
 	Status       FriendshipStatus `json:"status"`
 	CreatedAt    time.Time        `json:"createdAt"`
 	UpdatedAt    time.Time        `json:"updatedAt"`
+}
+
+type ShortProfileWithStatus struct {
+	ShortProfile
+	Status *FriendshipStatus `json:"status"` // Указатель
 }
 
 // FriendshipWithProfile добавляет информацию о профиле друга
@@ -62,7 +69,7 @@ type FriendService interface {
 	RejectFriendRequest(ctx context.Context, userID, friendID int) error
 	RemoveFriend(ctx context.Context, userID, friendID int) error
 	GetFriends(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
-	GetAllUsers(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
+	GetAllUsers(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileWithStatus, error)
 
 	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
 	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
@@ -80,7 +87,7 @@ type FriendStore interface {
 
 	// Получение списков с пагинацией
 	GetUserFriends(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
-	GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]ShortProfile, error)
+	GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]ShortProfileWithStatus, error)
 
 	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
 	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
