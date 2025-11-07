@@ -213,7 +213,7 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, limi
 	return friends, nil
 }
 
-func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]domain.ShortProfileWithStatus, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
@@ -227,18 +227,22 @@ func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, 
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
+	// Исправленный запрос - убираем условие AND fr.first_user_id IS NULL
 	query := `
-    SELECT p.user_id, p.first_name || ' ' || p.last_name as full_name, p.avatar_path
-    FROM profiles p
-    LEFT JOIN friend_relationships fr ON (
-        (fr.first_user_id = $1 AND fr.second_user_id = p.user_id) OR 
-        (fr.first_user_id = p.user_id AND fr.second_user_id = $1)
-    ) AND fr.status IN ('accepted', 'blocked')
-    WHERE p.user_id != $1
-    AND fr.first_user_id IS NULL
-    ORDER BY p.user_id
-    LIMIT $2 OFFSET $3
-`
+		SELECT 
+			p.user_id, 
+			p.first_name || ' ' || p.last_name as full_name, 
+			p.avatar_path, 
+			fr.status
+		FROM profiles p
+		LEFT JOIN friend_relationships fr ON (
+			(fr.first_user_id = $1 AND fr.second_user_id = p.user_id) OR 
+			(fr.first_user_id = p.user_id AND fr.second_user_id = $1)
+		)
+		WHERE p.user_id != $1
+		ORDER BY p.user_id
+		LIMIT $2 OFFSET $3
+	`
 
 	dblogger = dblogger.With(zap.String("query", query))
 	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
@@ -248,18 +252,30 @@ func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, 
 	}
 	defer rows.Close()
 
-	users := []domain.ShortProfile{}
+	users := []domain.ShortProfileWithStatus{}
 	for rows.Next() {
-		var user domain.ShortProfile
+		var user domain.ShortProfileWithStatus
+		var status sql.NullString // Используем sql.NullString для nullable статуса
+
 		err := rows.Scan(
 			&user.UserID,
 			&user.FullName,
 			&user.AvatarPath,
+			&status,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan user profile", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan user profile: %w", err)
 		}
+
+		// Преобразуем NullString в указатель на FriendshipStatus
+		if status.Valid {
+			statusValue := domain.FriendshipStatus(status.String)
+			user.Status = &statusValue
+		} else {
+			user.Status = nil // Будет опущено в JSON благодаря omitempty
+		}
+
 		users = append(users, user)
 	}
 

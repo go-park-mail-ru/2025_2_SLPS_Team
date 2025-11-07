@@ -201,7 +201,7 @@ func (s *FriendService) GetFriends(ctx context.Context, userID int, params domai
 }
 
 // GetAllUsers получает всех пользователей с пагинацией
-func (s *FriendService) GetAllUsers(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
+func (s *FriendService) GetAllUsers(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfileWithStatus, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
