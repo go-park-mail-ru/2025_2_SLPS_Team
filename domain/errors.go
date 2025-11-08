@@ -14,7 +14,7 @@ var (
 	ErrNotExist      = errors.New("not exist")
 	ErrDB            = errors.New("db error")
 	ErrAlreadyExists = errors.New("already exist")
-	ErrService       = errors.New("service error") //Какая-то внутренняя ошибка
+	ErrService       = errors.New("service error") //Какая-то внутренняя ошибк
 )
 
 // Ошибки для ПОСТОВ
