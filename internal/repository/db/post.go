@@ -410,12 +410,6 @@ func (store *DBPostStore) validatePost(post *domain.Post) error {
 	}
 
 	text := strings.TrimSpace(post.Text)
-	if text == "" {
-		return domain.ErrPostTextEmpty
-	}
-	if len(text) < 24 {
-		return domain.ErrPostTextTooShort
-	}
 	if len(text) > 4096 {
 		return domain.ErrPostTextTooLong
 	}

@@ -20,9 +20,7 @@ var (
 // Ошибки для ПОСТОВ
 var (
 	ErrPostNotFound      = errors.New("post not found")
-	ErrPostTextTooShort  = errors.New("post text too short")
 	ErrPostTextTooLong   = errors.New("post text too long")
-	ErrPostTextEmpty     = errors.New("post text cannot be empty")
 	ErrPostInvalidAuthor = errors.New("invalid author")
 )
 
