@@ -916,7 +916,6 @@ paths:
       - description: Текст поста
         in: formData
         name: text
-        required: true
         type: string
       - collectionFormat: multi
         description: Вложения
@@ -1048,7 +1047,6 @@ paths:
       - description: Текст поста
         in: formData
         name: text
-        required: true
         type: string
       - collectionFormat: multi
         description: Новые вложения

@@ -1036,8 +1036,7 @@
                         "type": "string",
                         "description": "Текст поста",
                         "name": "text",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "array",
@@ -1168,8 +1167,7 @@
                         "type": "string",
                         "description": "Текст поста",
                         "name": "text",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "array",

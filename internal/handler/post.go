@@ -103,7 +103,7 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 // @Tags posts
 // @Accept multipart/form-data
 // @Produce json
-// @Param text formData string true "Текст поста"
+// @Param text formData string false "Текст поста"
 // @Param attachments formData []file false "Вложения" collectionFormat(multi)
 // @Param photos formData []file false "Фотографии" collectionFormat(multi)
 // @Success 201 {object} JSONResponse
@@ -121,11 +121,6 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	text := r.FormValue("text")
-	if text == "" {
-		sendJSONResponse(w, "Text is required", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Text is required for post creation")
-		return
-	}
 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
@@ -159,7 +154,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param id path int true "ID поста" minimum(1)
-// @Param text formData string true "Текст поста"
+// @Param text formData string false "Текст поста"
 // @Param attachments formData []file false "Новые вложения" collectionFormat(multi)
 // @Param photos formData []file false "Новые фотографии" collectionFormat(multi)
 // @Success 200 {object} JSONResponse "Пост успешно обновлен"
@@ -187,11 +182,6 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	text := r.FormValue("text")
-	if text == "" {
-		sendJSONResponse(w, "Text is required", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Text is required for post update")
-		return
-	}
 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {

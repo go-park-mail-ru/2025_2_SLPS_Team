@@ -1042,8 +1042,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Текст поста",
                         "name": "text",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "array",
@@ -1174,8 +1173,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Текст поста",
                         "name": "text",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "array",

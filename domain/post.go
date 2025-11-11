@@ -24,14 +24,14 @@ type PostWithShortUser struct {
 
 // PostCreateRequest - запрос на создание поста для валидации
 type PostCreateRequest struct {
-	Text        string   `json:"text" valid:"stringlength(0|4096)"`
+	Text        string   `json:"text" valid:"optional,length(0|4096)"`
 	Attachments []string `json:"attachments" valid:"optional"`
 	Photos      []string `json:"photos" valid:"optional"`
 }
 
 // PostUpdateRequest - запрос на обновление поста для валидации
 type PostUpdateRequest struct {
-	Text        string   `json:"text" valid:"stringlength(0|4096)"`
+	Text        string   `json:"text" valid:"optional,length(0|4096)"`
 	Attachments []string `json:"attachments" valid:"optional"`
 	Photos      []string `json:"photos" valid:"optional"`
 }
