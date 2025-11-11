@@ -159,12 +159,6 @@ func (store *DBPostStore) CreatePost(ctx context.Context, post *domain.Post) err
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	//Валидируем входные данные структуры post в соответствии с CONSTRAINT в БД с помощью функции
-	if err := store.validatePost(post); err != nil {
-		dblogger.Warn("Post validation failed", zap.Error(err))
-		return err
-	}
-
 	//Начинаем транзакцию
 	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -225,11 +219,6 @@ func (store *DBPostStore) UpdatePost(ctx context.Context, post *domain.Post) err
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-	//Валидируем входные данные структуры post в соответствии с CONSTRAINT в БД с помощью функции
-	if err := store.validatePost(post); err != nil {
-		dblogger.Warn("Post validation failed", zap.Error(err))
-		return err
-	}
 	//Начинаем транзакцию
 	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -402,20 +391,6 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, limit
 }
 
 // НИЖЕ БУДУТ ПРИВЕДЕНЫ ВСПОМОГАТЕЛЬНЫЕ ФУКНЦИИ
-
-// Валидация данных поста
-func (store *DBPostStore) validatePost(post *domain.Post) error {
-	if post.AuthorID == 0 {
-		return domain.ErrPostInvalidAuthor
-	}
-
-	text := strings.TrimSpace(post.Text)
-	if len(text) > 4096 {
-		return domain.ErrPostTextTooLong
-	}
-
-	return nil
-}
 
 // Получение слайса путей ВЛОЖЕНИЙ и ФОТОГРАФИЙ
 func (store *DBPostStore) getPostMedia(ctx context.Context, postID uint) ([]string, []string, error) {
