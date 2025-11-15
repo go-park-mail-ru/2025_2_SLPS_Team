@@ -103,10 +103,10 @@ func (store *DBUserStore) GetUserByID(ctx context.Context, userID int) (domain.U
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	query := `SELECT id, email, password FROM users WHERE id = $1`
+	query := `SELECT id, email, password, role FROM users WHERE id = $1`
 
 	var user domain.User
-	err := store.db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Password)
+	err := store.db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Password, &user.Role)
 	dblogger = dblogger.With(zap.Int("userID", userID), zap.String("query", query))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -143,4 +143,21 @@ func (store *DBUserStore) IsUserExists(ctx context.Context, userID int) (bool, e
 
 	dblogger.Info("User find successfully")
 	return exists, nil
+}
+
+func (store *DBUserStore) IsUserAdmin(ctx context.Context) (bool, error) {
+	TempSessionInfo, _ := ctx.Value(domain.TempSessionCtxKey).(*domain.TempSessionInfo)
+	if TempSessionInfo == nil {
+		TempSessionInfo = &domain.TempSessionInfo{}
+	}
+	if TempSessionInfo.UserID != nil {
+		user, err := store.GetUserByID(ctx, *TempSessionInfo.UserID)
+		if err != nil {
+			return false, err
+		}
+		if user.Role == "admin" {
+			return true, nil
+		}
+	}
+	return false, nil
 }

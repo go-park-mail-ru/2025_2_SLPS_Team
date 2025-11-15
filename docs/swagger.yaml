@@ -1,5 +1,32 @@
 basePath: /api/
 definitions:
+  domain.Application:
+    properties:
+      authorID:
+        type: string
+      category:
+        example: app_freezing
+        type: string
+      createdAt:
+        example: "1990-01-01T00:00:00Z"
+        type: string
+      emailFeedBack:
+        type: string
+      emailReg:
+        type: string
+      fullName:
+        type: string
+      id:
+        type: integer
+      status:
+        example: open
+        type: string
+      text:
+        type: string
+      updatedAt:
+        example: "1990-01-01T00:00:00Z"
+        type: string
+    type: object
   domain.FriendsCountResponse:
     properties:
       count:
@@ -187,6 +214,13 @@ definitions:
         type: integer
       password:
         type: string
+      role:
+        type: string
+    type: object
+  handler.ApplicationIDResponse:
+    properties:
+      applicationID:
+        type: integer
     type: object
   handler.ChatIDResponse:
     properties:
@@ -233,6 +267,16 @@ definitions:
           $ref: '#/definitions/domain.Post'
         type: array
     type: object
+  handler.updateStatusRequest:
+    properties:
+      status:
+        type: string
+    type: object
+  handler.updateTextRequest:
+    properties:
+      text:
+        type: string
+    type: object
 host: localhost:8080
 info:
   contact: {}
@@ -241,6 +285,137 @@ info:
   title: VK API
   version: "1.0"
 paths:
+  /applications:
+    get:
+      consumes:
+      - application/json
+      description: Returns paginated list of applications. Admins see all, normal
+        users see only theirs.
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Application'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: List support applications
+      tags:
+      - Applications
+    post:
+      consumes:
+      - application/json
+      description: Creates a new support application. Can be created by a registered
+        user or a temp session.
+      parameters:
+      - description: Application payload
+        in: body
+        name: application
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Application'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApplicationIDResponse'
+        "400":
+          description: Invalid JSON or missing fields
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Create a new support application
+      tags:
+      - Applications
+  /applications/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Updates the status of an existing support application by ID.
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid ID or request body
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Update the status of an application
+      tags:
+      - Applications
+  /applications/{id}/text:
+    put:
+      consumes:
+      - application/json
+      description: Updates the text of an existing support application by ID.
+      parameters:
+      - description: Application ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New text
+        in: body
+        name: text
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateTextRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid ID or request body
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Update the text of an application
+      tags:
+      - Applications
   /auth/isloggedin:
     get:
       description: Возвращает ID пользователя, если сессия валидна

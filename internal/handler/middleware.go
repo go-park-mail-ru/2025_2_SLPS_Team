@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"project/config"
 	"project/domain"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -66,6 +67,20 @@ var AllowedPathsWithOutAuth = map[string]bool{
 }
 var SafeMethods = map[string]bool{"GET": true, "HEAD": true, "OPTIONS": true, "TRACE": true}
 
+func GetTempSessionID(r *http.Request) *uuid.UUID {
+	sessionCookie, err := r.Cookie("temp_session_id")
+	if err != nil {
+		return nil
+	}
+	str := sessionCookie.Value
+	id, err := uuid.Parse(str)
+	if err != nil {
+		return nil
+	}
+	return &id
+
+}
+
 func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodOptions {
@@ -76,6 +91,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 		path := r.URL.Path
 		session, err := api.IsLoggedIn(r)
 		isLoggedIn := true
+
 		if err != nil {
 			if errors.Is(err, domain.ErrNotFound) {
 				isLoggedIn = false
@@ -110,7 +126,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 		} else {
-			if !AllowedPathsWithOutAuth[path] {
+			if !AllowedPathsWithOutAuth[path] && !strings.HasPrefix(path, "/api/applications") {
 				sendJSONResponse(w, domain.Forbidden, http.StatusForbidden)
 				domain.FromContext(r.Context()).Warn("Try get access to forbidden path")
 				return
@@ -118,6 +134,26 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 		return
+	})
+}
+
+func (api *AuthHandler) TempSessionMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var userID *int
+		if v, ok := r.Context().Value(domain.UserIDKey).(int); ok {
+			userID = &v
+		}
+
+		ts := GetTempSessionID(r)
+
+		info := &domain.TempSessionInfo{
+			UserID:        userID,
+			TempSessionID: ts,
+		}
+		ctx := context.WithValue(r.Context(), domain.TempSessionCtxKey, info)
+		r = r.WithContext(ctx)
+
+		next.ServeHTTP(w, r)
 	})
 }
 
