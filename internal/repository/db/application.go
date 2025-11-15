@@ -117,3 +117,17 @@ func (r *DBApplicationStore) CreateApplication(ctx context.Context, app domain.A
 	}
 	return id, nil
 }
+func (r *DBApplicationStore) MergeTempSession(ctx context.Context) error {
+	TempSessionInfo, _ := ctx.Value(domain.TempSessionCtxKey).(*domain.TempSessionInfo)
+	if TempSessionInfo == nil {
+		TempSessionInfo = &domain.TempSessionInfo{}
+	}
+	query := `
+        UPDATE applications
+        SET author_id = $1,
+            temp_session_id = NULL
+        WHERE temp_session_id = $2
+    `
+	_, err := r.db.Exec(query, TempSessionInfo.UserID, TempSessionInfo.TempSessionID)
+	return err
+}

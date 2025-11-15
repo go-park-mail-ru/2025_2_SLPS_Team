@@ -49,7 +49,6 @@ func (api *ApplicationHandler) CreateApplication(w http.ResponseWriter, r *http.
 	if TempSessionInfo == nil {
 		TempSessionInfo = &domain.TempSessionInfo{}
 	}
-
 	if TempSessionInfo.TempSessionID == nil && TempSessionInfo.UserID == nil {
 		newID := uuid.New()
 		TempSessionInfo.TempSessionID = &newID

@@ -34,7 +34,8 @@ func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 }
 
 type IsLoggedInResponse struct {
-	UserID int `json:"userID"`
+	UserID int    `json:"userID"`
+	Role   string `json:"role"`
 }
 
 // IsLoggedInHandler проверяет, авторизован ли пользователь по cookie сессии.
@@ -58,9 +59,10 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 		sendJSONError(w, err)
 		return
 	}
-
+	role, err := api.authService.GetUserRole(r.Context(), session.UserID)
 	res := IsLoggedInResponse{
 		UserID: session.UserID,
+		Role:   role,
 	}
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {

@@ -31,6 +31,7 @@ type ApplicationService interface {
 	UpdateApplicationText(ctx context.Context, id int, newText string) error
 	UpdateApplicationStatus(ctx context.Context, id int, newStatus string) error
 	CreateApplication(ctx context.Context, application Application) (int, error)
+	MergeTempSession(ctx context.Context) error
 }
 
 type ApplicationStore interface {
@@ -39,4 +40,5 @@ type ApplicationStore interface {
 	UpdateApplicationText(ctx context.Context, id int, newText string) error
 	UpdateApplicationStatus(ctx context.Context, id int, newStatus string) error
 	CreateApplication(ctx context.Context, app Application) (int, error)
+	MergeTempSession(ctx context.Context) error
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"project/config"
@@ -137,7 +138,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-func (api *AuthHandler) TempSessionMiddleware(next http.Handler) http.Handler {
+func (api *ApplicationHandler) TempSessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var userID *int
 		if v, ok := r.Context().Value(domain.UserIDKey).(int); ok {
@@ -153,7 +154,27 @@ func (api *AuthHandler) TempSessionMiddleware(next http.Handler) http.Handler {
 		ctx := context.WithValue(r.Context(), domain.TempSessionCtxKey, info)
 		r = r.WithContext(ctx)
 
-		next.ServeHTTP(w, r)
+		if userID != nil && ts != nil {
+			expired := &http.Cookie{
+				Name:     "temp_session_id",
+				Value:    "",
+				Path:     "/",
+				Expires:  time.Unix(0, 0),
+				HttpOnly: true,
+			}
+			http.SetCookie(w, expired)
+			next.ServeHTTP(w, r)
+			go func(userID int, ts uuid.UUID) {
+				// вызываем метод в store
+				err := api.applicationService.MergeTempSession(ctx)
+				if err != nil {
+					// только логируем — ошибок пользователю не показываем
+					log.Println("Failed to merge temp session:", err)
+				}
+			}(*userID, *ts)
+		} else {
+			next.ServeHTTP(w, r)
+		}
 	})
 }
 

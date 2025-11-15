@@ -22,4 +22,5 @@ type AuthService interface {
 	Login(ctx context.Context, req User) (int, error)
 	Logout(ctx context.Context, session *http.Cookie) error
 	Register(ctx context.Context, req RegisterRequest) (int, error)
+	GetUserRole(ctx context.Context, userID int) (string, error)
 }

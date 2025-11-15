@@ -132,3 +132,8 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 	domain.FromContext(ctx).Info("User created, registration complete", zap.Int("userID", userID))
 	return userID, nil
 }
+
+func (api *AuthService) GetUserRole(ctx context.Context, userID int) (string, error) {
+	user, err := api.userStore.GetUserByID(ctx, userID)
+	return user.Role, err
+}

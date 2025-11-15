@@ -51,3 +51,6 @@ func (s *ApplicationService) UpdateApplicationStatus(ctx context.Context, id int
 func (s *ApplicationService) CreateApplication(ctx context.Context, application domain.Application) (int, error) {
 	return s.applicationStore.CreateApplication(ctx, application)
 }
+func (s *ApplicationService) MergeTempSession(ctx context.Context) error {
+	return s.applicationStore.MergeTempSession(ctx)
+}

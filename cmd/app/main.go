@@ -120,7 +120,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, con
 	apiRouter.Use(middleware.SecureMiddleware)
 	apiRouter.Use(middleware.LoggingMiddleware(logger))
 	apiRouter.Use(auth.AuthMiddleware)
-	apiRouter.Use(auth.TempSessionMiddleware)
+	apiRouter.Use(application.TempSessionMiddleware)
 	apiRouter.HandleFunc("/ws", wshandler.ServeWs)
 	authRouter := apiRouter.PathPrefix("/auth").Subrouter()
 	authRouter.HandleFunc("/register", auth.Register).Methods("POST", "OPTIONS")
