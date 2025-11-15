@@ -2,10 +2,13 @@ CREATE TYPE friendship_status_enum AS ENUM ('pending', 'accepted', 'rejected', '
 CREATE TYPE role_enum AS ENUM ('admin', 'moderator', 'member', 'owner');
 CREATE TYPE attachment_obj_type_enum AS ENUM ('message', 'comment', 'profile', 'community');
 CREATE TYPE application_category_enum AS ENUM (
-    'app_freezing',         -- приложение зависает/тормозит
-    'page_not_loading',     -- не загружается страница
-    'chat_profile_messenger_friends', -- не работает чат, профиль, мессенджер, страница друзей
-    'authorization_issue'   -- проблема с авторизацией/входом
+    'app_freezing',                  -- Приложение зависает/тормозит
+    'page_not_loading',              -- Не загружается страница
+    'chat_not_working',
+    'profile_not_working',
+    'messenger_not_working',
+    'friend_not_working',
+    'auth_problem'-- Проблема с авторизацией/входом
 );
 
 CREATE TYPE application_status_enum AS ENUM ('open','inWork','closed');

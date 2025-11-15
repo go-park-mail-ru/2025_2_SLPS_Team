@@ -122,13 +122,13 @@ func (h *ApplicationHandler) UpdateApplicationText(w http.ResponseWriter, r *htt
 	idStr := vars["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid application ID", http.StatusBadRequest)
+		sendJSONError(w, err)
 		return
 	}
 
 	var req updateTextRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		sendJSONError(w, err)
 		return
 	}
 
@@ -137,7 +137,7 @@ func (h *ApplicationHandler) UpdateApplicationText(w http.ResponseWriter, r *htt
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	sendJSONResponse(w, "app updated", http.StatusOK)
 }
 
 type updateStatusRequest struct {
@@ -161,20 +161,19 @@ func (h *ApplicationHandler) UpdateApplicationStatus(w http.ResponseWriter, r *h
 	idStr := vars["id"]
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Error(w, "Invalid application ID", http.StatusBadRequest)
+		sendJSONError(w, err)
 		return
 	}
 
 	var req updateStatusRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		sendJSONError(w, err)
 		return
 	}
 
 	if err := h.applicationService.UpdateApplicationStatus(r.Context(), id, req.Status); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		sendJSONError(w, err)
 		return
 	}
-
-	w.WriteHeader(http.StatusNoContent)
+	sendJSONResponse(w, "app updated", http.StatusOK)
 }
