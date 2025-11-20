@@ -1,0 +1,5 @@
+FROM elastic/elasticsearch:8.14.0
+
+# Устанавливаем ICU plugin
+RUN elasticsearch-plugin install --batch analysis-icu
+RUN elasticsearch-plugin install analysis-phonetic

@@ -12,14 +12,16 @@ import (
 )
 
 type AuthService struct {
-	sessionStore domain.SessionStore
-	userStore    domain.UserStore
+	sessionStore        domain.SessionStore
+	userStore           domain.UserStore
+	elasticProfileStore domain.ElasticProfileStore
 }
 
-func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore) domain.AuthService {
+func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore, elasticProfileStore domain.ElasticProfileStore) domain.AuthService {
 	return &AuthService{
-		sessionStore: sessionStore,
-		userStore:    userStore,
+		sessionStore:        sessionStore,
+		userStore:           userStore,
+		elasticProfileStore: elasticProfileStore,
 	}
 }
 
@@ -126,6 +128,13 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 	userID, err := api.userStore.CreateUser(ctx, user, profile)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to create user", zap.Error(err))
+		return 0, domain.ErrDB
+	}
+
+	fullName := profile.FirstName + " " + profile.LastName
+	err = api.elasticProfileStore.CreateProfile(ctx, fullName, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
 		return 0, domain.ErrDB
 	}
 

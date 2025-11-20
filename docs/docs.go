@@ -1683,6 +1683,55 @@ const docTemplate = `{
                 }
             }
         },
+        "/profile/search": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список профилей, имя которых соответствует поисковому запросу.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profile"
+                ],
+                "summary": "Поиск профилей по имени",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Полное или частичное имя пользователя",
+                        "name": "full_name",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Найденные профили",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "$ref": "#/definitions/domain.ShortProfile"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing full_name query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/profile/{id}": {
             "get": {
                 "security": [
@@ -2189,6 +2238,9 @@ const docTemplate = `{
         "handler.IsLoggedInResponse": {
             "type": "object",
             "properties": {
+                "role": {
+                    "type": "string"
+                },
                 "userID": {
                     "type": "integer"
                 }

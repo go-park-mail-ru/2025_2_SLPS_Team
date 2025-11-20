@@ -29,6 +29,14 @@ type ProfileService interface {
 	UpdateHeader(ctx context.Context, userID int, files []*multipart.FileHeader) error
 	GetProfileByUserID(ctx context.Context, userID int) (*Profile, error)
 	DeleteAvatarByUserID(ctx context.Context, userID int) error
+	SearchShortProfilesByFullName(ctx context.Context, fullName string) (map[int]ShortProfile, error)
+}
+
+type ElasticProfileStore interface {
+	CreateProfile(ctx context.Context, fullName string, userID int) error
+	UpdateProfile(ctx context.Context, fullName string, userID int) error
+	DeleteProfile(ctx context.Context, userID int) error
+	SearchProfileIDsByFullName(ctx context.Context, fullName string) ([]int, error)
 }
 
 type ProfileStore interface {

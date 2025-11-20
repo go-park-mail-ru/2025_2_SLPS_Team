@@ -11,14 +11,16 @@ import (
 )
 
 type ProfileService struct {
-	profileStore domain.ProfileStore
-	userStore    domain.UserStore
+	profileStore        domain.ProfileStore
+	userStore           domain.UserStore
+	elasticProfileStore domain.ElasticProfileStore
 }
 
-func NewProfileService(profileStore domain.ProfileStore, userStore domain.UserStore) domain.ProfileService {
+func NewProfileService(profileStore domain.ProfileStore, userStore domain.UserStore, elasticProfileStore domain.ElasticProfileStore) domain.ProfileService {
 	return &ProfileService{
-		profileStore: profileStore,
-		userStore:    userStore,
+		profileStore:        profileStore,
+		userStore:           userStore,
+		elasticProfileStore: elasticProfileStore,
 	}
 }
 
@@ -58,6 +60,14 @@ func (api *ProfileService) UpdateProfile(ctx context.Context, profile domain.Pro
 		domain.FromContext(ctx).Error("Failed to update profile", zap.Error(err))
 		return domain.ErrDB
 	}
+
+	fullName := profile.FirstName + " " + profile.LastName
+	err = api.elasticProfileStore.UpdateProfile(ctx, fullName, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
+		return domain.ErrDB
+	}
+
 	domain.FromContext(ctx).Info("Profile updated successfully")
 	return nil
 }
@@ -151,4 +161,19 @@ func (api *ProfileService) DeleteAvatarByUserID(ctx context.Context, userID int)
 	}
 
 	return nil
+}
+
+func (api *ProfileService) SearchShortProfilesByFullName(ctx context.Context, fullName string) (map[int]domain.ShortProfile, error) {
+	userIDs, err := api.elasticProfileStore.SearchProfileIDsByFullName(ctx, fullName)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+	profileMap, err := api.profileStore.GetShortProfileByUserIDs(ctx, userIDs)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail get short Profiles by user IDs", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+
+	return profileMap, nil
 }

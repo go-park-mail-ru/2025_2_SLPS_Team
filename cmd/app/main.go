@@ -8,10 +8,12 @@ import (
 	_ "project/docs"
 	"project/internal/handler"
 	"project/internal/repository/db"
+	"project/internal/repository/dbElasic"
 	"project/internal/repository/dbRedis"
 	"project/internal/service"
 	"time"
 
+	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -51,6 +53,28 @@ func NewRedisPool(dataSourceName string) *redis.Pool {
 		IdleTimeout: 240 * time.Second,
 	}
 }
+func NewElastic(config *config.Config) *elasticsearch.Client {
+	cfg := elasticsearch.Config{
+		Addresses: []string{
+			"http://elasticsearch:" + config.ElasticPort,
+		},
+		Username: config.ElasticUser,
+		Password: config.ElasticPassword,
+	}
+
+	es, err := elasticsearch.NewClient(cfg)
+	if err != nil {
+		log.Fatalf("Ошибка создания клиента: %s", err)
+	}
+
+	res, err := es.Info()
+	if err != nil {
+		log.Fatalf("Ошибка подключения: %s", err)
+	}
+	defer res.Body.Close()
+	log.Println("Elasticsearch подключен:", res.Status())
+	return es
+}
 
 func NewLogger(config *config.Config) *zap.Logger {
 	isDebug := config.Debug
@@ -83,7 +107,7 @@ func NewLogger(config *config.Config) *zap.Logger {
 	return logger
 }
 
-func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, config *config.Config) *mux.Router {
+func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, elasticConn *elasticsearch.Client, config *config.Config) *mux.Router {
 
 	userStore := db.NewDBUserStore(dbConn)
 	sessionStore := dbRedis.NewRedisSessionStore(redisPool)
@@ -92,10 +116,11 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, con
 	messageStore := db.NewDBMessageStore(dbConn)
 	postStore := db.NewDBPostStore(dbConn)
 	applicationStore := db.NewDBApplicationStore(dbConn)
+	elasticProfileStore := dbElasic.NewElasticProfileStore(elasticConn, "profile")
 	wsHub := service.NewHub()
 	friendStore := db.NewDBFriendStore(dbConn)
-	authService := service.NewAuthService(userStore, sessionStore)
-	profileService := service.NewProfileService(profileStore, userStore)
+	authService := service.NewAuthService(userStore, sessionStore, elasticProfileStore)
+	profileService := service.NewProfileService(profileStore, userStore, elasticProfileStore)
 	chatService := service.NewChatService(userStore, profileStore, chatStore, messageStore, wsHub)
 	applicationService := service.NewApplicationService(userStore, applicationStore, wsHub)
 	application := handler.NewApplicationHandler(applicationService)
@@ -128,11 +153,13 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, con
 	authRouter.HandleFunc("/logout", auth.Logout).Methods("POST", "OPTIONS")
 	authRouter.HandleFunc("/isloggedin", auth.IsLoggedInHandler).Methods("GET")
 
-	apiRouter.HandleFunc("/profile/{id:[0-9]+}", profile.GetProfileByUserID).Methods("GET")
-	apiRouter.HandleFunc("/profile", profile.UpdateProfile).Methods("PUT", "OPTIONS")
-	apiRouter.HandleFunc("/profile/avatar", profile.UpdateAvatar).Methods("PUT", "OPTIONS")
-	apiRouter.HandleFunc("/profile/avatar", profile.DeleteAvatar).Methods("DELETE", "OPTIONS")
-	apiRouter.HandleFunc("/profile/header", profile.UpdateHeader).Methods("PUT", "OPTIONS")
+	profileRouter := apiRouter.PathPrefix("/profile").Subrouter()
+	profileRouter.HandleFunc("/profile/{id:[0-9]+}", profile.GetProfileByUserID).Methods("GET")
+	profileRouter.HandleFunc("", profile.UpdateProfile).Methods("PUT", "OPTIONS")
+	profileRouter.HandleFunc("/avatar", profile.UpdateAvatar).Methods("PUT", "OPTIONS")
+	profileRouter.HandleFunc("/avatar", profile.DeleteAvatar).Methods("DELETE", "OPTIONS")
+	profileRouter.HandleFunc("/header", profile.UpdateHeader).Methods("PUT", "OPTIONS")
+	profileRouter.HandleFunc("/search", profile.SearchProfilesByFullName).Methods("GET")
 
 	chatRouter := apiRouter.PathPrefix("/chats").Subrouter()
 	chatRouter.HandleFunc("", chat.GetUserChats).Methods("GET")
@@ -194,8 +221,8 @@ func main() {
 
 	redisConn := NewRedisPool(config.RedisURL)
 	defer redisConn.Close()
-
-	apiRouter := NewApiRouter(logger, dbConn, redisConn, config)
+	elasticConn := NewElastic(config)
+	apiRouter := NewApiRouter(logger, dbConn, redisConn, elasticConn, config)
 
 	if err := http.ListenAndServe(":8080", apiRouter); err != nil {
 		log.Fatalf("Server failed start: %v", err)
