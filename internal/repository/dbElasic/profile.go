@@ -117,25 +117,20 @@ func (e *ElasticProfileStore) DeleteProfile(ctx context.Context, userID int) err
 func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fullName string) ([]int, error) {
 	qEn := unidecode.Unidecode(fullName)
 
-	queries := []map[string]interface{}{
-		{"full_name": fullName},
-		{"full_name_translit": fullName},
-		{"full_name": qEn},
-		{"full_name_translit": qEn},
-	}
+	queries := []string{fullName, qEn}
 
-	shouldClauses := make([]map[string]interface{}, 0, len(queries))
+	shouldClauses := []map[string]interface{}{}
 	for _, q := range queries {
-		for field, val := range q {
-			shouldClauses = append(shouldClauses, map[string]interface{}{
+		shouldClauses = append(shouldClauses,
+			map[string]interface{}{
 				"multi_match": map[string]interface{}{
-					"query":     val,
-					"fields":    []string{field},
+					"query":     q,
+					"fields":    []string{"full_name", "full_name_translit"},
 					"fuzziness": "AUTO",
 					"type":      "best_fields",
 				},
-			})
-		}
+			},
+		)
 	}
 
 	query := map[string]interface{}{
@@ -147,11 +142,7 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 		},
 	}
 
-	body, err := json.Marshal(query)
-	if err != nil {
-		return nil, err
-	}
-
+	body, _ := json.Marshal(query)
 	res, err := e.client.Search(
 		e.client.Search.WithContext(ctx),
 		e.client.Search.WithIndex(e.index),
@@ -163,10 +154,6 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 	}
 	defer res.Body.Close()
 
-	if res.IsError() {
-		return nil, fmt.Errorf("error searching profiles: %s", res.String())
-	}
-
 	var r struct {
 		Hits struct {
 			Hits []struct {
@@ -175,9 +162,7 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 		} `json:"hits"`
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
-		return nil, err
-	}
+	_ = json.NewDecoder(res.Body).Decode(&r)
 
 	idsMap := make(map[int]struct{})
 	for _, hit := range r.Hits.Hits {
