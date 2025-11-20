@@ -69,61 +69,22 @@ func CreateProfileIndex(indexName string, config *config.Config) error {
         }
       },
       "filter": {
-        "russian_morphology": {
-          "type": "snowball",
-          "language": "russian"
-        },
-        "english_morphology": {
-          "type": "snowball",
-          "language": "english"
-        },
-        "edge_ngram_filter": {
-          "type": "edge_ngram",
-          "min_gram": 2,
-          "max_gram": 20
-        },
-        "name_phonetic": {
-          "type": "phonetic",
-          "encoder": "metaphone",
-          "languageset": ["russian", "english"],
-          "replace": false
-        }
+        "russian_morphology": { "type": "snowball", "language": "russian" },
+        "english_morphology": { "type": "snowball", "language": "english" },
+        "edge_ngram_filter": { "type": "edge_ngram", "min_gram": 2, "max_gram": 20 },
+        "name_phonetic": { "type": "phonetic", "encoder": "metaphone", "languageset": ["russian","english"], "replace": false }
       }
     }
   },
   "mappings": {
     "properties": {
-      "full_name": {
-        "type": "text",
-        "analyzer": "name_analyzer",
-        "search_analyzer": "name_search_analyzer",
-        "fields": {
-          "raw": { "type": "keyword" },
-          "ngram": {
-            "type": "text",
-            "analyzer": "name_analyzer",
-            "search_analyzer": "name_search_analyzer"
-          }
-        }
-      },
-      "full_name_translit": {
-        "type": "text",
-        "analyzer": "name_analyzer",
-        "search_analyzer": "name_search_analyzer",
-        "fields": {
-          "ngram": {
-            "type": "text",
-            "analyzer": "name_analyzer",
-            "search_analyzer": "name_search_analyzer"
-          }
-        }
-      },
-      "user_id": {
-        "type": "integer"
-      }
+      "full_name": { "type": "text", "analyzer": "name_analyzer", "search_analyzer": "name_search_analyzer" },
+      "full_name_translit": { "type": "text", "analyzer": "name_analyzer", "search_analyzer": "name_search_analyzer" },
+      "user_id": { "type": "integer" }
     }
   }
 }
+
 
 
 

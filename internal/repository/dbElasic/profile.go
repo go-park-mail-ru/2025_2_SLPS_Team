@@ -117,31 +117,31 @@ func (e *ElasticProfileStore) DeleteProfile(ctx context.Context, userID int) err
 func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fullName string) ([]int, error) {
 	qEn := unidecode.Unidecode(fullName)
 
+	queries := []map[string]interface{}{
+		{"full_name": fullName},
+		{"full_name_translit": fullName},
+		{"full_name": qEn},
+		{"full_name_translit": qEn},
+	}
+
+	shouldClauses := make([]map[string]interface{}, 0, len(queries))
+	for _, q := range queries {
+		for field, val := range q {
+			shouldClauses = append(shouldClauses, map[string]interface{}{
+				"multi_match": map[string]interface{}{
+					"query":     val,
+					"fields":    []string{field},
+					"fuzziness": "AUTO",
+					"type":      "best_fields",
+				},
+			})
+		}
+	}
+
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
 			"bool": map[string]interface{}{
-				"should": []map[string]interface{}{
-					{
-						"match": map[string]interface{}{
-							"full_name": fullName,
-						},
-					},
-					{
-						"match": map[string]interface{}{
-							"full_name_translit": fullName,
-						},
-					},
-					{
-						"match": map[string]interface{}{
-							"full_name": qEn,
-						},
-					},
-					{
-						"match": map[string]interface{}{
-							"full_name_translit": qEn,
-						},
-					},
-				},
+				"should":               shouldClauses,
 				"minimum_should_match": 1,
 			},
 		},
@@ -179,7 +179,6 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 		return nil, err
 	}
 
-	// Собираем уникальные user_id
 	idsMap := make(map[int]struct{})
 	for _, hit := range r.Hits.Hits {
 		idsMap[hit.Source.UserID] = struct{}{}
