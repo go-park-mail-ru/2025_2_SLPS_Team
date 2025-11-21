@@ -9,33 +9,45 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: [myapp, myapp-elasticsearch]
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Log in to DockerHub
+      - name: Docker login
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - name: Set build context and Dockerfile
+        run: |
+          if [ "${{ matrix.image }}" = "myapp" ]; then
+            echo "DOCKERFILE=Dockerfile"
+            echo "BUILD_CONTEXT=."
+          else
+            echo "DOCKERFILE=Dockerfile.elasticsearch"
+            echo "BUILD_CONTEXT=."
+          fi
+        id: vars
+
       - name: Build Docker image
         run: |
-          docker build -t ${{ secrets.DOCKER_USERNAME }}/myapp:${{ github.sha }} .
+          IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}
+          DOCKERFILE=$(cat ${{ steps.vars.outputs.DOCKERFILE }})
+          CONTEXT=$(cat ${{ steps.vars.outputs.BUILD_CONTEXT }})
+          docker build -f $DOCKERFILE -t $IMAGE_NAME:${{ github.sha }} --cache-from $IMAGE_NAME:latest $CONTEXT
 
       - name: Push Docker image
         run: |
-          docker tag ${{ secrets.DOCKER_USERNAME }}/myapp:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/myapp:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/myapp:${{ github.sha }}
-      - name: Build Elasticsearch image
-        run: |
-          docker build -f Dockerfile.elasticsearch -t ${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:${{ github.sha }} .
+          IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}
+          docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
+          docker push $IMAGE_NAME:${{ github.sha }}
+          docker push $IMAGE_NAME:latest
 
-      - name: Push Elasticsearch image
-        run: |
-          docker tag ${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:latest
-          docker push ${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:${{ github.sha }}
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
