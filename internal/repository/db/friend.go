@@ -596,6 +596,16 @@ func (store *DBFriendStore) CountUserRelations(ctx context.Context, userID int, 
 }
 
 func (store *DBFriendStore) GetShortProfilesBySearchIDSAndFriendType(ctx context.Context, userID int, fType domain.FriendshipCountType, targetIDs []int, limit, offset int) ([]domain.ShortProfile, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "friendStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetShortProfilesBySearchIDSAndFriendType")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
 	if len(targetIDs) == 0 {
 		return nil, nil
 	}
@@ -668,7 +678,9 @@ func (store *DBFriendStore) GetShortProfilesBySearchIDSAndFriendType(ctx context
     `
 	}
 	rows, err := store.db.QueryContext(ctx, query, userID, pq.Array(targetIDs), limit, offset)
+	dblogger = dblogger.With(zap.Int("UserID", userID), zap.String("type", string(fType)))
 	if err != nil {
+		dblogger.Error("Failed to get rows", zap.Error(err))
 		return nil, err
 	}
 	defer rows.Close()
@@ -677,11 +689,14 @@ func (store *DBFriendStore) GetShortProfilesBySearchIDSAndFriendType(ctx context
 	for rows.Next() {
 		var p domain.ShortProfile
 		if err := rows.Scan(&p.UserID, &p.FullName, &p.AvatarPath, &p.Dob); err != nil {
+			dblogger.Error("Failed to scan row", zap.Error(err))
 			return nil, err
 		}
 		profiles = append(profiles, p)
 	}
+
 	if err := rows.Err(); err != nil {
+		dblogger.Error("rows error", zap.Error(err))
 		return nil, err
 	}
 

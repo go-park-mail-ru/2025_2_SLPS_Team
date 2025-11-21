@@ -331,11 +331,12 @@ func (s *FriendService) SearchShortProfilesByFullNameAndRelationType(ctx context
 		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
 		return nil, domain.ErrDB
 	}
-	profileMap, err := s.friendStore.GetShortProfilesBySearchIDSAndFriendType(ctx, userID, fType, userIDs, limit, offset)
+
+	profile, err := s.friendStore.GetShortProfilesBySearchIDSAndFriendType(ctx, userID, fType, userIDs, limit, offset)
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail get short Profiles by user IDs", zap.Error(err))
 		return nil, domain.ErrDB
 	}
 
-	return profileMap, nil
+	return profile, nil
 }
