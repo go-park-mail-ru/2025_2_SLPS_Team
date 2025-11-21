@@ -704,6 +704,78 @@ const docTemplate = `{
                 }
             }
         },
+        "/friends/search": {
+            "get": {
+                "description": "Возвращает список профилей, имя которых соответствует поисковому запросу.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "friend"
+                ],
+                "summary": "Поиск профилей по имени",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Полное или частичное имя пользователя",
+                        "name": "full_name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "accepted",
+                            "pending",
+                            "sent",
+                            "blocked",
+                            "notFriends"
+                        ],
+                        "type": "string",
+                        "default": "notFriends",
+                        "description": "Тип дружбы: accepted, pending, sent, blocked, notFriends",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Лимит количества профилей",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "страница для пагинации",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "198": {
+                        "description": "Найденные профили",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortProfile"
+                            }
+                        }
+                    },
+                    "398": {
+                        "description": "Missing full_name query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "498": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/friends/sent": {
             "get": {
                 "security": [
@@ -1683,55 +1755,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/profile/search": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Возвращает список профилей, имя которых соответствует поисковому запросу.",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "profile"
-                ],
-                "summary": "Поиск профилей по имени",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Полное или частичное имя пользователя",
-                        "name": "full_name",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Найденные профили",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "$ref": "#/definitions/domain.ShortProfile"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Missing full_name query parameter",
-                        "schema": {
-                            "type": "string"
-                        }
-                    },
-                    "500": {
-                        "description": "Server error",
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
         "/profile/{id}": {
             "get": {
                 "security": [
@@ -1940,14 +1963,16 @@ const docTemplate = `{
                 "accepted",
                 "rejected",
                 "blocked",
-                "sent"
+                "sent",
+                "notFriends"
             ],
             "x-enum-varnames": [
                 "CountPending",
                 "CountAccepted",
                 "CountRejected",
                 "CountBlocked",
-                "CountSent"
+                "CountSent",
+                "CountNotFriends"
             ]
         },
         "domain.FriendshipStatus": {
@@ -2129,6 +2154,9 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "avatarPath": {
+                    "type": "string"
+                },
+                "dob": {
                     "type": "string"
                 },
                 "fullName": {

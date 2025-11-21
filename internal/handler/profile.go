@@ -192,36 +192,3 @@ func (api *ProfileHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) 
 
 	sendJSONResponse(w, "Avatar deleted", http.StatusOK)
 }
-
-// SearchProfilesByFullName ищет профили по имени.
-//
-// @Summary Поиск профилей по имени
-// @Description Возвращает список профилей, имя которых соответствует поисковому запросу.
-// @Tags profile
-// @Produce json
-// @Param full_name query string true "Полное или частичное имя пользователя"
-// @Success 200 {object} map[int]domain.ShortProfile "Найденные профили"
-// @Failure 400 {string} string "Missing full_name query parameter"
-// @Failure 500 {string} string "Server error"
-// @Security ApiKeyAuth
-// @Router /profile/search [get]
-func (api *ProfileHandler) SearchProfilesByFullName(w http.ResponseWriter, r *http.Request) {
-	fullName := r.URL.Query().Get("full_name")
-	if fullName == "" {
-		sendJSONResponse(w, "Missing full_name query parameter", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Warn("full_name query parameter is missing")
-		return
-	}
-
-	profileMap, err := api.profileService.SearchShortProfilesByFullName(r.Context(), fullName)
-	if err != nil {
-		sendJSONError(w, err)
-		domain.FromContext(r.Context()).Error("Fail search profiles by full name", zap.Error(err))
-		return
-	}
-
-	err = sendJSONData(r.Context(), w, profileMap)
-	if err == nil {
-		domain.FromContext(r.Context()).Info("Profiles returned successfully")
-	}
-}

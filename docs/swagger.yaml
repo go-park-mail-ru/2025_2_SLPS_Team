@@ -43,6 +43,7 @@ definitions:
     - rejected
     - blocked
     - sent
+    - notFriends
     type: string
     x-enum-varnames:
     - CountPending
@@ -50,6 +51,7 @@ definitions:
     - CountRejected
     - CountBlocked
     - CountSent
+    - CountNotFriends
   domain.FriendshipStatus:
     enum:
     - pending
@@ -174,6 +176,8 @@ definitions:
   domain.ShortProfile:
     properties:
       avatarPath:
+        type: string
+      dob:
         type: string
       fullName:
         type: string
@@ -968,6 +972,57 @@ paths:
       summary: Получить входящие запросы в друзья
       tags:
       - friends
+  /friends/search:
+    get:
+      description: Возвращает список профилей, имя которых соответствует поисковому
+        запросу.
+      parameters:
+      - description: Полное или частичное имя пользователя
+        in: query
+        name: full_name
+        required: true
+        type: string
+      - default: notFriends
+        description: 'Тип дружбы: accepted, pending, sent, blocked, notFriends'
+        enum:
+        - accepted
+        - pending
+        - sent
+        - blocked
+        - notFriends
+        in: query
+        name: type
+        type: string
+      - default: 20
+        description: Лимит количества профилей
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: страница для пагинации
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "198":
+          description: Найденные профили
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortProfile'
+            type: array
+        "398":
+          description: Missing full_name query parameter
+          schema:
+            type: string
+        "498":
+          description: Server error
+          schema:
+            type: string
+      summary: Поиск профилей по имени
+      tags:
+      - friend
   /friends/sent:
     get:
       description: Возвращает список отправленных запросов на дружбу с пагинацией
@@ -1417,38 +1472,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Обновление header
-      tags:
-      - profile
-  /profile/search:
-    get:
-      description: Возвращает список профилей, имя которых соответствует поисковому
-        запросу.
-      parameters:
-      - description: Полное или частичное имя пользователя
-        in: query
-        name: full_name
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Найденные профили
-          schema:
-            additionalProperties:
-              $ref: '#/definitions/domain.ShortProfile'
-            type: object
-        "400":
-          description: Missing full_name query parameter
-          schema:
-            type: string
-        "500":
-          description: Server error
-          schema:
-            type: string
-      security:
-      - ApiKeyAuth: []
-      summary: Поиск профилей по имени
       tags:
       - profile
   /users/{userID}/posts:

@@ -131,7 +131,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	middleware := handler.NewMiddlewareHandler(config)
 	posts := handler.NewPostsHandler(postService)
 	wshandler := handler.NewWSHandler(wsHub)
-	friendService := service.NewFriendService(friendStore, userStore)
+	friendService := service.NewFriendService(friendStore, userStore, elasticProfileStore)
 	friend := handler.NewFriendHandler(friendService)
 
 	r := mux.NewRouter()
@@ -159,7 +159,6 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	profileRouter.HandleFunc("/avatar", profile.UpdateAvatar).Methods("PUT", "OPTIONS")
 	profileRouter.HandleFunc("/avatar", profile.DeleteAvatar).Methods("DELETE", "OPTIONS")
 	profileRouter.HandleFunc("/header", profile.UpdateHeader).Methods("PUT", "OPTIONS")
-	profileRouter.HandleFunc("/search", profile.SearchProfilesByFullName).Methods("GET")
 
 	chatRouter := apiRouter.PathPrefix("/chats").Subrouter()
 	chatRouter.HandleFunc("", chat.GetUserChats).Methods("GET")
@@ -195,6 +194,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	friendRouter.HandleFunc("/{id:[0-9]+}/status", friend.GetFriendshipStatus).Methods("GET")
 	friendRouter.HandleFunc("/{id:[0-9]+}", friend.RemoveFriend).Methods("DELETE")
 	friendRouter.HandleFunc("/{id:[0-9]+}/count", friend.CountUserRelations).Methods("GET")
+	friendRouter.HandleFunc("/search", friend.SearchProfilesByFullName).Methods("GET")
 
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 

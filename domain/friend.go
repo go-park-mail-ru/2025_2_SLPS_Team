@@ -19,11 +19,12 @@ const (
 type FriendshipCountType string
 
 const (
-	CountPending  FriendshipCountType = "pending"
-	CountAccepted FriendshipCountType = "accepted"
-	CountRejected FriendshipCountType = "rejected"
-	CountBlocked  FriendshipCountType = "blocked"
-	CountSent     FriendshipCountType = "sent"
+	CountPending    FriendshipCountType = "pending"
+	CountAccepted   FriendshipCountType = "accepted"
+	CountRejected   FriendshipCountType = "rejected"
+	CountBlocked    FriendshipCountType = "blocked"
+	CountSent       FriendshipCountType = "sent"
+	CountNotFriends FriendshipCountType = "notFriends"
 )
 
 type Friendship struct {
@@ -77,6 +78,7 @@ type FriendService interface {
 	GetFriends(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileAndDOB, error)
 	GetAllUsers(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileWithStatusAndDOB, error)
 
+	SearchShortProfilesByFullNameAndRelationType(ctx context.Context, userID int, params PaginateQueryParams, fullName string, fType FriendshipCountType) ([]ShortProfile, error)
 	GetFriendRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileAndDOB, error)
 	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfileAndDOB, error)
 
@@ -97,7 +99,7 @@ type FriendStore interface {
 
 	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfileAndDOB, error)
 	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfileAndDOB, error)
-
+	GetShortProfilesBySearchIDSAndFriendType(ctx context.Context, userID int, fType FriendshipCountType, targetIDs []int, limit, offset int) ([]ShortProfile, error)
 	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int) (bool, error)
 	GetFriendshipStatus(ctx context.Context, userID1, userID2 int) (FriendshipStatus, error)

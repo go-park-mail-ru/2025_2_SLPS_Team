@@ -8,6 +8,7 @@ import (
 	"project/domain"
 	"time"
 
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -592,4 +593,97 @@ func (store *DBFriendStore) CountUserRelations(ctx context.Context, userID int, 
 		zap.Int("count", count),
 		zap.String("countType", string(countType)))
 	return count, nil
+}
+
+func (store *DBFriendStore) GetShortProfilesBySearchIDSAndFriendType(ctx context.Context, userID int, fType domain.FriendshipCountType, targetIDs []int, limit, offset int) ([]domain.ShortProfile, error) {
+	if len(targetIDs) == 0 {
+		return nil, nil
+	}
+
+	var whereClause string
+	var query string
+	if fType == domain.CountNotFriends {
+		query = `
+        SELECT p.user_id,
+               COALESCE(p.first_name || ' ' || p.last_name, '') AS full_name,
+               COALESCE(p.avatar_path, '') AS avatar_path,
+               p.dob
+        FROM profiles p
+        WHERE p.user_id != $1
+          AND p.user_id = ANY($2)
+          AND NOT EXISTS (
+              SELECT 1
+              FROM friend_relationships fr
+              WHERE (fr.first_user_id = $1 AND fr.second_user_id = p.user_id)
+                 OR (fr.first_user_id = p.user_id AND fr.second_user_id = $1)
+          )
+        LIMIT $3 OFFSET $4
+    `
+	} else {
+		switch fType {
+		case domain.CountAccepted:
+			whereClause = `
+            (fr.first_user_id = $1 OR fr.second_user_id = $1)
+            AND fr.status = 'accepted'
+        `
+		case domain.CountPending:
+			whereClause = `
+            (fr.first_user_id = $1 OR fr.second_user_id = $1)
+            AND (
+                (fr.status = 'pending' AND fr.action_user_id != $1)
+                OR (fr.status = 'rejected' AND fr.action_user_id = $1)
+            )
+        `
+		case domain.CountSent:
+			whereClause = `
+            (fr.first_user_id = $1 OR fr.second_user_id = $1)
+            AND (
+                (fr.status = 'pending' AND fr.action_user_id = $1)
+                OR (fr.status = 'rejected' AND fr.action_user_id != $1)
+            )
+        `
+		case domain.CountBlocked:
+			whereClause = `
+            (fr.first_user_id = $1 OR fr.second_user_id = $1)
+            AND fr.status = 'blocked'
+        `
+
+		default:
+			return nil, fmt.Errorf("unknown statusType: %s", fType)
+		}
+
+		query = `
+        SELECT p.user_id,
+               COALESCE(p.first_name || ' ' || p.last_name, '') AS full_name,
+               COALESCE(p.avatar_path, '') AS avatar_path,
+               p.dob
+        FROM friend_relationships fr
+        JOIN profiles p ON p.user_id = CASE
+            WHEN fr.first_user_id = $1 THEN fr.second_user_id
+            ELSE fr.first_user_id
+        END
+        WHERE ` + whereClause + `
+          AND (fr.first_user_id = ANY($2) OR fr.second_user_id = ANY($2))
+			LIMIT $3 OFFSET $4
+    `
+	}
+	rows, err := store.db.QueryContext(ctx, query, userID, pq.Array(targetIDs), limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var profiles []domain.ShortProfile
+	for rows.Next() {
+		var p domain.ShortProfile
+		if err := rows.Scan(&p.UserID, &p.FullName, &p.AvatarPath, &p.Dob); err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return profiles, nil
 }

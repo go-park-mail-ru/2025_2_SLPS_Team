@@ -9,14 +9,16 @@ import (
 )
 
 type FriendService struct {
-	friendStore domain.FriendStore
-	userStore   domain.UserStore
+	friendStore         domain.FriendStore
+	userStore           domain.UserStore
+	elasticProfileStore domain.ElasticProfileStore
 }
 
-func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore) domain.FriendService {
+func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore, elasticProfileStore domain.ElasticProfileStore) domain.FriendService {
 	return &FriendService{
-		friendStore: friendStore,
-		userStore:   userStore,
+		friendStore:         friendStore,
+		userStore:           userStore,
+		elasticProfileStore: elasticProfileStore,
 	}
 }
 
@@ -319,4 +321,21 @@ func (s *FriendService) isValidCountType(countType domain.FriendshipCountType) b
 		domain.CountRejected: true,
 	}
 	return validTypes[countType]
+}
+
+func (s *FriendService) SearchShortProfilesByFullNameAndRelationType(ctx context.Context, userID int, params domain.PaginateQueryParams, fullName string, fType domain.FriendshipCountType) ([]domain.ShortProfile, error) {
+
+	offset, limit := domain.ValidatePaginationParams(params)
+	userIDs, err := s.elasticProfileStore.SearchProfileIDsByFullName(ctx, fullName, limit, offset)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+	profileMap, err := s.friendStore.GetShortProfilesBySearchIDSAndFriendType(ctx, userID, fType, userIDs, limit, offset)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail get short Profiles by user IDs", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+
+	return profileMap, nil
 }

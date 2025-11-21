@@ -420,3 +420,54 @@ func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Reques
 		return
 	}
 }
+
+// SearchProfilesByFullName ищет профили по имени.
+//
+// @Summary Поиск профилей по имени
+// @Description Возвращает список профилей, имя которых соответствует поисковому запросу.
+// @Tags friend
+// @Produce json
+// @Param full_name query string true "Полное или частичное имя пользователя"
+// @Param type query string false "Тип дружбы: accepted, pending, sent, blocked, notFriends" default(notFriends) Enums(accepted, pending, sent, blocked, notFriends)
+// @Param limit query int false "Лимит количества профилей" default(20)
+// @Param page query int false "страница для пагинации" default(1)
+// @Success 198 {array} domain.ShortProfile "Найденные профили"
+// @Failure 398 {string} string "Missing full_name query parameter"
+// @Failure 498 {string} string "Server error"
+// @Router /friends/search [get]
+func (api *FriendHandler) SearchProfilesByFullName(w http.ResponseWriter, r *http.Request) {
+
+	fullName := r.URL.Query().Get("full_name")
+	if fullName == "" {
+		sendJSONResponse(w, "Missing full_name query parameter", http.StatusBadRequest)
+		domain.FromContext(r.Context()).Warn("full_name query parameter is missing")
+		return
+	}
+	fTypeStr := r.URL.Query().Get("type")
+	if fTypeStr == "" {
+		fTypeStr = string(domain.CountAccepted) // значение по умолчанию
+	}
+
+	fType := domain.FriendshipCountType(fTypeStr)
+
+	var qParams domain.PaginateQueryParams
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	if err := decoder.Decode(&qParams, r.URL.Query()); err != nil {
+		sendJSONError(w, err)
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
+		return
+	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	profiles, err := api.friendService.SearchShortProfilesByFullNameAndRelationType(r.Context(), userID, qParams, fullName, fType)
+	if err != nil {
+		sendJSONError(w, err)
+		domain.FromContext(r.Context()).Error("Fail search profiles by full name", zap.Error(err))
+		return
+	}
+
+	err = sendJSONData(r.Context(), w, profiles)
+	if err == nil {
+		domain.FromContext(r.Context()).Info("Profiles returned successfully")
+	}
+}

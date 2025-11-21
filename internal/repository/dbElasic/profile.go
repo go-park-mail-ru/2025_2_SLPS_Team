@@ -114,7 +114,7 @@ func (e *ElasticProfileStore) DeleteProfile(ctx context.Context, userID int) err
 	return nil
 }
 
-func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fullName string) ([]int, error) {
+func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fullName string, limit int, offset int) ([]int, error) {
 	qEn := unidecode.Unidecode(fullName)
 
 	queries := []string{fullName, qEn}
@@ -140,6 +140,8 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 				"minimum_should_match": 1,
 			},
 		},
+		"from": offset,
+		"size": limit,
 	}
 
 	body, _ := json.Marshal(query)
