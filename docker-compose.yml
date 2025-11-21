@@ -49,7 +49,7 @@ services:
     networks:
       - network
   elasticsearch:
-
+    image: ${ELASTIC_IMAGE:-local/elasticsearch:latest}
     build:
       context: .
       dockerfile: Dockerfile.elasticsearch
@@ -68,11 +68,11 @@ services:
       test:
         [
           "CMD-SHELL",
-          "curl -s --user ${ELASTIC_USER}:${ELASTIC_PASSWORD} -X GET http://elasticsearch:9200/_cluster/health?pretty | grep status | grep -q '\\(green\\|yellow\\)'"
+          "curl -s --user ${ELASTIC_USER}:${ELASTIC_PASSWORD} http://elasticsearch:9200/ | grep -q 'You Know, for Search'"
         ]
-      interval: 10s
-      timeout: 10s
-      retries: 24
+      interval: 5s
+      timeout: 5s
+      retries: 12
     networks:
       - network
 networks:

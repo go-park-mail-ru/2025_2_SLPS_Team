@@ -28,8 +28,14 @@ jobs:
         run: |
           docker tag ${{ secrets.DOCKER_USERNAME }}/myapp:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/myapp:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/myapp:${{ github.sha }}
-          docker push ${{ secrets.DOCKER_USERNAME }}/myapp:latest
+      - name: Build Elasticsearch image
+        run: |
+          docker build -f Dockerfile.elasticsearch -t ${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:${{ github.sha }} .
 
+      - name: Push Elasticsearch image
+        run: |
+          docker tag ${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:${{ github.sha }} ${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:${{ github.sha }}
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -58,7 +64,8 @@ jobs:
             mkdir -p /home/ubuntu/myapp
             
             printf '%s\n' "${{ secrets.ENV_FILE }}" > /home/ubuntu/myapp/.env
-            
+            echo "APP_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp:${{ github.sha }}" >> /home/ubuntu/myapp/.env
+            echo "ELASTIC_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:${{ github.sha }}" >> /home/ubuntu/myapp/.env 
             cd /home/ubuntu/myapp
             
             docker-compose down -v || true

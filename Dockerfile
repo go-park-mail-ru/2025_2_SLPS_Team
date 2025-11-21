@@ -11,8 +11,8 @@ RUN go mod download
 COPY . .
 
 # Собираем оба приложения
-RUN CGO_ENABLED=0 GOOS=linux go build -o main ./cmd/app/main.go && \
-    CGO_ENABLED=0 GOOS=linux go build -o migrate ./cmd/migration/migrate.go
+RUN CGO_ENABLED=0 GOOS=linux go install  ./cmd/app
+RUN CGO_ENABLED=0 GOOS=linux go install  ./cmd/migration
 
 # Этап 2: Финальный образ
 FROM alpine:3.18
@@ -23,8 +23,8 @@ WORKDIR /app
 RUN apk add --no-cache postgresql-client
 
 # Копируем только необходимые артефакты
-COPY --from=builder /app/main .
-COPY --from=builder /app/migrate .
+COPY --from=builder /go/bin/app ./main
+COPY --from=builder /go/bin/migration ./migrate
 COPY --from=builder /app/db/migrations ./db/migrations
 COPY --from=builder /app/logs ./logs
 EXPOSE 8080
