@@ -154,7 +154,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	authRouter.HandleFunc("/isloggedin", auth.IsLoggedInHandler).Methods("GET")
 
 	profileRouter := apiRouter.PathPrefix("/profile").Subrouter()
-	profileRouter.HandleFunc("/profile/{id:[0-9]+}", profile.GetProfileByUserID).Methods("GET")
+	profileRouter.HandleFunc("/{id:[0-9]+}", profile.GetProfileByUserID).Methods("GET")
 	profileRouter.HandleFunc("", profile.UpdateProfile).Methods("PUT", "OPTIONS")
 	profileRouter.HandleFunc("/avatar", profile.UpdateAvatar).Methods("PUT", "OPTIONS")
 	profileRouter.HandleFunc("/avatar", profile.DeleteAvatar).Methods("DELETE", "OPTIONS")
