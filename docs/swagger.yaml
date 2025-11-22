@@ -125,6 +125,10 @@ definitions:
       id:
         description: в БД табличка posts называется
         type: integer
+      isLiked:
+        type: boolean
+      likeCount:
+        type: integer
       photos:
         description: в БД табличка post_photos называется
         items:
@@ -185,32 +189,6 @@ definitions:
         type: string
       fullName:
         type: string
-      userID:
-        type: integer
-    type: object
-  domain.ShortProfileAndDOB:
-    properties:
-      avatarPath:
-        type: string
-      dob:
-        type: string
-      fullName:
-        type: string
-      userID:
-        type: integer
-    type: object
-  domain.ShortProfileWithStatusAndDOB:
-    properties:
-      avatarPath:
-        type: string
-      dob:
-        type: string
-      fullName:
-        type: string
-      status:
-        allOf:
-        - $ref: '#/definitions/domain.FriendshipStatus'
-        description: Указатель
       userID:
         type: integer
     type: object
@@ -741,7 +719,7 @@ paths:
           description: Успешный ответ со списком друзей
           schema:
             items:
-              $ref: '#/definitions/domain.ShortProfileAndDOB'
+              $ref: '#/definitions/domain.ShortProfile'
             type: array
         "400":
           description: Неверные параметры пагинации
@@ -1002,7 +980,7 @@ paths:
           description: Успешный ответ со списком запросов
           schema:
             items:
-              $ref: '#/definitions/domain.ShortProfileAndDOB'
+              $ref: '#/definitions/domain.ShortProfile'
             type: array
         "400":
           description: Неверные параметры пагинации
@@ -1092,7 +1070,7 @@ paths:
           description: Успешный ответ со списком отправленных запросов
           schema:
             items:
-              $ref: '#/definitions/domain.ShortProfileAndDOB'
+              $ref: '#/definitions/domain.ShortProfile'
             type: array
         "400":
           description: Неверные параметры пагинации
@@ -1132,7 +1110,7 @@ paths:
           description: Успешный ответ со списком пользователей
           schema:
             items:
-              $ref: '#/definitions/domain.ShortProfileWithStatusAndDOB'
+              $ref: '#/definitions/domain.ShortProfile'
             type: array
         "400":
           description: Неверные параметры пагинации

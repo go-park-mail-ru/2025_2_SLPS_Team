@@ -679,7 +679,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.ShortProfileAndDOB"
+                                "$ref": "#/definitions/domain.ShortProfile"
                             }
                         }
                     },
@@ -738,7 +738,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.ShortProfileAndDOB"
+                                "$ref": "#/definitions/domain.ShortProfile"
                             }
                         }
                     },
@@ -869,7 +869,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.ShortProfileAndDOB"
+                                "$ref": "#/definitions/domain.ShortProfile"
                             }
                         }
                     },
@@ -928,7 +928,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.ShortProfileWithStatusAndDOB"
+                                "$ref": "#/definitions/domain.ShortProfile"
                             }
                         }
                     },
@@ -2177,6 +2177,12 @@ const docTemplate = `{
                     "description": "в БД табличка posts называется",
                     "type": "integer"
                 },
+                "isLiked": {
+                    "type": "boolean"
+                },
+                "likeCount": {
+                    "type": "integer"
+                },
                 "photos": {
                     "description": "в БД табличка post_photos называется",
                     "type": "array",
@@ -2264,48 +2270,6 @@ const docTemplate = `{
                 },
                 "fullName": {
                     "type": "string"
-                },
-                "userID": {
-                    "type": "integer"
-                }
-            }
-        },
-        "domain.ShortProfileAndDOB": {
-            "type": "object",
-            "properties": {
-                "avatarPath": {
-                    "type": "string"
-                },
-                "dob": {
-                    "type": "string"
-                },
-                "fullName": {
-                    "type": "string"
-                },
-                "userID": {
-                    "type": "integer"
-                }
-            }
-        },
-        "domain.ShortProfileWithStatusAndDOB": {
-            "type": "object",
-            "properties": {
-                "avatarPath": {
-                    "type": "string"
-                },
-                "dob": {
-                    "type": "string"
-                },
-                "fullName": {
-                    "type": "string"
-                },
-                "status": {
-                    "description": "Указатель",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/domain.FriendshipStatus"
-                        }
-                    ]
                 },
                 "userID": {
                     "type": "integer"

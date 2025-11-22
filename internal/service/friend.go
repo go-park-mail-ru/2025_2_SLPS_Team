@@ -184,7 +184,7 @@ func (s *FriendService) RemoveFriend(ctx context.Context, userID, friendID int) 
 }
 
 // GetFriends получает список друзей
-func (s *FriendService) GetFriends(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfileAndDOB, error) {
+func (s *FriendService) GetFriends(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
@@ -203,7 +203,7 @@ func (s *FriendService) GetFriends(ctx context.Context, userID int, params domai
 }
 
 // GetAllUsers получает всех пользователей с пагинацией
-func (s *FriendService) GetAllUsers(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfileWithStatusAndDOB, error) {
+func (s *FriendService) GetAllUsers(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
@@ -222,7 +222,7 @@ func (s *FriendService) GetAllUsers(ctx context.Context, userID int, params doma
 }
 
 // GetFriendRequests получает входящие запросы в друзья
-func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfileAndDOB, error) {
+func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
@@ -241,7 +241,7 @@ func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, param
 }
 
 // GetSentRequests получает отправленные запросы в друзья
-func (s *FriendService) GetSentRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfileAndDOB, error) {
+func (s *FriendService) GetSentRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
