@@ -25,13 +25,20 @@ jobs:
 
       - name: Set build context and Dockerfile
         run: |
-          if [ "${{ matrix.image }}" = "myapp" ]; then
-            echo "DOCKERFILE=Dockerfile" >> $GITHUB_ENV
-            echo "BUILD_CONTEXT=." >> $GITHUB_ENV
-          else
-            echo "DOCKERFILE=Dockerfile.elasticsearch" >> $GITHUB_ENV
-            echo "BUILD_CONTEXT=." >> $GITHUB_ENV
-          fi
+          case "${{ matrix.image }}" in
+            myapp)
+              echo "DOCKERFILE=Dockerfile" >> $GITHUB_ENV
+              echo "BUILD_CONTEXT=." >> $GITHUB_ENV
+              ;;
+            myapp-elasticsearch)
+              echo "DOCKERFILE=Dockerfile.elasticsearch" >> $GITHUB_ENV
+              echo "BUILD_CONTEXT=." >> $GITHUB_ENV
+              ;;
+            *)
+              echo "Unknown image: ${{ matrix.image }}"
+              exit 1
+              ;;
+          esac
 
       - name: Build Docker image
         run: |
