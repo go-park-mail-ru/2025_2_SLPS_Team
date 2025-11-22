@@ -70,9 +70,9 @@ services:
           "CMD-SHELL",
           "curl -s --user ${ELASTIC_USER}:${ELASTIC_PASSWORD} http://elasticsearch:9200/ | grep -q 'You Know, for Search'"
         ]
-      interval: 5s
-      timeout: 5s
-      retries: 12
+      interval: 10s
+      timeout: 10s
+      retries: 20
     networks:
       - network
 networks:
