@@ -46,7 +46,7 @@ jobs:
           docker push $IMAGE_NAME:latest
 
   deploy:
-    needs: [build-myapp, build-elastic]
+    needs: build-and-push
     runs-on: ubuntu-latest
 
     steps:
