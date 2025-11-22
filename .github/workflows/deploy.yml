@@ -42,13 +42,12 @@ jobs:
       - name: Build Docker image
         run: |
           IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}
-          docker build -f $DOCKERFILE -t $IMAGE_NAME:${{ github.sha }} --cache-from $IMAGE_NAME:latest $BUILD_CONTEXT
+          docker build -f $DOCKERFILE -t $IMAGE_NAME:latest --cache-from $IMAGE_NAME:latest $BUILD_CONTEXT
 
       - name: Push Docker image
         run: |
           IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}
           docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
-          docker push $IMAGE_NAME:${{ github.sha }}
           docker push $IMAGE_NAME:latest
 
   deploy:
@@ -79,8 +78,8 @@ jobs:
             mkdir -p /home/ubuntu/myapp
             
             printf '%s\n' "${{ secrets.ENV_FILE }}" > /home/ubuntu/myapp/.env
-            echo "APP_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp:${{ github.sha }}" >> /home/ubuntu/myapp/.env
-            echo "ELASTIC_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:${{ github.sha }}" >> /home/ubuntu/myapp/.env 
+            echo "APP_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp:latest" >> /home/ubuntu/myapp/.env
+            echo "ELASTIC_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:latest" >> /home/ubuntu/myapp/.env 
             cd /home/ubuntu/myapp
             
             docker-compose down -v || true
