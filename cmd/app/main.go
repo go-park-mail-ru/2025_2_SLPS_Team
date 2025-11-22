@@ -120,7 +120,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	wsHub := service.NewHub()
 	friendStore := db.NewDBFriendStore(dbConn)
 	authService := service.NewAuthService(userStore, sessionStore, elasticProfileStore)
-	profileService := service.NewProfileService(profileStore, userStore, elasticProfileStore)
+	profileService := service.NewProfileService(profileStore, userStore, friendStore, elasticProfileStore)
 	chatService := service.NewChatService(userStore, profileStore, chatStore, messageStore, wsHub)
 	applicationService := service.NewApplicationService(userStore, applicationStore, wsHub)
 	application := handler.NewApplicationHandler(applicationService)

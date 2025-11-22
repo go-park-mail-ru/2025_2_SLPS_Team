@@ -132,6 +132,8 @@ definitions:
         type: string
       lastName:
         type: string
+      relationsCount:
+        $ref: '#/definitions/domain.UserRelationsCounts'
       userID:
         type: integer
     type: object

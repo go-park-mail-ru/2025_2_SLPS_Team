@@ -2178,6 +2178,9 @@ const docTemplate = `{
                 "lastName": {
                     "type": "string"
                 },
+                "relationsCount": {
+                    "$ref": "#/definitions/domain.UserRelationsCounts"
+                },
                 "userID": {
                     "type": "integer"
                 }

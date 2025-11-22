@@ -133,7 +133,7 @@ func (api *ProfileService) UpdateHeader(ctx context.Context, userID int, files [
 	return nil
 }
 
-func (api *ProfileService) GetProfileByUserID(ctx context.Context, userID int) (*domain.Profile, error) {
+func (api *ProfileService) GetProfileByUserID(ctx context.Context, selfUserID, userID int) (*domain.Profile, error) {
 
 	profile, err := api.profileStore.GetProfileByUserID(ctx, userID)
 	if err != nil {
@@ -150,8 +150,14 @@ func (api *ProfileService) GetProfileByUserID(ctx context.Context, userID int) (
 		domain.FromContext(ctx).Error("Failed to relations count", zap.Error(err), zap.Int("userID", userID))
 		return nil, domain.ErrDB
 	}
-	profile.RelationsCount = *relationsCount
 
+	status, err := api.friendStore.GetFriendshipStatus(ctx, selfUserID, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to relations count", zap.Error(err), zap.Int("userID", userID))
+		return nil, domain.ErrDB
+	}
+	profile.RelationsCount = *relationsCount
+	profile.RelationStatus = status
 	domain.FromContext(ctx).Info("return profile successfully")
 	return &profile, nil
 }

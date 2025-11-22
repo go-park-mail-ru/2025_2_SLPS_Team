@@ -161,8 +161,8 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 		domain.FromContext(r.Context()).Error("Failed to parse user ID", zap.Error(err))
 		return
 	}
-
-	profile, err := api.profileService.GetProfileByUserID(r.Context(), userID)
+	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int)
+	profile, err := api.profileService.GetProfileByUserID(r.Context(), selfUserID, userID)
 	if err != nil {
 		sendJSONError(w, err)
 	}

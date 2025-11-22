@@ -16,6 +16,7 @@ type Profile struct {
 	Gender         string              `json:"gender"`
 	Dob            time.Time           `json:"dob"`
 	RelationsCount UserRelationsCounts `json:"relationsCount"`
+	RelationStatus FriendshipStatus    `json:"relationStatus"`
 }
 
 type ShortProfile struct {
@@ -29,7 +30,7 @@ type ProfileService interface {
 	UpdateProfile(ctx context.Context, profile Profile, userID int, files []*multipart.FileHeader) error
 	UpdateAvatar(ctx context.Context, userID int, files []*multipart.FileHeader) error
 	UpdateHeader(ctx context.Context, userID int, files []*multipart.FileHeader) error
-	GetProfileByUserID(ctx context.Context, userID int) (*Profile, error)
+	GetProfileByUserID(ctx context.Context, selfUserID, userID int) (*Profile, error)
 	DeleteAvatarByUserID(ctx context.Context, userID int) error
 }
 
