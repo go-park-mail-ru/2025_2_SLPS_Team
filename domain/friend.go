@@ -27,6 +27,13 @@ const (
 	CountNotFriends FriendshipCountType = "notFriends"
 )
 
+type UserRelationsCounts struct {
+	Accepted int `json:"countAccepted"`
+	Pending  int `json:"countPending"`
+	Sent     int `json:"countSent"`
+	Blocked  int `json:"CountBlocked"`
+}
+
 type Friendship struct {
 	ID           int              `json:"id"`
 	FirstUserID  int              `json:"firstUserID"`
@@ -66,7 +73,7 @@ type FriendService interface {
 	GetSentRequests(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortProfile, error)
 
 	GetFriendshipStatus(ctx context.Context, userID, friendID int) (FriendshipStatus, error)
-	CountUserRelations(ctx context.Context, userID int, countType FriendshipCountType) (int, error)
+	CountUserRelations(ctx context.Context, userID int) (*UserRelationsCounts, error)
 }
 
 type FriendStore interface {
@@ -86,5 +93,5 @@ type FriendStore interface {
 	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int) (bool, error)
 	GetFriendshipStatus(ctx context.Context, userID1, userID2 int) (FriendshipStatus, error)
-	CountUserRelations(ctx context.Context, userID int, countType FriendshipCountType) (int, error)
+	CountUserRelations(ctx context.Context, userID int) (*UserRelationsCounts, error)
 }

@@ -161,19 +161,7 @@ func (s *FriendService) RemoveFriend(ctx context.Context, userID, friendID int) 
 		zap.Int("userID", userID),
 		zap.Int("friendID", friendID))
 
-	// Проверяем что пользователи действительно друзья
-	areFriends, err := s.friendStore.AreFriends(ctx, userID, friendID)
-	if err != nil {
-		domain.Error(ctx, "Failed to check friendship", err)
-		return domain.ErrDB
-	}
-
-	if !areFriends {
-		domain.Warn(ctx, "Attempt to remove non-friend")
-		return domain.ErrNotFound
-	}
-
-	err = s.friendStore.DeleteFriendship(ctx, userID, friendID)
+	err := s.friendStore.DeleteFriendship(ctx, userID, friendID)
 	if err != nil {
 		domain.Error(ctx, "Failed to remove friend", err)
 		return domain.ErrDB
@@ -276,38 +264,29 @@ func (s *FriendService) GetFriendshipStatus(ctx context.Context, userID, friendI
 }
 
 // CountUserRelations подсчитывает количество отношений пользователя по типу
-func (s *FriendService) CountUserRelations(ctx context.Context, userID int, countType domain.FriendshipCountType) (int, error) {
+func (s *FriendService) CountUserRelations(ctx context.Context, userID int) (*domain.UserRelationsCounts, error) {
 	domain.Info(ctx, "Counting user relations",
-		zap.Int("userID", userID),
-		zap.String("countType", string(countType)))
-
-	//Валидация типа чтобы был только разрешенный
-	if !s.isValidCountType(countType) {
-		domain.Warn(ctx, "Invalid count type", zap.String("countType", string(countType)))
-		return 0, domain.ErrInvalidInput
-	}
+		zap.Int("userID", userID))
 
 	// Проверяем существование пользователя
 	_, err := s.userStore.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			domain.Warn(ctx, "User not found", zap.Int("userID", userID))
-			return 0, domain.ErrNotFound
+			return nil, domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get user", err, zap.Int("userID", userID))
-		return 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
-	count, err := s.friendStore.CountUserRelations(ctx, userID, countType)
+	count, err := s.friendStore.CountUserRelations(ctx, userID)
 	if err != nil {
 		domain.Error(ctx, "Failed to count user relations", err)
-		return 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
 	domain.Info(ctx, "User relations counted successfully",
-		zap.Int("userID", userID),
-		zap.String("countType", string(countType)),
-		zap.Int("count", count))
+		zap.Int("userID", userID))
 	return count, nil
 }
 

@@ -502,87 +502,52 @@ func (store *DBFriendStore) GetFriendshipStatus(ctx context.Context, userID1, us
 }
 
 // CountUserRelations подсчитывает количество отношений пользователя по типу
-func (store *DBFriendStore) CountUserRelations(ctx context.Context, userID int, countType domain.FriendshipCountType) (int, error) {
+func (store *DBFriendStore) CountUserRelations(ctx context.Context, userID int) (*domain.UserRelationsCounts, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start CountUserRelations",
-		zap.Int("userID", userID),
-		zap.String("countType", string(countType)))
+		zap.Int("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	var query string
-	var args []interface{}
-
-	switch countType {
-	case domain.CountAccepted:
-		//Это количество ДРУЗЕЙ
-		query = `
-            SELECT COUNT(*)
-            FROM friend_relationships
-            WHERE (first_user_id = $1 OR second_user_id = $1)
-            AND status = 'accepted'
-        `
-		args = []interface{}{userID}
-
-	case domain.CountPending:
-		// Все pending запросы где пользователь является получателем. Сколько людей хочет добавить тебя в друзья, но ты им еще не ответил ПОДПИСЧИКИ
-		query = `
-        SELECT COUNT(*)
-        FROM friend_relationships
-        WHERE (first_user_id = $1 OR second_user_id = $1)
-        AND (
-            (status = 'pending' AND action_user_id != $1)    -- входящие запросы
-            OR 
-            (status = 'rejected' AND action_user_id = $1)   -- я отклонил запросы. Оставил в подписчиках так сказать
-        )
+	query := `
+WITH counts AS (
+    SELECT 
+        COUNT(*) FILTER (WHERE status = 'accepted') AS accepted_count,
+        COUNT(*) FILTER (WHERE status = 'pending' AND action_user_id != $1) AS pending_count,
+        COUNT(*) FILTER (WHERE status = 'pending' AND action_user_id = $1) AS sent_count,
+        COUNT(*) FILTER (WHERE status = 'rejected' AND action_user_id = $1) AS rejected_by_me_count,
+        COUNT(*) FILTER (WHERE status = 'rejected' AND action_user_id != $1) AS rejected_by_other_count,
+        COUNT(*) FILTER (WHERE status = 'blocked') AS blocked_count
+    FROM friend_relationships
+    WHERE first_user_id = $1 OR second_user_id = $1
+)
+SELECT 
+	accepted_count,
+	pending_count + rejected_by_me_count,
+	sent_count + rejected_by_other_count,
+	blocked_count
+FROM counts;
     `
-		args = []interface{}{userID}
 
-	case domain.CountSent:
-		// Все pending запросы где пользователь является отправителем. Это ПОДПИСКИ, количество людей, на которых ты подписался
-		query = `
-            SELECT COUNT(*)
-            FROM friend_relationships
-            WHERE (first_user_id = $1 OR second_user_id = $1)
-		AND (
-            (status = 'pending' AND action_user_id = $1)    -- исходящие от userID запросы
-            OR 
-            (status = 'rejected' AND action_user_id != $1)   -- отклоненные запросы юзера
-        )	
-        `
-		args = []interface{}{userID}
-
-	case domain.CountBlocked:
-		query = `
-            SELECT COUNT(*)
-            FROM friend_relationships
-            WHERE (first_user_id = $1 OR second_user_id = $1)
-            AND status = 'blocked'
-        `
-		args = []interface{}{userID}
-
-	default:
-		dblogger.Error("Unknown count type", zap.String("countType", string(countType)))
-		return 0, domain.ErrInvalidInput
-	}
-
-	dblogger = dblogger.With(zap.String("query", query))
-	var count int
-	err := store.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	var counts domain.UserRelationsCounts
+	err := store.db.QueryRowContext(ctx, query, userID).Scan(
+		&counts.Accepted,
+		&counts.Pending,
+		&counts.Sent,
+		&counts.Blocked,
+	)
 	if err != nil {
 		dblogger.Error("Failed to count user relations", zap.Error(err))
-		return 0, fmt.Errorf("failed to count user relations: %w", err)
+		return nil, fmt.Errorf("failed to count user relations: %w", err)
 	}
 
-	dblogger.Info("User relations counted successfully",
-		zap.Int("count", count),
-		zap.String("countType", string(countType)))
-	return count, nil
+	dblogger.Info("User relations counted successfully", zap.Any("counts", counts))
+	return &counts, nil
 }
 
 func (store *DBFriendStore) GetShortProfilesBySearchIDSAndFriendType(ctx context.Context, userID int, fType domain.FriendshipCountType, targetIDs []int, limit, offset int) ([]domain.ShortProfile, error) {

@@ -27,31 +27,6 @@ definitions:
         example: "1990-01-01T00:00:00Z"
         type: string
     type: object
-  domain.FriendsCountResponse:
-    properties:
-      count:
-        type: integer
-      countType:
-        $ref: '#/definitions/domain.FriendshipCountType'
-      userID:
-        type: integer
-    type: object
-  domain.FriendshipCountType:
-    enum:
-    - pending
-    - accepted
-    - rejected
-    - blocked
-    - sent
-    - notFriends
-    type: string
-    x-enum-varnames:
-    - CountPending
-    - CountAccepted
-    - CountRejected
-    - CountBlocked
-    - CountSent
-    - CountNotFriends
   domain.FriendshipStatus:
     enum:
     - pending
@@ -202,6 +177,17 @@ definitions:
         type: string
       role:
         type: string
+    type: object
+  domain.UserRelationsCounts:
+    properties:
+      CountBlocked:
+        type: integer
+      countAccepted:
+        type: integer
+      countPending:
+        type: integer
+      countSent:
+        type: integer
     type: object
   handler.ApplicationIDResponse:
     properties:
@@ -856,23 +842,13 @@ paths:
         name: id
         required: true
         type: integer
-      - default: accepted
-        description: 'Тип подсчета: accepted, pending, sent, blocked'
-        enum:
-        - accepted
-        - pending
-        - sent
-        - blocked
-        in: query
-        name: type
-        type: string
       produces:
       - application/json
       responses:
         "200":
           description: Успешный ответ с количеством отношений
           schema:
-            $ref: '#/definitions/domain.FriendsCountResponse'
+            $ref: '#/definitions/domain.UserRelationsCounts'
         "400":
           description: Неверный ID пользователя или тип подсчета
           schema:

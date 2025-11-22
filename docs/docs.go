@@ -1142,26 +1142,13 @@ const docTemplate = `{
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "enum": [
-                            "accepted",
-                            "pending",
-                            "sent",
-                            "blocked"
-                        ],
-                        "type": "string",
-                        "default": "accepted",
-                        "description": "Тип подсчета: accepted, pending, sent, blocked",
-                        "name": "type",
-                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Успешный ответ с количеством отношений",
                         "schema": {
-                            "$ref": "#/definitions/domain.FriendsCountResponse"
+                            "$ref": "#/definitions/domain.UserRelationsCounts"
                         }
                     },
                     "400": {
@@ -2039,39 +2026,6 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.FriendsCountResponse": {
-            "type": "object",
-            "properties": {
-                "count": {
-                    "type": "integer"
-                },
-                "countType": {
-                    "$ref": "#/definitions/domain.FriendshipCountType"
-                },
-                "userID": {
-                    "type": "integer"
-                }
-            }
-        },
-        "domain.FriendshipCountType": {
-            "type": "string",
-            "enum": [
-                "pending",
-                "accepted",
-                "rejected",
-                "blocked",
-                "sent",
-                "notFriends"
-            ],
-            "x-enum-varnames": [
-                "CountPending",
-                "CountAccepted",
-                "CountRejected",
-                "CountBlocked",
-                "CountSent",
-                "CountNotFriends"
-            ]
-        },
         "domain.FriendshipStatus": {
             "type": "string",
             "enum": [
@@ -2290,6 +2244,23 @@ const docTemplate = `{
                 },
                 "role": {
                     "type": "string"
+                }
+            }
+        },
+        "domain.UserRelationsCounts": {
+            "type": "object",
+            "properties": {
+                "CountBlocked": {
+                    "type": "integer"
+                },
+                "countAccepted": {
+                    "type": "integer"
+                },
+                "countPending": {
+                    "type": "integer"
+                },
+                "countSent": {
+                    "type": "integer"
                 }
             }
         },
