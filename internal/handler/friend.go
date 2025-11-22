@@ -425,7 +425,7 @@ func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Reques
 //
 // @Summary Поиск профилей по имени
 // @Description Возвращает список профилей, имя которых соответствует поисковому запросу.
-// @Tags friend
+// @Tags friends
 // @Produce json
 // @Param full_name query string true "Полное или частичное имя пользователя"
 // @Param type query string false "Тип дружбы: accepted, pending, sent, blocked, notFriends" default(notFriends) Enums(accepted, pending, sent, blocked, notFriends)
