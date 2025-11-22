@@ -47,7 +47,6 @@ jobs:
       - name: Push Docker image
         run: |
           IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}
-          docker tag $IMAGE_NAME:${{ github.sha }} $IMAGE_NAME:latest
           docker push $IMAGE_NAME:latest
 
   deploy:
