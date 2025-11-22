@@ -3,3 +3,4 @@
 /.dockerignore
 /repository/sqlc/
 /internal/repository/sqlc/
+/cookies.txt
