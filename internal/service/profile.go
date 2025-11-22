@@ -13,13 +13,16 @@ import (
 type ProfileService struct {
 	profileStore        domain.ProfileStore
 	userStore           domain.UserStore
+	friendStore         domain.FriendStore
 	elasticProfileStore domain.ElasticProfileStore
 }
 
-func NewProfileService(profileStore domain.ProfileStore, userStore domain.UserStore, elasticProfileStore domain.ElasticProfileStore) domain.ProfileService {
+func NewProfileService(profileStore domain.ProfileStore, userStore domain.UserStore, friendStore domain.FriendStore, elasticProfileStore domain.ElasticProfileStore) domain.ProfileService {
 	return &ProfileService{
-		profileStore: profileStore,
-		userStore:    userStore,
+		profileStore:        profileStore,
+		userStore:           userStore,
+		friendStore:         friendStore,
+		elasticProfileStore: elasticProfileStore,
 	}
 }
 
@@ -141,6 +144,13 @@ func (api *ProfileService) GetProfileByUserID(ctx context.Context, userID int) (
 		domain.FromContext(ctx).Error("Failed to get profile", zap.Error(err), zap.Int("userID", userID))
 		return nil, domain.ErrDB
 	}
+
+	relationsCount, err := api.friendStore.CountUserRelations(ctx, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to relations count", zap.Error(err), zap.Int("userID", userID))
+		return nil, domain.ErrDB
+	}
+	profile.RelationsCount = *relationsCount
 
 	domain.FromContext(ctx).Info("return profile successfully")
 	return &profile, nil

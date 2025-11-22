@@ -7,14 +7,15 @@ import (
 )
 
 type Profile struct {
-	UserID      int       `json:"userID"`
-	FirstName   string    `json:"firstName"`
-	LastName    string    `json:"lastName"`
-	AvatarPath  *string   `json:"avatarPath"`
-	HeaderPath  *string   `json:"headerPath"`
-	AboutMyself *string   `json:"aboutMyself"`
-	Gender      string    `json:"gender"`
-	Dob         time.Time `json:"dob"`
+	UserID         int                 `json:"userID"`
+	FirstName      string              `json:"firstName"`
+	LastName       string              `json:"lastName"`
+	AvatarPath     *string             `json:"avatarPath"`
+	HeaderPath     *string             `json:"headerPath"`
+	AboutMyself    *string             `json:"aboutMyself"`
+	Gender         string              `json:"gender"`
+	Dob            time.Time           `json:"dob"`
+	RelationsCount UserRelationsCounts `json:"relationsCount"`
 }
 
 type ShortProfile struct {
