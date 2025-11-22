@@ -15,7 +15,8 @@ type Post struct {
 
 	Attachments []string `json:"attachments"` //в БД табличка post_attachments называется
 	PhotosPath  []string `json:"photos"`      //в БД табличка post_photos называется
-
+	LikeCount   int      `json:"likeCount"`
+	IsLiked     bool     `json:"isLiked"`
 }
 type PostWithShortUser struct {
 	Post   Post         `json:"post"`
@@ -37,19 +38,20 @@ type PostUpdateRequest struct {
 }
 
 type PostService interface {
-	PostsPaginate(ctx context.Context, params PaginateQueryParams) ([]PostWithShortUser, error)
-	GetPost(ctx context.Context, postID uint) (*Post, error)
+	PostsPaginate(ctx context.Context, userID int, params PaginateQueryParams) ([]PostWithShortUser, error)
+	GetPost(ctx context.Context, userID int, postID uint) (*Post, error)
 	CreatePost(ctx context.Context, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*Post, error)
 	UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error
 	DeletePost(ctx context.Context, postID uint, userID int) error
-	GetUserPosts(ctx context.Context, userID uint, params PaginateQueryParams) ([]Post, error)
+	GetUserPosts(ctx context.Context, selfUserID int, userID uint, params PaginateQueryParams) ([]Post, error)
+	UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error
 }
 
 type PostStore interface {
 	// Получение постов с пагинацией
-	PostsPaginatedList(ctx context.Context, limit, offset int) ([]PostWithShortUser, error)
+	PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]PostWithShortUser, error)
 	// Получение поста по ID
-	GetPostByID(ctx context.Context, id uint) (*Post, error)
+	GetPostByID(ctx context.Context, userID int, id uint) (*Post, error)
 	// Создание поста
 	CreatePost(ctx context.Context, post *Post) error
 	// Обновление поста
@@ -57,5 +59,7 @@ type PostStore interface {
 	// Удаление поста
 	DeletePost(ctx context.Context, id uint, authorID uint) error
 	// Получение постов пользователя
-	GetPostsByUser(ctx context.Context, userID uint, limit, offset int) ([]Post, error)
+	GetPostsByUser(ctx context.Context, selfUserID int, userID uint, limit, offset int) ([]Post, error)
+
+	UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error
 }

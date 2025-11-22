@@ -78,8 +78,12 @@ definitions:
         $ref: '#/definitions/domain.Message'
       lastMessageAuthor:
         $ref: '#/definitions/domain.ShortProfile'
+      lastReadMessageID:
+        type: integer
       name:
         type: string
+      unReadCounts:
+        type: integer
     type: object
   domain.Message:
     properties:
@@ -272,6 +276,11 @@ definitions:
         items:
           $ref: '#/definitions/domain.Post'
         type: array
+    type: object
+  handler.UpdateLastReadRequest:
+    properties:
+      lastReadMessageID:
+        type: integer
     type: object
   handler.updateStatusRequest:
     properties:
@@ -600,6 +609,42 @@ paths:
       summary: Создать сообщение
       tags:
       - messages
+  /chats/{id}/last-read:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет значение lastReadMessageID для текущего (аутентифицированного)
+        пользователя в указанном чате.
+      parameters:
+      - description: ID чата
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Новый ID последнего прочитанного сообщения
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/handler.UpdateLastReadRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация об успешном обновлении или отсутствии изменений
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Некорректные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Обновить последнее прочитанное сообщение
+      tags:
+      - chats
   /chats/{id}/messages:
     get:
       description: Возвращает сообщения из чата с пагинацией и краткую информацию
@@ -1022,7 +1067,7 @@ paths:
             type: string
       summary: Поиск профилей по имени
       tags:
-      - friend
+      - friends
   /friends/sent:
     get:
       description: Возвращает список отправленных запросов на дружбу с пагинацией
@@ -1324,6 +1369,36 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Обновить пост
+      tags:
+      - posts
+  /posts/{id}/like:
+    put:
+      consumes:
+      - application/json
+      description: Переключает лайк текущего (аутентифицированного) пользователя на
+        указанном посте.
+      parameters:
+      - description: ID поста
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Информация о результате операции: лайк поставлен или снят'
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Некорректный ID поста
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Поставить или убрать лайк на посте
       tags:
       - posts
   /profile:

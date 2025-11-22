@@ -525,6 +525,59 @@ const docTemplate = `{
                 }
             }
         },
+        "/chats/{id}/last-read": {
+            "put": {
+                "description": "Обновляет значение lastReadMessageID для текущего (аутентифицированного) пользователя в указанном чате.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "chats"
+                ],
+                "summary": "Обновить последнее прочитанное сообщение",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новый ID последнего прочитанного сообщения",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.UpdateLastReadRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация об успешном обновлении или отсутствии изменений",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/chats/{id}/messages": {
             "get": {
                 "description": "Возвращает сообщения из чата с пагинацией и краткую информацию об авторах",
@@ -711,7 +764,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "friend"
+                    "friends"
                 ],
                 "summary": "Поиск профилей по имени",
                 "parameters": [
@@ -1570,6 +1623,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/posts/{id}/like": {
+            "put": {
+                "description": "Переключает лайк текущего (аутентифицированного) пользователя на указанном посте.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Поставить или убрать лайк на посте",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID поста",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация о результате операции: лайк поставлен или снят",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный ID поста",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/profile": {
             "put": {
                 "security": [
@@ -2010,8 +2107,14 @@ const docTemplate = `{
                 "lastMessageAuthor": {
                     "$ref": "#/definitions/domain.ShortProfile"
                 },
+                "lastReadMessageID": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
+                },
+                "unReadCounts": {
+                    "type": "integer"
                 }
             }
         },
@@ -2303,6 +2406,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/domain.Post"
                     }
+                }
+            }
+        },
+        "handler.UpdateLastReadRequest": {
+            "type": "object",
+            "properties": {
+                "lastReadMessageID": {
+                    "type": "integer"
                 }
             }
         },

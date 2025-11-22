@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"encoding/json"
 	"project/domain"
 
 	"go.uber.org/zap"
@@ -118,29 +117,20 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int, chatID in
 			domain.FromContext(ctx).Error("Fail to get chat", zap.Error(err))
 			return
 		}
+
 		recipients, err := api.chatStore.GetOtherChatMembersIdByAuthorId(ctx, userID, chatID)
 		if err != nil {
 			domain.FromContext(ctx).Error("Fail to get recipients", zap.Error(err))
 			return
 		}
-		data, err := json.Marshal(chat)
-		if err != nil {
-			domain.FromContext(ctx).Error("Fail to marshal chat", zap.Error(err))
-			return
-		}
-		response := domain.Envelope{
-			Type: "new_message",
-			Data: data,
-		}
-
-		jsonResponse, err := json.Marshal(response)
-		if err != nil {
-			domain.FromContext(ctx).Error("Fail to marshal chat", zap.Error(err))
-			return
-		}
 
 		for _, recipient := range recipients {
-			api.wsHub.SendToUser(ctx, recipient, jsonResponse)
+			chat.LastReadMessageID = recipient.LastReadMessageID
+			chat.UnreadCounts = recipient.UnreadCounts
+			err = api.wsHub.SendJSON(ctx, recipient.MemberID, "new_message", chat)
+			if err != nil {
+				domain.FromContext(ctx).Error("Fail to marshal chat", zap.Error(err))
+			}
 		}
 
 		domain.FromContext(ctx).Info("message send to recipients")
@@ -161,4 +151,17 @@ func (api *ChatService) GetUserChats(ctx context.Context, userID int, params dom
 
 	domain.FromContext(ctx).Info("Chats retrieved successfully", zap.Int("limit", limit), zap.Int("offset", offset))
 	return chats, nil
+}
+
+func (api *ChatService) UpdateLastReadMessage(ctx context.Context, userID, chatID, lastReadMessageID int) error {
+	err := api.chatStore.UpdateLastReadMessageByUserIDAndChatID(ctx, userID, chatID, lastReadMessageID)
+	if err != nil {
+
+		domain.FromContext(ctx).Error("Failed update last read message", zap.Error(err))
+		return domain.ErrDB
+
+	}
+
+	domain.FromContext(ctx).Info("last read message updated")
+	return nil
 }

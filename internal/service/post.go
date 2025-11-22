@@ -23,11 +23,11 @@ func NewPostService(postStore domain.PostStore, userStore domain.UserStore) doma
 }
 
 // PostsPaginate возвращает посты с пагинацией
-func (s *PostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.PostWithShortUser, error) {
+func (s *PostService) PostsPaginate(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.PostWithShortUser, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting paginated posts", zap.Int("offset", offset), zap.Int("limit", limit))
 
-	postsWithAuthor, err := s.postStore.PostsPaginatedList(ctx, limit, offset)
+	postsWithAuthor, err := s.postStore.PostsPaginatedList(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get posts", err)
 		return nil, domain.ErrDB
@@ -37,10 +37,10 @@ func (s *PostService) PostsPaginate(ctx context.Context, params domain.PaginateQ
 }
 
 // GetPost возвращает пост по ID
-func (s *PostService) GetPost(ctx context.Context, postID uint) (*domain.Post, error) {
+func (s *PostService) GetPost(ctx context.Context, userID int, postID uint) (*domain.Post, error) {
 	domain.Info(ctx, "Getting post by ID", zap.Uint("postID", postID))
 
-	post, err := s.postStore.GetPostByID(ctx, postID)
+	post, err := s.postStore.GetPostByID(ctx, userID, postID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			domain.Warn(ctx, "Post not found", zap.Uint("postID", postID))
@@ -141,7 +141,7 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 	domain.Info(ctx, "Updating post", zap.Uint("postID", postID), zap.Int("userID", userID))
 
 	// Получаем текущий пост
-	existingPost, err := s.postStore.GetPostByID(ctx, postID)
+	existingPost, err := s.postStore.GetPostByID(ctx, userID, postID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			domain.Warn(ctx, "Post not found for update", zap.Uint("postID", postID))
@@ -249,7 +249,7 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 	domain.Info(ctx, "Deleting post", zap.Uint("postID", postID), zap.Int("userID", userID))
 
 	// Получаем пост для проверки прав и получения путей файлов
-	existingPost, err := s.postStore.GetPostByID(ctx, postID)
+	existingPost, err := s.postStore.GetPostByID(ctx, userID, postID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			domain.Warn(ctx, "Post not found for deletion", zap.Uint("postID", postID))
@@ -298,7 +298,7 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 }
 
 // GetUserPosts возвращает посты пользователя
-func (s *PostService) GetUserPosts(ctx context.Context, userID uint, params domain.PaginateQueryParams) ([]domain.Post, error) {
+func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int, userID uint, params domain.PaginateQueryParams) ([]domain.Post, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
@@ -319,13 +319,26 @@ func (s *PostService) GetUserPosts(ctx context.Context, userID uint, params doma
 	}
 
 	// Получаем посты
-	posts, err := s.postStore.GetPostsByUser(ctx, userID, limit, offset)
+	posts, err := s.postStore.GetPostsByUser(ctx, selfUserID, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user posts", err, zap.Uint("userID", userID))
 		return nil, domain.ErrDB
 	}
 
 	return posts, nil
+}
+
+func (s *PostService) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error {
+	err := s.postStore.UpdateLikeOnPostByUserID(ctx, userID, postID)
+	if err != nil {
+
+		domain.FromContext(ctx).Error("Failed update like on post", zap.Error(err))
+		return domain.ErrDB
+
+	}
+
+	domain.FromContext(ctx).Info("like on post updated")
+	return nil
 }
 
 // convertToPointerSlice вспомогательная функция для конвертации

@@ -165,11 +165,14 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	chatRouter.HandleFunc("/user/{id:[0-9]+}", chat.GetOrCreateChatWithUser).Methods("GET")
 	chatRouter.HandleFunc("/{id:[0-9]+}/message", chat.CreateMessage).Methods("POST", "OPTIONS")
 	chatRouter.HandleFunc("/{id:[0-9]+}/messages", chat.GetMessagesByChatId).Methods("GET")
+	chatRouter.HandleFunc("/{id:[0-9]+}/last-read", chat.UpdateLastReadMessage).Methods("PUT", "OPTIONS")
+
 	appRouter := apiRouter.PathPrefix("/applications").Subrouter()
 	appRouter.HandleFunc("", application.CreateApplication).Methods("POST", "OPTIONS")
 	appRouter.HandleFunc("", application.GetApplications).Methods("GET")
 	appRouter.HandleFunc("/{id:[0-9]+}/text", application.UpdateApplicationText).Methods("PUT", "OPTIONS")
 	appRouter.HandleFunc("/{id:[0-9]+}/status", application.UpdateApplicationStatus).Methods("PUT", "OPTIONS")
+
 	// Posts routes (публичные - не требуют авторизации)
 	apiRouter.HandleFunc("/posts", posts.PostsPaginate).Methods("GET")
 	apiRouter.HandleFunc("/posts/{id:[0-9]+}", posts.GetPost).Methods("GET")
@@ -181,6 +184,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	postsAuthRouter.HandleFunc("", posts.CreatePost).Methods("POST", "OPTIONS")
 	postsAuthRouter.HandleFunc("/{id:[0-9]+}", posts.UpdatePost).Methods("PUT", "OPTIONS")
 	postsAuthRouter.HandleFunc("/{id:[0-9]+}", posts.DeletePost).Methods("DELETE", "OPTIONS")
+	postsAuthRouter.HandleFunc("/{id:[0-9]+}/like", posts.UpdateLikeOnPost).Methods("PUT", "OPTIONS")
 
 	friendRouter := apiRouter.PathPrefix("/friends").Subrouter()
 	friendRouter.Use(auth.AuthMiddleware)

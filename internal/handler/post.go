@@ -54,7 +54,9 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := h.postService.PostsPaginate(r.Context(), qParams)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+
+	posts, err := h.postService.PostsPaginate(r.Context(), userID, qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -85,8 +87,8 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
 		return
 	}
-
-	post, err := h.postService.GetPost(r.Context(), uint(postID))
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	post, err := h.postService.GetPost(r.Context(), userID, uint(postID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -276,8 +278,8 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
-
-	posts, err := h.postService.GetUserPosts(r.Context(), uint(userID), qParams)
+	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int)
+	posts, err := h.postService.GetUserPosts(r.Context(), selfUserID, uint(userID), qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -286,4 +288,39 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 	if err := sendJSONData(r.Context(), w, posts); err != nil {
 		return
 	}
+}
+
+// UpdateLikeOnPost ставит или убирает лайк пользователя на посте.
+//
+// @Summary Поставить или убрать лайк на посте
+// @Description Переключает лайк текущего (аутентифицированного) пользователя на указанном посте.
+// Если лайк уже есть → убирается, если нет → ставится.
+// @Tags posts
+// @Accept json
+// @Produce json
+// @Param id path int true "ID поста"
+// @Success 200 {object} JSONResponse "Информация о результате операции: лайк поставлен или снят"
+// @Failure 400 {object} JSONResponse "Некорректный ID поста"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Router /posts/{id}/like [put]
+func (h *PostsHandler) UpdateLikeOnPost(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	postIDStr := vars["id"]
+	postID, err := strconv.Atoi(postIDStr)
+	if err != nil {
+		sendJSONResponse(w, "invalid postID", http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error("Failed to parse postID", zap.Error(err))
+		return
+	}
+
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+
+	err = h.postService.UpdateLikeOnPostByUserID(r.Context(), userID, postID)
+	if err != nil {
+		domain.FromContext(r.Context()).Error("Failed update like on post", zap.Error(err))
+		return
+	}
+
+	domain.FromContext(r.Context()).Info("like updated")
+	sendJSONResponse(w, "like updated", http.StatusOK)
 }

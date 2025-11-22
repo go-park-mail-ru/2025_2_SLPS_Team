@@ -144,14 +144,25 @@ func (store *DBChatStore) GetUserFullChats(ctx context.Context, userID int, limi
 	query := `
 
 WITH last_messages AS (
-    SELECT DISTINCT ON (chat_id)
-        id AS message_id,
-        chat_id,
-        author_id,
-        text,
-        created_at
-    FROM messages
-    ORDER BY chat_id, created_at DESC
+    SELECT DISTINCT ON (m.chat_id)
+        m.chat_id,
+        m.id AS message_id,
+        m.text,
+        m.created_at,
+        m.author_id
+    FROM messages m
+    WHERE m.chat_id IN (SELECT chat_id FROM chat_members WHERE member_id = $1)
+    ORDER BY m.chat_id, m.created_at DESC
+),
+unread_counts AS (
+    SELECT 
+        cm.chat_id,
+        COUNT(m.id) AS unread_count
+    FROM chat_members cm
+    LEFT JOIN messages m ON m.chat_id = cm.chat_id 
+        AND m.id > cm.last_read_message_id
+    WHERE cm.member_id = $1
+    GROUP BY cm.chat_id
 )
 SELECT
     c.id AS chat_id,
@@ -162,17 +173,19 @@ SELECT
     lm.message_id AS last_message_id,
     lm.text AS last_message_text,
     lm.created_at AS last_message_created_at,
-    
-    author_user.id AS last_message_author_id,
+   	lm.author_id AS last_message_author_id,
+   	
     author_profile.first_name || ' ' || author_profile.last_name AS last_message_author_name,
-    author_profile.avatar_path AS last_message_author_avatar
+    author_profile.avatar_path AS last_message_author_avatar,
+    
+	COALESCE(uc.unread_count, 0) AS unread_count,
+	cm.last_read_message_id
 
 FROM chat_members cm
 JOIN chats c ON c.id = cm.chat_id
 JOIN last_messages lm ON lm.chat_id = c.id
-JOIN users author_user ON author_user.id = lm.author_id
-JOIN profiles author_profile ON author_profile.user_id = author_user.id
-
+JOIN unread_counts uc ON uc.chat_id = c.id
+JOIN profiles author_profile ON author_profile.user_id = lm.author_id
 LEFT JOIN LATERAL (
     SELECT 
         p.first_name || ' ' || p.last_name AS chat_name,
@@ -213,6 +226,8 @@ LIMIT $2 OFFSET $3;
 			&u.UserID,
 			&u.FullName,
 			&u.AvatarPath,
+			&c.UnreadCounts,
+			&c.LastReadMessageID,
 		)
 		m.AuthorID = u.UserID
 		m.ChatID = c.ID
@@ -235,7 +250,7 @@ LIMIT $2 OFFSET $3;
 	return chats, nil
 }
 
-func (store *DBChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, userID int, chatID int) ([]int, error) {
+func (store *DBChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, userID int, chatID int) ([]domain.MemberWithLastReadMessage, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "chatStore")
 	dbloggerCopy := dblogger
@@ -246,30 +261,39 @@ func (store *DBChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, u
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 	query := `
-	SELECT member_id
-	FROM chat_members
-	WHERE member_id != $1 and chat_id = $2
+SELECT 
+    cm.member_id,
+    cm.last_read_message_id,
+    COUNT(m.id) AS unread_count
+FROM chat_members cm
+LEFT JOIN messages m ON m.chat_id = cm.chat_id 
+    AND m.id > cm.last_read_message_id
+WHERE cm.member_id != $1 
+    AND cm.chat_id = $2
+GROUP BY cm.member_id, cm.last_read_message_id
 	`
 	rows, err := store.db.Query(query, userID, chatID)
-	dblogger = dblogger.With(zap.String("query", query), zap.Int("userID", userID), zap.Int("ChatID", chatID))
+	dblogger = dblogger.With(zap.String("query", query), zap.Int("userID", userID), zap.Int("chatID", chatID))
 	if err != nil {
 		dblogger.Error("Failed to find members of chat")
 		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	defer rows.Close()
 
-	memberIDs := []int{}
+	members := []domain.MemberWithLastReadMessage{}
 	for rows.Next() {
-		var memberID int
+		var member domain.MemberWithLastReadMessage
 		err := rows.Scan(
-			&memberID,
+			&member.MemberID,
+			&member.LastReadMessageID,
+			&member.UnreadCounts,
 		)
 		if err != nil {
 			dblogger.Error("Failed to read member rows", zap.Error(err))
 			return nil, fmt.Errorf("scan failed: %w", err)
 		}
 
-		memberIDs = append(memberIDs, memberID)
+		members = append(members, member)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -278,7 +302,7 @@ func (store *DBChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, u
 	}
 
 	dblogger.Info("Members returns")
-	return memberIDs, nil
+	return members, nil
 }
 
 func (store *DBChatStore) GetFullChatByIDAndSenderID(ctx context.Context, userID int, chatID int) (*domain.FullChat, error) {
@@ -293,37 +317,28 @@ func (store *DBChatStore) GetFullChatByIDAndSenderID(ctx context.Context, userID
 	}()
 
 	query := `
-
-WITH last_message AS (
-    SELECT DISTINCT ON (chat_id)
-        id AS message_id,
-        chat_id,
-        author_id,
-        text,
-        created_at
-    FROM messages
-    WHERE chat_id = $1
-    ORDER BY chat_id, created_at DESC
-)
 SELECT
     c.id AS chat_id,
     c.is_group,
     COALESCE(private_user.chat_name, c.name) AS chat_name,
     COALESCE(private_user.chat_avatar, c.avatar) AS chat_avatar,
 
-    lm.message_id AS last_message_id,
-    lm.text AS last_message_text,
-    lm.created_at AS last_message_created_at,
+    m.id AS last_message_id,
+    m.text AS last_message_text,
+    m.created_at AS last_message_created_at,
 
-    author_user.id AS last_message_author_id,
+    m.author_id AS last_message_author_id,
     author_profile.first_name || ' ' || author_profile.last_name AS last_message_author_name,
     author_profile.avatar_path AS last_message_author_avatar
 
 FROM chats c
-LEFT JOIN last_message lm ON lm.chat_id = c.id
-LEFT JOIN users author_user ON author_user.id = lm.author_id
-LEFT JOIN profiles author_profile ON author_profile.user_id = author_user.id
-
+LEFT JOIN messages m ON m.id = (
+    SELECT id FROM messages 
+    WHERE chat_id = c.id 
+    ORDER BY created_at DESC 
+    LIMIT 1
+)
+LEFT JOIN profiles author_profile ON author_profile.user_id = m.author_id
 LEFT JOIN LATERAL (
     SELECT 
         p.first_name || ' ' || p.last_name AS chat_name,
@@ -372,4 +387,32 @@ WHERE c.id = $1;
 
 	dblogger.Info("Chat returned successfully", zap.Int("chat_id", chatID))
 	return &c, nil
+}
+
+func (store *DBChatStore) UpdateLastReadMessageByUserIDAndChatID(ctx context.Context, userID, chatID, lastReadMessageID int) error {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "chatStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start UpdateLastReadMessageByUserIDAndChatID")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+	query := `
+        UPDATE chat_members
+        SET last_read_message_id = $1
+        WHERE chat_id = $2
+          AND member_id = $3
+          AND $1 > last_read_message_id
+	`
+	_, err := store.db.ExecContext(ctx, query, lastReadMessageID, chatID, userID)
+	dblogger = dblogger.With(zap.String("query", query), zap.Int("userID", userID), zap.Int("chatID", chatID))
+	if err != nil {
+		dblogger.Error("Failed update last read message")
+		return fmt.Errorf("query failed: %w", err)
+	}
+
+	dblogger.Info("LastReadMessage changed")
+	return nil
 }

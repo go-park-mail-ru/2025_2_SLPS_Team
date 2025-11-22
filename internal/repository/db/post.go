@@ -21,7 +21,7 @@ func NewDBPostStore(db *sql.DB) domain.PostStore {
 }
 
 // Возвращает пагинированный слайс постов
-func (store *DBPostStore) PostsPaginatedList(ctx context.Context, limit, offset int) ([]domain.PostWithShortUser, error) {
+func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]domain.PostWithShortUser, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
@@ -33,16 +33,33 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, limit, offset 
 	}()
 
 	query := `
-        SELECT 
-            p.id, p.author_id, p.text, p.created_at, p.updated_at,
-            u.user_id, u.first_name ||' '|| u.last_name, u.avatar_path
-        FROM posts p
-        JOIN profiles u ON p.author_id = u.user_id
-        ORDER BY p.created_at DESC
-        LIMIT $1 OFFSET $2
+SELECT 
+    p.id,
+    p.author_id,
+    p.text,
+    p.created_at,
+    p.updated_at,
+    u.user_id,
+    u.first_name || ' ' || u.last_name AS author_name,
+    u.avatar_path,
+    COALESCE(likes.count, 0) AS likes_count,
+    EXISTS (
+        SELECT 1
+        FROM post_likes pl
+        WHERE pl.post_id = p.id AND pl.user_id = $3
+    ) AS liked_by_user
+FROM posts p
+JOIN profiles u ON p.author_id = u.user_id
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS count
+    FROM post_likes
+    GROUP BY post_id
+) likes ON likes.post_id = p.id
+ORDER BY p.created_at DESC
+LIMIT $1 OFFSET $2;
     `
 
-	rows, err := store.db.QueryContext(ctx, query, limit, offset)
+	rows, err := store.db.QueryContext(ctx, query, limit, offset, userID)
 	if err != nil {
 		dblogger.Error("Failed to query posts with authors", zap.Error(err))
 		return nil, fmt.Errorf("failed to query posts: %w", err)
@@ -66,6 +83,8 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, limit, offset 
 			&author.UserID,
 			&author.FullName,
 			&author.AvatarPath,
+			&post.LikeCount,
+			&post.IsLiked,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan post with author", zap.Error(err))
@@ -97,7 +116,7 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, limit, offset 
 }
 
 // Возвращает пост по ID поста
-func (store *DBPostStore) GetPostByID(ctx context.Context, id uint) (*domain.Post, error) {
+func (store *DBPostStore) GetPostByID(ctx context.Context, userID int, id uint) (*domain.Post, error) {
 	start := time.Now()                           //засекаем время начала операции
 	dblogger := domain.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
 	dbloggerCopy := dblogger
@@ -109,19 +128,39 @@ func (store *DBPostStore) GetPostByID(ctx context.Context, id uint) (*domain.Pos
 	}()
 
 	query := `
-        SELECT p.id, p.author_id, p.text, p.created_at, p.updated_at
-        FROM posts p
-        WHERE p.id = $1
+SELECT 
+    p.id,
+    p.author_id,
+    p.text,
+    p.created_at,
+    p.updated_at,
+    COALESCE(likes.count, 0) AS likes_count,
+    EXISTS (
+        SELECT 1
+        FROM post_likes pl
+        WHERE pl.post_id = p.id AND pl.user_id = $2
+    ) AS liked_by_user
+FROM posts p
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS count
+    FROM post_likes
+    GROUP BY post_id
+) likes ON likes.post_id = p.id
+LEFT JOIN post_likes ul 
+       ON ul.post_id = p.id AND ul.user_id = $2 
+WHERE p.id = $1; 
     `
 
 	dblogger = dblogger.With(zap.String("query", query))
 	var post domain.Post
-	err := store.db.QueryRowContext(ctx, query, id).Scan(
+	err := store.db.QueryRowContext(ctx, query, id, userID).Scan(
 		&post.ID,
 		&post.AuthorID,
 		&post.Text,
 		&post.CreatedAt,
 		&post.UpdatedAt,
+		&post.LikeCount,
+		&post.IsLiked,
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -334,7 +373,7 @@ func (store *DBPostStore) DeletePost(ctx context.Context, id uint, authorID uint
 }
 
 // Получение постов пользователя с пагинацией
-func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, limit, offset int) ([]domain.Post, error) {
+func (store *DBPostStore) GetPostsByUser(ctx context.Context, seldUserID int, userID uint, limit, offset int) ([]domain.Post, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
@@ -346,14 +385,29 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, limit
 	}()
 
 	query := `
-        SELECT id, author_id, text, created_at, updated_at
-        FROM posts 
-        WHERE author_id = $1
-        ORDER BY created_at DESC
-        LIMIT $2 OFFSET $3
-    `
+SELECT 
+    p.id,
+    p.author_id,
+    p.text,
+    p.created_at,
+    p.updated_at,
+    COALESCE(likes.count, 0) AS likes_count,
+    EXISTS (
+        SELECT 1
+        FROM post_likes pl
+        WHERE pl.post_id = p.id AND pl.user_id = $2
+    ) AS liked_by_user
+FROM posts p
+LEFT JOIN (
+    SELECT post_id, COUNT(*) AS count
+    FROM post_likes
+    GROUP BY post_id
+) likes ON likes.post_id = p.id
+WHERE p.author_id = $1
+ORDER BY p.created_at DESC
+LIMIT $3 OFFSET $4;    `
 	dblogger = dblogger.With(zap.String("query", query))
-	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
+	rows, err := store.db.QueryContext(ctx, query, userID, seldUserID, limit, offset)
 
 	if err != nil {
 		dblogger.Error("Failed to query user posts", zap.Error(err))
@@ -370,6 +424,8 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, userID uint, limit
 			&post.Text,
 			&post.CreatedAt,
 			&post.UpdatedAt,
+			&post.LikeCount,
+			&post.IsLiked,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan post", zap.Error(err))
@@ -541,4 +597,37 @@ func (store *DBPostStore) updatePostPhotosTx(ctx context.Context, tx *sql.Tx, po
 	}
 	// Вставляем новые ВЛОЖЕНИЯ
 	return store.savePostPhotosTx(ctx, tx, postID, photos)
+}
+
+func (store *DBPostStore) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "chatStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start UpdateLikeOnPostByUserID")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	query := `
+WITH toggled AS (
+    DELETE FROM post_likes
+    WHERE post_id = $1 AND user_id = $2
+    RETURNING *
+)
+INSERT INTO post_likes (post_id, user_id)
+SELECT $1, $2
+WHERE NOT EXISTS (SELECT 1 FROM toggled)
+	`
+	_, err := store.db.ExecContext(ctx, query, postID, userID)
+	dblogger = dblogger.With(zap.String("query", query), zap.Int("userID", userID), zap.Int("postID", postID))
+	if err != nil {
+		dblogger.Error("Failed update like on post")
+		return fmt.Errorf("exec failed: %w", err)
+	}
+
+	dblogger.Info("like on post updated")
+	return nil
+
 }

@@ -127,7 +127,7 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 	chatIDStr := vars["id"]
 	chatID, err := strconv.Atoi(chatIDStr)
 	if err != nil {
-		http.Error(w, "invalid chatID", http.StatusBadRequest)
+		sendJSONResponse(w, "invalid chatID", http.StatusBadRequest)
 		domain.FromContext(r.Context()).Error("Failed to parse chatID", zap.Error(err))
 		return
 	}
@@ -187,4 +187,50 @@ func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		domain.FromContext(r.Context()).Info("Chats retrieved successfully", zap.Int("limit", qParams.Limit), zap.Int("page", qParams.Page))
 	}
+}
+
+type UpdateLastReadRequest struct {
+	LastReadMessageID int `json:"lastReadMessageID"`
+}
+
+// UpdateLastReadMessage обновляет ID последнего прочитанного сообщения пользователя в чате.
+//
+// @Summary Обновить последнее прочитанное сообщение
+// @Description Обновляет значение lastReadMessageID для текущего (аутентифицированного) пользователя в указанном чате.
+// Обновление произойдёт только если новое значение больше текущего, чтобы предотвратить откат счётчика непрочитанных сообщений.
+// @Tags chats
+// @Accept json
+// @Produce json
+// @Param id path int true "ID чата"
+// @Param body body UpdateLastReadRequest true "Новый ID последнего прочитанного сообщения"
+// @Success 200 {object} JSONResponse "Информация об успешном обновлении или отсутствии изменений"
+// @Failure 400 {object} JSONResponse "Некорректные параметры запроса"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Router /chats/{id}/last-read [put]
+func (api *ChatHandler) UpdateLastReadMessage(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	chatIDStr := vars["id"]
+	chatID, err := strconv.Atoi(chatIDStr)
+	if err != nil {
+		sendJSONResponse(w, "invalid chatID", http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error("Failed to parse chatID", zap.Error(err))
+		return
+	}
+
+	var req UpdateLastReadRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
+		return
+	}
+
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	err = api.chatService.UpdateLastReadMessage(r.Context(), userID, chatID, req.LastReadMessageID)
+	if err != nil {
+		domain.FromContext(r.Context()).Error("Failed update last read message", zap.Error(err))
+		return
+	}
+
+	domain.FromContext(r.Context()).Info("last read message updated")
+	sendJSONResponse(w, "last read message updated", http.StatusOK)
 }

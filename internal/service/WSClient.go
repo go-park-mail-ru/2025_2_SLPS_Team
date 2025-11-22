@@ -88,7 +88,7 @@ func (h *Hub) SendJSON(ctx context.Context, userID int, eventType string, data i
 
 	envelope := Envelope{
 		Type: eventType,
-		Data: payload,
+		Data: json.RawMessage(payload),
 	}
 
 	message, err := json.Marshal(envelope)
