@@ -27,11 +27,11 @@ func NewCommunityHandler(communityService domain.CommunityService) *CommunityHan
 // @Tags communities
 // @Accept multipart/form-data
 // @Produce json
-// @Param name formData string true "Название сообщества"
-// @Param description formData string false "Описание сообщества"
+// @Param name formData string true "Название сообщества (3-48 символов)"
+// @Param description formData string false "Описание сообщества (до 512 символов)"
 // @Param avatar formData file false "Аватар сообщества"
 // @Param cover formData file false "Обложка сообщества"
-// @Success 201 {object} JSONResponse "Сообщество успешно создано"
+// @Success 201 {object} map[string]interface{} "Сообщество успешно создано"
 // @Failure 400 {object} JSONResponse "Неверные данные запроса"
 // @Failure 401 {object} JSONResponse "Пользователь не авторизован"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -63,7 +63,7 @@ func (h *CommunityHandler) CreateCommunity(w http.ResponseWriter, r *http.Reques
 		coverFile = covers[0]
 	}
 
-	req := domain.CommunityCreateRequest{
+	req := domain.CommunityRequest{
 		Name:        name,
 		Description: description,
 	}
@@ -92,8 +92,8 @@ func (h *CommunityHandler) CreateCommunity(w http.ResponseWriter, r *http.Reques
 // @Accept multipart/form-data
 // @Produce json
 // @Param id path int true "ID сообщества"
-// @Param name formData string false "Название сообщества"
-// @Param description formData string false "Описание сообщества"
+// @Param name formData string false "Название сообщества (3-48 символов)"
+// @Param description formData string false "Описание сообщества (до 512 символов)"
 // @Param avatar formData file false "Новый аватар сообщества"
 // @Param cover formData file false "Новая обложка сообщества"
 // @Success 200 {object} JSONResponse "Сообщество успешно обновлено"
@@ -138,7 +138,7 @@ func (h *CommunityHandler) UpdateCommunity(w http.ResponseWriter, r *http.Reques
 		coverFile = covers[0]
 	}
 
-	req := domain.CommunityUpdateRequest{
+	req := domain.CommunityRequest{
 		Name:        name,
 		Description: description,
 	}
@@ -156,7 +156,6 @@ func (h *CommunityHandler) UpdateCommunity(w http.ResponseWriter, r *http.Reques
 // @Summary Удалить сообщество
 // @Description Удаляет сообщество (только создатель)
 // @Tags communities
-// @Accept json
 // @Produce json
 // @Param id path int true "ID сообщества"
 // @Success 200 {object} JSONResponse "Сообщество успешно удалено"
@@ -198,7 +197,7 @@ func (h *CommunityHandler) DeleteCommunity(w http.ResponseWriter, r *http.Reques
 // @Tags communities
 // @Produce json
 // @Param id path int true "ID сообщества"
-// @Success 200 {object} domain.CommunityWithSubscription "Информация о сообществе"
+// @Success 200 {object} domain.CommunityForViewWithSubscription "Информация о сообществе"
 // @Failure 400 {object} JSONResponse "Неверный ID сообщества"
 // @Failure 404 {object} JSONResponse "Сообщество не найдено"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -233,7 +232,7 @@ func (h *CommunityHandler) GetCommunity(w http.ResponseWriter, r *http.Request) 
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {array} domain.CommunityWithSubscription "Список сообществ"
+// @Success 200 {array} domain.ShortCommunity "Список сообществ пользователя"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
@@ -266,12 +265,12 @@ func (h *CommunityHandler) GetUserCommunities(w http.ResponseWriter, r *http.Req
 
 // GetOtherCommunities возвращает сообщества, на которые пользователь не подписан
 // @Summary Получить другие сообщества
-// @Description Возвращает список сообществ, на которые пользователь не подписан
+// @Description Возвращает список сообществ, на которые пользователь не подписан (рекомендации)
 // @Tags communities
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {array} domain.CommunityWithSubscription "Список сообществ"
+// @Success 200 {array} domain.ShortCommunity "Список рекомендуемых сообществ"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
@@ -376,38 +375,6 @@ func (h *CommunityHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	sendJSONResponse(w, "Unsubscribed successfully", http.StatusOK)
 }
 
-// CountSubscribers возвращает количество подписчиков сообщества
-// @Summary Получить количество подписчиков
-// @Description Возвращает количество подписчиков указанного сообщества
-// @Tags communities
-// @Produce json
-// @Param id path int true "ID сообщества"
-// @Success 200 {object} map[string]int "Количество подписчиков"
-// @Failure 400 {object} JSONResponse "Неверный ID сообщества"
-// @Failure 404 {object} JSONResponse "Сообщество не найдено"
-// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
-// @Security ApiKeyAuth
-// @Router /communities/{id}/subscribers/count [get]
-func (h *CommunityHandler) CountSubscribers(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	communityID, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		sendJSONResponse(w, "Invalid community ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", vars["id"]))
-		return
-	}
-
-	count, err := h.communityService.CountSubscribers(r.Context(), communityID)
-	if err != nil {
-		sendJSONError(w, err)
-		return
-	}
-
-	if err := sendJSONData(r.Context(), w, map[string]int{"subscribersCount": count}); err != nil {
-		return
-	}
-}
-
 // GetCommunityPosts возвращает посты сообщества
 // @Summary Получить посты сообщества
 // @Description Возвращает посты указанного сообщества с пагинацией
@@ -416,7 +383,7 @@ func (h *CommunityHandler) CountSubscribers(w http.ResponseWriter, r *http.Reque
 // @Param id path int true "ID сообщества"
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество постов на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {array} domain.Post "Список постов"
+// @Success 200 {array} domain.Post "Список постов сообщества"
 // @Failure 400 {object} JSONResponse "Неверные параметры запроса"
 // @Failure 404 {object} JSONResponse "Сообщество не найдено"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
