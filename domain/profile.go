@@ -38,7 +38,7 @@ type ElasticProfileStore interface {
 	CreateProfile(ctx context.Context, fullName string, userID int) error
 	UpdateProfile(ctx context.Context, fullName string, userID int) error
 	DeleteProfile(ctx context.Context, userID int) error
-	SearchProfileIDsByFullName(ctx context.Context, fullName string, limit int, offset int) ([]int, error)
+	SearchProfileIDsByFullName(ctx context.Context, fullName string) ([]int, error)
 }
 
 type ProfileStore interface {

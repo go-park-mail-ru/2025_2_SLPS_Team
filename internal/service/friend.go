@@ -305,7 +305,7 @@ func (s *FriendService) isValidCountType(countType domain.FriendshipCountType) b
 func (s *FriendService) SearchShortProfilesByFullNameAndRelationType(ctx context.Context, userID int, params domain.PaginateQueryParams, fullName string, fType domain.FriendshipCountType) ([]domain.ShortProfile, error) {
 
 	offset, limit := domain.ValidatePaginationParams(params)
-	userIDs, err := s.elasticProfileStore.SearchProfileIDsByFullName(ctx, fullName, limit, offset)
+	userIDs, err := s.elasticProfileStore.SearchProfileIDsByFullName(ctx, fullName)
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
 		return nil, domain.ErrDB
