@@ -389,7 +389,7 @@ func (s *CommunityService) CountSubscribers(ctx context.Context, communityID int
 }
 
 func (s *CommunityService) GetCommunityPosts(ctx context.Context, userID int, communityID int, params domain.PaginateQueryParams) ([]domain.Post, error) {
-	offset, limit := domain.ValidatePaginationParams(params)
+	//offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting community posts", zap.Int("communityID", communityID))
 
 	// Проверяем существование сообщества
