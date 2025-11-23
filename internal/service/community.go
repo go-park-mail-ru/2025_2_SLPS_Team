@@ -24,7 +24,7 @@ func NewCommunityService(communityStore domain.CommunityStore, postStore domain.
 	}
 }
 
-func (s *CommunityService) CreateCommunity(ctx context.Context, userID int, req domain.CommunityCreateRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) (*domain.Community, error) {
+func (s *CommunityService) CreateCommunity(ctx context.Context, userID int, req domain.CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) (*domain.Community, error) {
 	// Валидация
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
@@ -88,7 +88,7 @@ func (s *CommunityService) CreateCommunity(ctx context.Context, userID int, req 
 	return community, nil
 }
 
-func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int, userID int, req domain.CommunityUpdateRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) error {
+func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int, userID int, req domain.CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) error {
 	// Валидация
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
@@ -226,7 +226,7 @@ func (s *CommunityService) DeleteCommunity(ctx context.Context, communityID int,
 	return nil
 }
 
-func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communityID int) (*domain.CommunityWithSubscription, error) {
+func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communityID int) (*domain.CommunityForViewWithSubscription, error) {
 	domain.Info(ctx, "Getting community", zap.Int("communityID", communityID))
 
 	community, err := s.communityStore.GetCommunityByID(ctx, communityID)
@@ -239,13 +239,6 @@ func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communi
 		return nil, domain.ErrDB
 	}
 
-	// Получаем количество подписчиков
-	subscribersCount, err := s.communityStore.CountSubscribers(ctx, communityID)
-	if err != nil {
-		domain.Error(ctx, "Failed to count subscribers", err)
-		return nil, domain.ErrDB
-	}
-
 	// Проверяем подписку пользователя
 	isSubscribed, err := s.communityStore.IsSubscribed(ctx, communityID, userID)
 	if err != nil {
@@ -253,45 +246,37 @@ func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communi
 		return nil, domain.ErrDB
 	}
 
-	result := &domain.CommunityWithSubscription{
-		Community:        *community,
-		SubscribersCount: subscribersCount,
-		IsSubscribed:     isSubscribed,
+	// Преобразуем в структуру без CreatorID
+	result := &domain.CommunityForViewWithSubscription{
+		CommunityForView: domain.CommunityForView{
+			ID:               community.ID,
+			Name:             community.Name,
+			Description:      community.Description,
+			AvatarPath:       community.AvatarPath,
+			CoverPath:        community.CoverPath,
+			CreatedAt:        community.CreatedAt,
+			SubscribersCount: community.SubscribersCount,
+		},
+		IsSubscribed: isSubscribed,
 	}
 
 	return result, nil
 }
 
-func (s *CommunityService) GetUserCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.CommunityWithSubscription, error) {
+func (s *CommunityService) GetUserCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
-	domain.Info(ctx, "Getting user communities", zap.Int("userID", userID))
 
+	domain.Info(ctx, "Getting user communities", zap.Int("userID", userID))
 	communities, err := s.communityStore.GetUserCommunities(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user communities", err)
 		return nil, domain.ErrDB
 	}
 
-	// Обогащаем данные о подписках
-	result := make([]domain.CommunityWithSubscription, len(communities))
-	for i, community := range communities {
-		subscribersCount, err := s.communityStore.CountSubscribers(ctx, community.ID)
-		if err != nil {
-			domain.Error(ctx, "Failed to count subscribers", err)
-			return nil, domain.ErrDB
-		}
-
-		result[i] = domain.CommunityWithSubscription{
-			Community:        community,
-			SubscribersCount: subscribersCount,
-			IsSubscribed:     true, // Это сообщества пользователя, поэтому он подписан
-		}
-	}
-
-	return result, nil
+	return communities, nil
 }
 
-func (s *CommunityService) GetOtherCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.CommunityWithSubscription, error) {
+func (s *CommunityService) GetOtherCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting other communities", zap.Int("userID", userID))
 
@@ -301,29 +286,7 @@ func (s *CommunityService) GetOtherCommunities(ctx context.Context, userID int, 
 		return nil, domain.ErrDB
 	}
 
-	// Обогащаем данные о подписках
-	result := make([]domain.CommunityWithSubscription, len(communities))
-	for i, community := range communities {
-		subscribersCount, err := s.communityStore.CountSubscribers(ctx, community.ID)
-		if err != nil {
-			domain.Error(ctx, "Failed to count subscribers", err)
-			return nil, domain.ErrDB
-		}
-
-		isSubscribed, err := s.communityStore.IsSubscribed(ctx, community.ID, userID)
-		if err != nil {
-			domain.Error(ctx, "Failed to check subscription", err)
-			return nil, domain.ErrDB
-		}
-
-		result[i] = domain.CommunityWithSubscription{
-			Community:        community,
-			SubscribersCount: subscribersCount,
-			IsSubscribed:     isSubscribed,
-		}
-	}
-
-	return result, nil
+	return communities, nil
 }
 
 func (s *CommunityService) Subscribe(ctx context.Context, communityID int, userID int) error {
@@ -374,18 +337,6 @@ func (s *CommunityService) Unsubscribe(ctx context.Context, communityID int, use
 
 	domain.Info(ctx, "Unsubscribed successfully")
 	return nil
-}
-
-func (s *CommunityService) CountSubscribers(ctx context.Context, communityID int) (int, error) {
-	domain.Info(ctx, "Counting subscribers", zap.Int("communityID", communityID))
-
-	count, err := s.communityStore.CountSubscribers(ctx, communityID)
-	if err != nil {
-		domain.Error(ctx, "Failed to count subscribers", err)
-		return 0, domain.ErrDB
-	}
-
-	return count, nil
 }
 
 func (s *CommunityService) GetCommunityPosts(ctx context.Context, userID int, communityID int, params domain.PaginateQueryParams) ([]domain.Post, error) {
