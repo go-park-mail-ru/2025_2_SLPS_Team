@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"project/domain"
 	"strconv"
 
 	"github.com/elastic/go-elasticsearch/v8"
@@ -18,7 +19,7 @@ type ElasticProfileStore struct {
 	index  string
 }
 
-func NewElasticProfileStore(client *elasticsearch.Client, index string) *ElasticProfileStore {
+func NewElasticProfileStore(client *elasticsearch.Client, index string) domain.ElasticProfileStore {
 	return &ElasticProfileStore{
 		client: client,
 		index:  index,
@@ -148,6 +149,7 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 		e.client.Search.WithIndex(e.index),
 		e.client.Search.WithBody(bytes.NewReader(body)),
 		e.client.Search.WithTrackTotalHits(true),
+		e.client.Search.WithSize(500),
 	)
 	if err != nil {
 		return nil, err
@@ -162,7 +164,9 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 		} `json:"hits"`
 	}
 
-	_ = json.NewDecoder(res.Body).Decode(&r)
+	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		return nil, err
+	}
 
 	idsMap := make(map[int]struct{})
 	for _, hit := range r.Hits.Hits {
