@@ -1,7 +1,7 @@
 FROM elastic/elasticsearch:8.14.0
 
 # Устанавливаем ICU plugin
-# RUN elasticsearch-plugin install --batch analysis-icu
-# RUN elasticsearch-plugin install analysis-phonetic
+RUN elasticsearch-plugin install --batch analysis-icu
+RUN elasticsearch-plugin install analysis-phonetic
 COPY /elastic/synonyms.txt /usr/share/elasticsearch/config/elastic/synonyms.txt
 
