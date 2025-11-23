@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"project/domain"
 
 	"go.uber.org/zap"
@@ -11,13 +12,15 @@ import (
 type FriendService struct {
 	friendStore         domain.FriendStore
 	userStore           domain.UserStore
+	profileStore        domain.ProfileStore
 	elasticProfileStore domain.ElasticProfileStore
 }
 
-func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore, elasticProfileStore domain.ElasticProfileStore) domain.FriendService {
+func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore, elasticProfileStore domain.ElasticProfileStore, profileStore domain.ProfileStore) domain.FriendService {
 	return &FriendService{
 		friendStore:         friendStore,
 		userStore:           userStore,
+		profileStore:        profileStore,
 		elasticProfileStore: elasticProfileStore,
 	}
 }
@@ -305,17 +308,28 @@ func (s *FriendService) isValidCountType(countType domain.FriendshipCountType) b
 func (s *FriendService) SearchShortProfilesByFullNameAndRelationType(ctx context.Context, userID int, params domain.PaginateQueryParams, fullName string, fType domain.FriendshipCountType) ([]domain.ShortProfile, error) {
 
 	offset, limit := domain.ValidatePaginationParams(params)
-	userIDs, err := s.elasticProfileStore.SearchProfileIDsByFullName(ctx, fullName)
+	isTerms := true
+	if fType == domain.CountNotFriends {
+		isTerms = false
+	}
+	log.Println(isTerms)
+	filterIDs, err := s.friendStore.GetUserIDsByFriendType(ctx, userID, fType)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail find user relations by type", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+	log.Println(filterIDs)
+	foundIDs, err := s.elasticProfileStore.SearchUserIDsByFullNameWithFilter(ctx, fullName, filterIDs, isTerms, limit, offset)
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
 		return nil, domain.ErrDB
 	}
-
-	profile, err := s.friendStore.GetShortProfilesBySearchIDSAndFriendType(ctx, userID, fType, userIDs, limit, offset)
+	log.Println(foundIDs)
+	profiles, err := s.profileStore.GetShortProfileByUserIDs(ctx, foundIDs)
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail get short Profiles by user IDs", zap.Error(err))
 		return nil, domain.ErrDB
 	}
 
-	return profile, nil
+	return profiles, nil
 }

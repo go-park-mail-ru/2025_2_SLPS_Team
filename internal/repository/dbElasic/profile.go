@@ -115,11 +115,12 @@ func (e *ElasticProfileStore) DeleteProfile(ctx context.Context, userID int) err
 	return nil
 }
 
-func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fullName string) ([]int, error) {
+func (e *ElasticProfileStore) SearchUserIDsByFullNameWithFilter(ctx context.Context, fullName string, filterIDs []int, isTerms bool, limit, offset int) ([]int, error) {
 	qEn := unidecode.Unidecode(fullName)
-
 	queries := []string{fullName, qEn}
-
+	if isTerms && len(filterIDs) == 0 {
+		return []int{}, nil
+	}
 	shouldClauses := []map[string]interface{}{}
 	for _, q := range queries {
 		shouldClauses = append(shouldClauses,
@@ -134,12 +135,26 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 		)
 	}
 
+	boolQuery := map[string]interface{}{
+		"should":               shouldClauses,
+		"minimum_should_match": 1,
+	}
+
+	if len(filterIDs) > 0 {
+		if isTerms {
+			boolQuery["filter"] = []map[string]interface{}{
+				{"terms": map[string]interface{}{"user_id": filterIDs}},
+			}
+		} else {
+			boolQuery["must_not"] = []map[string]interface{}{
+				{"terms": map[string]interface{}{"user_id": filterIDs}},
+			}
+		}
+	}
+
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
-			"bool": map[string]interface{}{
-				"should":               shouldClauses,
-				"minimum_should_match": 1,
-			},
+			"bool": boolQuery,
 		},
 	}
 
@@ -149,7 +164,8 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 		e.client.Search.WithIndex(e.index),
 		e.client.Search.WithBody(bytes.NewReader(body)),
 		e.client.Search.WithTrackTotalHits(true),
-		e.client.Search.WithSize(500),
+		e.client.Search.WithSize(limit),
+		e.client.Search.WithFrom(offset),
 	)
 	if err != nil {
 		return nil, err
@@ -168,14 +184,9 @@ func (e *ElasticProfileStore) SearchProfileIDsByFullName(ctx context.Context, fu
 		return nil, err
 	}
 
-	idsMap := make(map[int]struct{})
+	ids := make([]int, 0, len(r.Hits.Hits))
 	for _, hit := range r.Hits.Hits {
-		idsMap[hit.Source.UserID] = struct{}{}
-	}
-
-	ids := make([]int, 0, len(idsMap))
-	for id := range idsMap {
-		ids = append(ids, id)
+		ids = append(ids, hit.Source.UserID)
 	}
 
 	return ids, nil

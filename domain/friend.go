@@ -89,7 +89,7 @@ type FriendStore interface {
 
 	GetFriendshipRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
 	GetSentRequests(ctx context.Context, userID, limit, offset int) ([]ShortProfile, error)
-	GetShortProfilesBySearchIDSAndFriendType(ctx context.Context, userID int, fType FriendshipCountType, targetIDs []int, limit, offset int) ([]ShortProfile, error)
+	GetUserIDsByFriendType(ctx context.Context, userID int, fType FriendshipCountType) ([]int, error)
 	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int) (bool, error)
 	GetFriendshipStatus(ctx context.Context, userID1, userID2 int) (FriendshipStatus, error)

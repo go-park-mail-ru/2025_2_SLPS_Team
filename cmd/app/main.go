@@ -131,7 +131,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	middleware := handler.NewMiddlewareHandler(config)
 	posts := handler.NewPostsHandler(postService)
 	wshandler := handler.NewWSHandler(wsHub)
-	friendService := service.NewFriendService(friendStore, userStore, elasticProfileStore)
+	friendService := service.NewFriendService(friendStore, userStore, elasticProfileStore, profileStore)
 	friend := handler.NewFriendHandler(friendService)
 
 	r := mux.NewRouter()

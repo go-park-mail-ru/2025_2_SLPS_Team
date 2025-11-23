@@ -97,7 +97,7 @@ func (store *DBProfileStore) UpdateHeader(ctx context.Context, headerPath string
 	return err
 }
 
-func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int) (map[int]domain.ShortProfile, error) {
+func (store *DBProfileStore) GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int) (map[int]domain.ShortProfile, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "profileStore")
 	dbloggerCopy := dblogger
@@ -141,6 +141,52 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 	}
 
 	return usersMap, nil
+}
+
+func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int) ([]domain.ShortProfile, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "profileStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetShortProfileByUserIDs")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	if len(userIDs) == 0 {
+		return nil, nil
+	}
+
+	query := `SELECT user_id, first_name || ' ' || last_name as full_name , avatar_path, dob FROM profiles WHERE user_id = ANY($1)`
+
+	dblogger = dblogger.With(zap.Ints("userIDs", userIDs), zap.String("query", query))
+
+	rows, err := store.db.Query(query, pq.Array(userIDs))
+	if err != nil {
+		dblogger.Error("Failed to get profiles by user ids", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var profiles []domain.ShortProfile
+
+	for rows.Next() {
+		var u domain.ShortProfile
+		err := rows.Scan(&u.UserID, &u.FullName, &u.AvatarPath, &u.Dob)
+		if err != nil {
+			dblogger.Error("Failed to read profile rows", zap.Error(err))
+			return nil, err
+		}
+		profiles = append(profiles, u)
+	}
+
+	if err = rows.Err(); err != nil {
+		dblogger.Error("Failed to read profile rows", zap.Error(err))
+		return nil, err
+	}
+
+	return profiles, nil
 }
 
 func (store *DBProfileStore) GetProfileByUserID(ctx context.Context, userID int) (domain.Profile, error) {
