@@ -145,9 +145,18 @@ func (store *DBCommunityStore) GetCommunityByID(ctx context.Context, id int) (*d
 	}()
 
 	query := `
-		SELECT id, name, description, creator_id, avatar_path, cover_path, created_at, updated_at
-		FROM communities 
-		WHERE id = $1
+		SELECT 
+			c.id, 
+			c.name, 
+			c.description,
+			c.creator_id, 
+			c.avatar_path, 
+			c.cover_path, 
+			c.created_at,
+			c.updated_at,
+			(SELECT COUNT(*) FROM community_subscriptions WHERE community_id = c.id) as subscribers_count
+		FROM communities c
+		WHERE c.id = $1
 	`
 
 	dblogger = dblogger.With(zap.String("query", query))
@@ -161,6 +170,7 @@ func (store *DBCommunityStore) GetCommunityByID(ctx context.Context, id int) (*d
 		&community.CoverPath,
 		&community.CreatedAt,
 		&community.UpdatedAt,
+		&community.SubscribersCount,
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -172,11 +182,11 @@ func (store *DBCommunityStore) GetCommunityByID(ctx context.Context, id int) (*d
 		return nil, fmt.Errorf("failed to get community: %w", err)
 	}
 
-	dblogger.Info("Community retrieved successfully")
+	dblogger.Info("Community retrieved successfully", zap.Int("subscribersCount", community.SubscribersCount))
 	return &community, nil
 }
 
-func (store *DBCommunityStore) GetUserCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.Community, error) {
+func (store *DBCommunityStore) GetUserCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.ShortCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
@@ -188,7 +198,12 @@ func (store *DBCommunityStore) GetUserCommunities(ctx context.Context, userID in
 	}()
 
 	query := `
-		SELECT c.id, c.name, c.description, c.creator_id, c.avatar_path, c.cover_path, c.created_at, c.updated_at
+		SELECT 
+			c.id, 
+			c.name, 
+			c.description, 
+			c.avatar_path,
+			(SELECT COUNT(*) FROM community_subscriptions cs2 WHERE cs2.community_id = c.id) as subscribers_count
 		FROM communities c
 		INNER JOIN community_subscriptions cs ON c.id = cs.community_id
 		WHERE cs.user_id = $1
@@ -204,18 +219,15 @@ func (store *DBCommunityStore) GetUserCommunities(ctx context.Context, userID in
 	}
 	defer rows.Close()
 
-	var communities []domain.Community
+	communities := []domain.ShortCommunity{}
 	for rows.Next() {
-		var community domain.Community
+		var community domain.ShortCommunity
 		err := rows.Scan(
 			&community.ID,
 			&community.Name,
 			&community.Description,
-			&community.CreatorID,
 			&community.AvatarPath,
-			&community.CoverPath,
-			&community.CreatedAt,
-			&community.UpdatedAt,
+			&community.SubscribersCount,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan community", zap.Error(err))
@@ -228,7 +240,7 @@ func (store *DBCommunityStore) GetUserCommunities(ctx context.Context, userID in
 	return communities, nil
 }
 
-func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.Community, error) {
+func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.ShortCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
@@ -240,11 +252,20 @@ func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID i
 	}()
 
 	query := `
-		SELECT id, name, description, creator_id, avatar_path, cover_path, created_at, updated_at
+		SELECT 
+			c.id, 
+			c.name, 
+			c.description, 
+			c.avatar_path,
+			COUNT(cs_all.community_id) as subscribers_count
 		FROM communities c
+		LEFT JOIN community_subscriptions cs_all ON c.id = cs_all.community_id
 		WHERE c.id NOT IN (
-			SELECT community_id FROM community_subscriptions WHERE user_id = $1
+			SELECT community_id 
+			FROM community_subscriptions 
+			WHERE user_id = $1
 		)
+		GROUP BY c.id, c.name, c.description, c.avatar_path
 		ORDER BY c.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -257,18 +278,15 @@ func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID i
 	}
 	defer rows.Close()
 
-	var communities []domain.Community
+	communities := []domain.ShortCommunity{}
 	for rows.Next() {
-		var community domain.Community
+		var community domain.ShortCommunity
 		err := rows.Scan(
 			&community.ID,
 			&community.Name,
 			&community.Description,
-			&community.CreatorID,
 			&community.AvatarPath,
-			&community.CoverPath,
-			&community.CreatedAt,
-			&community.UpdatedAt,
+			&community.SubscribersCount,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan community", zap.Error(err))
@@ -365,28 +383,4 @@ func (store *DBCommunityStore) IsSubscribed(ctx context.Context, communityID int
 
 	dblogger.Info("Subscription check completed", zap.Bool("isSubscribed", exists))
 	return exists, nil
-}
-
-func (store *DBCommunityStore) CountSubscribers(ctx context.Context, communityID int) (int, error) {
-	start := time.Now()
-	dblogger := domain.DBLogger(ctx, "communityStore")
-	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start CountSubscribers", zap.Int("communityID", communityID))
-
-	defer func() {
-		duration := time.Since(start)
-		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
-	}()
-
-	query := `SELECT COUNT(*) FROM community_subscriptions WHERE community_id = $1`
-	dblogger = dblogger.With(zap.String("query", query))
-	var count int
-	err := store.db.QueryRowContext(ctx, query, communityID).Scan(&count)
-	if err != nil {
-		dblogger.Error("Failed to count subscribers", zap.Error(err))
-		return 0, fmt.Errorf("failed to count subscribers: %w", err)
-	}
-
-	dblogger.Info("Subscribers counted successfully", zap.Int("count", count))
-	return count, nil
 }
