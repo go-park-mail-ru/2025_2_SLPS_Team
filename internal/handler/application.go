@@ -2,14 +2,15 @@ package handler
 
 import (
 	"encoding/json"
-	"github.com/google/uuid"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
-	"go.uber.org/zap"
 	"net/http"
 	"project/domain"
 	"strconv"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
+	"github.com/gorilla/schema"
+	"go.uber.org/zap"
 )
 
 type ApplicationHandler struct {
