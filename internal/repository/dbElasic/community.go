@@ -114,14 +114,38 @@ func (e *ElasticCommunityStore) DeleteCommunity(ctx context.Context, communityID
 	return nil
 }
 
-func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, name string) ([]int, error) {
+func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, name string, filterIDs []int, isTerms bool, limit, offset int) ([]int, error) {
+	if isTerms && len(filterIDs) == 0 {
+		return []int{}, nil
+	}
+
+	multiMatch := map[string]interface{}{
+		"multi_match": map[string]interface{}{
+			"query":     name,
+			"fields":    []string{"community_name", "community_name_translit"},
+			"fuzziness": "AUTO",
+		},
+	}
+
+	boolQuery := map[string]interface{}{
+		"must": []interface{}{multiMatch},
+	}
+
+	if len(filterIDs) > 0 {
+		if isTerms {
+			boolQuery["filter"] = []map[string]interface{}{
+				{"terms": map[string]interface{}{"community_id": filterIDs}},
+			}
+		} else {
+			boolQuery["must_not"] = []map[string]interface{}{
+				{"terms": map[string]interface{}{"community_id": filterIDs}},
+			}
+		}
+	}
+
 	query := map[string]interface{}{
 		"query": map[string]interface{}{
-			"multi_match": map[string]interface{}{
-				"query":     name,
-				"fields":    []string{"community_name", "community_name_translit"},
-				"fuzziness": "AUTO",
-			},
+			"bool": boolQuery,
 		},
 	}
 
@@ -135,7 +159,8 @@ func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, na
 		e.client.Search.WithIndex(e.index),
 		e.client.Search.WithBody(bytes.NewReader(body)),
 		e.client.Search.WithTrackTotalHits(true),
-		e.client.Search.WithSize(500),
+		e.client.Search.WithSize(limit),
+		e.client.Search.WithFrom(offset),
 	)
 	if err != nil {
 		return nil, err
@@ -156,14 +181,9 @@ func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, na
 		return nil, err
 	}
 
-	idsMap := make(map[int]struct{})
+	ids := make([]int, 0, len(r.Hits.Hits))
 	for _, hit := range r.Hits.Hits {
-		idsMap[hit.Source.CommunityID] = struct{}{}
-	}
-
-	ids := make([]int, 0, len(idsMap))
-	for id := range idsMap {
-		ids = append(ids, id)
+		ids = append(ids, hit.Source.CommunityID)
 	}
 
 	return ids, nil
