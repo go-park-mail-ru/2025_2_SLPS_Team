@@ -7,17 +7,25 @@ import (
 )
 
 type Post struct {
-	ID        uint      `json:"id"`         //в БД табличка posts называется
-	AuthorID  uint      `json:"authorID"`   //в БД табличка posts называется
-	Text      string    `json:"text"`       //в БД табличка posts называется
-	CreatedAt time.Time `json:"created_at"` //в БД табличка posts называется
-	UpdatedAt time.Time `json:"updated_at"` //в БД табличка posts называется
+	ID          uint      `json:"id"`       //в БД табличка posts называется
+	AuthorID    uint      `json:"authorID"` //в БД табличка posts называется
+	CommunityID *int      `json:"communityID,omitempty"`
+	Text        string    `json:"text"`       //в БД табличка posts называется
+	CreatedAt   time.Time `json:"created_at"` //в БД табличка posts называется
+	UpdatedAt   time.Time `json:"updated_at"` //в БД табличка posts называется
 
 	Attachments []string `json:"attachments"` //в БД табличка post_attachments называется
 	PhotosPath  []string `json:"photos"`      //в БД табличка post_photos называется
 	LikeCount   int      `json:"likeCount"`
 	IsLiked     bool     `json:"isLiked"`
 }
+
+type PostWithAuthor struct {
+	Post      Post         `json:"post"`
+	Author    ShortProfile `json:"author"`
+	Community *Community   `json:"community,omitempty"` // Информация о сообществе для постов в сообществах
+}
+
 type PostWithShortUser struct {
 	Post   Post         `json:"post"`
 	Author ShortProfile `json:"author"`
@@ -26,6 +34,7 @@ type PostWithShortUser struct {
 // PostCreateRequest - запрос на создание поста для валидации
 type PostCreateRequest struct {
 	Text        string   `json:"text" valid:"optional,length(0|4096)"`
+	CommunityID *int     `json:"communityID" valid:"optional"` // Новое поле
 	Attachments []string `json:"attachments" valid:"optional"`
 	Photos      []string `json:"photos" valid:"optional"`
 }
@@ -37,29 +46,64 @@ type PostUpdateRequest struct {
 	Photos      []string `json:"photos" valid:"optional"`
 }
 
+// PostFeedItem - элемент ленты, который может быть от пользователя или сообщества
+type PostFeedItem struct {
+	Post        Post          `json:"post"`
+	Author      *ShortProfile `json:"author,omitempty"`    // Для постов пользователей
+	Community   *Community    `json:"community,omitempty"` // Для постов сообществ
+	IsCommunity bool          `json:"isCommunity"`         // Флаг, указывающий тип поста
+}
+
+// PostService интерфейс для работы с постами
 type PostService interface {
-	PostsPaginate(ctx context.Context, userID int, params PaginateQueryParams) ([]PostWithShortUser, error)
+	// Получение постов с пагинацией (включая посты из сообществ)
+	PostsPaginate(ctx context.Context, userID int, params PaginateQueryParams) ([]PostFeedItem, error)
+
+	// Получение поста по ID
 	GetPost(ctx context.Context, userID int, postID uint) (*Post, error)
-	CreatePost(ctx context.Context, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*Post, error)
+
+	// Создание поста (может быть как от пользователя, так и от сообщества)
+	CreatePost(ctx context.Context, userID int, text string, communityID *int, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*Post, error)
+
+	// Обновление поста
 	UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error
+
+	// Удаление поста
 	DeletePost(ctx context.Context, postID uint, userID int) error
+
+	// Получение постов пользователя
 	GetUserPosts(ctx context.Context, selfUserID int, userID uint, params PaginateQueryParams) ([]Post, error)
+
+	// Получение постов сообщества
+	GetCommunityPosts(ctx context.Context, userID int, communityID int, params PaginateQueryParams) ([]Post, error)
+
+	// Лайк/дизлайк поста
 	UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error
 }
 
+// PostStore интерфейс хранилища постов
 type PostStore interface {
-	// Получение постов с пагинацией
-	PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]PostWithShortUser, error)
+	// Получение постов с пагинацией (включая посты из сообществ, на которые подписан пользователь)
+	PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]PostFeedItem, error)
+
 	// Получение поста по ID
 	GetPostByID(ctx context.Context, userID int, id uint) (*Post, error)
+
 	// Создание поста
 	CreatePost(ctx context.Context, post *Post) error
+
 	// Обновление поста
 	UpdatePost(ctx context.Context, post *Post) error
+
 	// Удаление поста
 	DeletePost(ctx context.Context, id uint, authorID uint) error
+
 	// Получение постов пользователя
 	GetPostsByUser(ctx context.Context, selfUserID int, userID uint, limit, offset int) ([]Post, error)
 
+	// Получение постов сообщества
+	GetCommunityPosts(ctx context.Context, userID int, communityID int, limit, offset int) ([]Post, error)
+
+	// Лайк/дизлайк поста
 	UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error
 }

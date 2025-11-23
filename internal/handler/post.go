@@ -106,6 +106,7 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param text formData string false "Текст поста"
+// @Param communityID formData int false "ID сообщества (если пост в сообществе)"
 // @Param attachments formData []file false "Вложения" collectionFormat(multi)
 // @Param photos formData []file false "Фотографии" collectionFormat(multi)
 // @Success 201 {object} JSONResponse
@@ -123,6 +124,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	text := r.FormValue("text")
+	communityIDStr := r.FormValue("communityID")
 
 	userID, ok := r.Context().Value(domain.UserIDKey).(int)
 	if !ok {
@@ -139,14 +141,31 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		photoFiles = photos
 	}
 
-	post, err := h.postService.CreatePost(r.Context(), userID, text, attachmentFiles, photoFiles)
+	var communityID *int
+	if communityIDStr != "" {
+		id, err := strconv.Atoi(communityIDStr)
+		if err != nil {
+			sendJSONResponse(w, "Invalid community ID", http.StatusBadRequest)
+			domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", communityIDStr))
+			return
+		}
+		communityID = &id
+	}
+
+	post, err := h.postService.CreatePost(r.Context(), userID, text, communityID, attachmentFiles, photoFiles)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, "Post created successfully", http.StatusCreated)
-	domain.Info(r.Context(), "Post created successfully", zap.Uint("postID", post.ID))
+	response := map[string]interface{}{
+		"message": "Post created successfully",
+		"post":    post,
+	}
+	
+	if err := sendJSONData(r.Context(), w, response); err != nil {
+		return
+	}
 }
 
 // UpdatePost - обновление поста с файлами

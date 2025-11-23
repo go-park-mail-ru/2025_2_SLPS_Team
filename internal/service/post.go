@@ -11,19 +11,21 @@ import (
 )
 
 type PostService struct {
-	postStore domain.PostStore
-	userStore domain.UserStore
+	postStore      domain.PostStore
+	userStore      domain.UserStore
+	communityStore domain.CommunityStore 
 }
 
-func NewPostService(postStore domain.PostStore, userStore domain.UserStore) domain.PostService {
+func NewPostService(postStore domain.PostStore, userStore domain.UserStore, communityStore domain.CommunityStore) domain.PostService {
 	return &PostService{
-		postStore: postStore,
-		userStore: userStore,
+		postStore:      postStore,
+		userStore:      userStore,
+		communityStore: communityStore,
 	}
 }
 
 // PostsPaginate возвращает посты с пагинацией
-func (s *PostService) PostsPaginate(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.PostWithShortUser, error) {
+func (s *PostService) PostsPaginate(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.PostFeedItem, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting paginated posts", zap.Int("offset", offset), zap.Int("limit", limit))
 
@@ -54,7 +56,7 @@ func (s *PostService) GetPost(ctx context.Context, userID int, postID uint) (*do
 }
 
 // CreatePost создает новый пост
-func (s *PostService) CreatePost(ctx context.Context, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
+func (s *PostService) CreatePost(ctx context.Context, userID int, text string, communityID *int, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
 
 	// Создаем структуру для валидации
 	createRequest := domain.PostCreateRequest{
@@ -95,9 +97,27 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, a
 		createRequest.Photos = photoPaths
 	}
 
+	// Если указан communityID, проверяем права
+	if communityID != nil {
+		community, err := s.communityStore.GetCommunityByID(ctx, *communityID)
+		if err != nil {
+			domain.Warn(ctx, "Community not found", zap.Int("communityID", *communityID))
+			return nil, domain.ErrNotFound
+		}
+
+		// Проверяем, является ли пользователь создателем сообщества
+		if community.CreatorID != userID {
+			domain.Warn(ctx, "User is not community creator",
+				zap.Int("userID", userID),
+				zap.Int("creatorID", community.CreatorID))
+			return nil, domain.ErrAccessDenied
+		}
+	}
+
 	// Создаем объект поста
 	post := &domain.Post{
 		AuthorID:    uint(userID),
+		CommunityID: communityID,
 		Text:        createRequest.Text,
 		Attachments: createRequest.Attachments,
 		PhotosPath:  createRequest.Photos,
@@ -322,6 +342,31 @@ func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int, userID u
 	posts, err := s.postStore.GetPostsByUser(ctx, selfUserID, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user posts", err, zap.Uint("userID", userID))
+		return nil, domain.ErrDB
+	}
+
+	return posts, nil
+}
+
+// Получение постов сообщества
+func (s *PostService) GetCommunityPosts(ctx context.Context, userID int, communityID int, params domain.PaginateQueryParams) ([]domain.Post, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
+	domain.Info(ctx, "Getting community posts", zap.Int("communityID", communityID))
+
+	// Проверяем существование сообщества
+	_, err := s.communityStore.GetCommunityByID(ctx, communityID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
+			return nil, domain.ErrNotFound
+		}
+		domain.Error(ctx, "Failed to get community", err)
+		return nil, domain.ErrDB
+	}
+
+	posts, err := s.postStore.GetCommunityPosts(ctx, userID, communityID, limit, offset)
+	if err != nil {
+		domain.Error(ctx, "Failed to get community posts", err)
 		return nil, domain.ErrDB
 	}
 
