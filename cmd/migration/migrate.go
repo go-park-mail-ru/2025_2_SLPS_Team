@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -38,100 +39,63 @@ func NewElastic(config *config.Config) *elasticsearch.Client {
 	return es
 }
 
-func CreateProfileIndex(indexName string, config *config.Config) error {
+func LoadIndexConfigs(path string) (map[string][]byte, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
 
-	es := NewElastic(config)
-	indexConfig := []byte(`
-{
-  "settings": {
-    "analysis": {
-      "filter": {
-        "russian_morphology": { "type": "snowball", "language": "russian" },
-        "english_morphology": { "type": "snowball", "language": "english" },
-        "edge_ngram_filter": { "type": "edge_ngram", "min_gram": 2, "max_gram": 20 },
-        "name_phonetic": { "type": "phonetic", "encoder": "metaphone", "languageset": ["russian","english"], "replace": false },
-        "name_synonyms": {
-          "type": "synonym",
-          "synonyms_path": "elastic/synonyms.txt"
-        }
-      },
-      "analyzer": {
-        "name_index_analyzer": {
-          "tokenizer": "standard",
-          "filter": [
-            "lowercase",
-            "asciifolding",
-            "russian_morphology",
-            "english_morphology",
-            "name_synonyms",
-            "name_phonetic",
-            "edge_ngram_filter"
-          ]
-        },
-        "name_search_analyzer": {
-          "tokenizer": "standard",
-          "filter": [
-            "lowercase",
-            "asciifolding",
-            "russian_morphology",
-            "english_morphology",
-            "name_synonyms",
-            "name_phonetic"
-          ]
-        }
-      }
-    }
-  },
-  "mappings": {
-    "properties": {
-      "full_name": {
-        "type": "text",
-        "analyzer": "name_index_analyzer",
-        "search_analyzer": "name_search_analyzer"
-      },
-      "full_name_translit": {
-        "type": "text",
-        "analyzer": "name_index_analyzer",
-        "search_analyzer": "name_search_analyzer"
-      },
-      "user_id": { "type": "integer" }
-    }
-  }
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return nil, err
+	}
+
+	result := make(map[string][]byte)
+	for indexName, cfg := range raw {
+		result[indexName] = cfg
+	}
+
+	return result, nil
 }
 
+func CreateIndexes(config *config.Config) error {
+	es := NewElastic(config)
 
-
-
-
-
-`)
-
-	existsResp, err := es.Indices.Exists([]string{indexName})
+	indexConfigs, err := LoadIndexConfigs(config.ElasticIndexesPath)
 	if err != nil {
 		return err
 	}
-	defer existsResp.Body.Close()
 
-	if existsResp.StatusCode == 200 {
-		fmt.Println("Index already exists:", indexName)
-		return nil
+	for indexName, indexConfig := range indexConfigs {
+
+		existsResp, err := es.Indices.Exists([]string{indexName})
+		if err != nil {
+			return err
+		}
+		existsResp.Body.Close()
+
+		if existsResp.StatusCode == 200 {
+			fmt.Println("Index already exists:", indexName)
+			continue
+		}
+
+		res, err := es.Indices.Create(
+			indexName,
+			es.Indices.Create.WithBody(bytes.NewReader(indexConfig)),
+		)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
+
+		if res.IsError() {
+			body, _ := io.ReadAll(res.Body)
+			return fmt.Errorf("error creating index %s: %s", indexName, body)
+		}
+
+		fmt.Println("Index created:", indexName)
 	}
 
-	res, err := es.Indices.Create(
-		indexName,
-		es.Indices.Create.WithBody(bytes.NewReader(indexConfig)),
-	)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if res.IsError() {
-		body, _ := io.ReadAll(res.Body)
-		return fmt.Errorf("error creating index: %s", body)
-	}
-
-	fmt.Println("Index created:", indexName)
 	return nil
 }
 
@@ -168,8 +132,7 @@ func main() {
 		if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
 			log.Fatalf("Error applying migrations: %v", err)
 		}
-
-		if err := CreateProfileIndex("profile", config); err != nil {
+		if err := CreateIndexes(config); err != nil {
 			log.Fatalf("Error applying migrations: %v", err)
 		}
 		log.Println("Migrations applied successfully.")

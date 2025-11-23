@@ -9,16 +9,17 @@ import (
 )
 
 type Config struct {
-	Env             string
-	PostgresURL     string
-	RedisURL        string
-	ElasticUser     string
-	ElasticPassword string
-	ElasticPort     string
-	Debug           bool
-	LogLevel        string
-	FrontendOrigin  string
-	MigrationsPath  string
+	Env                string
+	PostgresURL        string
+	RedisURL           string
+	ElasticUser        string
+	ElasticPassword    string
+	ElasticPort        string
+	ElasticIndexesPath string
+	Debug              bool
+	LogLevel           string
+	FrontendOrigin     string
+	MigrationsPath     string
 }
 
 func NewConfig() *Config {
@@ -46,21 +47,23 @@ func NewConfig() *Config {
 	elasticUser := os.Getenv("ELASTIC_USER")
 	elasticPassword := os.Getenv("ELASTIC_PASSWORD")
 	elasticPort := os.Getenv("ELASTIC_PORT")
+	elasticIndexesPath := os.Getenv("ELASTIC_INDEXES_PATH")
 
 	migrationsPath := os.Getenv("MIGRATIONS_PATH")
 	migrationsPath = fmt.Sprintf("file://%s", migrationsPath)
 
 	config := &Config{
-		Env:             os.Getenv("APP_ENV"),
-		PostgresURL:     postgresURL,
-		RedisURL:        redisURL,
-		ElasticUser:     elasticUser,
-		ElasticPassword: elasticPassword,
-		ElasticPort:     elasticPort,
-		Debug:           os.Getenv("APP_ENV") != "prod",
-		LogLevel:        os.Getenv("LOG_LEVEL"),
-		FrontendOrigin:  os.Getenv("FRONTEND_ORIGIN"),
-		MigrationsPath:  migrationsPath,
+		Env:                os.Getenv("APP_ENV"),
+		PostgresURL:        postgresURL,
+		RedisURL:           redisURL,
+		ElasticUser:        elasticUser,
+		ElasticPassword:    elasticPassword,
+		ElasticPort:        elasticPort,
+		ElasticIndexesPath: elasticIndexesPath,
+		Debug:              os.Getenv("APP_ENV") != "prod",
+		LogLevel:           os.Getenv("LOG_LEVEL"),
+		FrontendOrigin:     os.Getenv("FRONTEND_ORIGIN"),
+		MigrationsPath:     migrationsPath,
 	}
 	return config
 }

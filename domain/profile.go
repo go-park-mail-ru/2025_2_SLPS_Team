@@ -38,7 +38,7 @@ type ElasticProfileStore interface {
 	CreateProfile(ctx context.Context, fullName string, userID int) error
 	UpdateProfile(ctx context.Context, fullName string, userID int) error
 	DeleteProfile(ctx context.Context, userID int) error
-	SearchProfileIDsByFullName(ctx context.Context, fullName string, limit int, offset int) ([]int, error)
+	SearchUserIDsByFullNameWithFilter(ctx context.Context, fullName string, filterIDs []int, isTerms bool, limit, offset int) ([]int, error)
 }
 
 type ProfileStore interface {
@@ -46,7 +46,8 @@ type ProfileStore interface {
 	UpdateAvatar(ctx context.Context, avatarPath string, userID int) error
 	UpdateHeader(ctx context.Context, avatarPath string, UserID int) error
 	GetProfileByUserID(ctx context.Context, userID int) (Profile, error)
-	GetShortProfileByUserIDs(ctx context.Context, userIDs []int) (map[int]ShortProfile, error)
+	GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int) (map[int]ShortProfile, error)
+	GetShortProfileByUserIDs(ctx context.Context, userIDs []int) ([]ShortProfile, error)
 	GetAvatarByUserID(ctx context.Context, userID int) (*string, error)
 	GetHeaderByUserID(ctx context.Context, userID int) (*string, error)
 	DeleteAvatarByUserID(ctx context.Context, userID int) (*string, error)

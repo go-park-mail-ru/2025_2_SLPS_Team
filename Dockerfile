@@ -26,6 +26,7 @@ RUN apk add --no-cache postgresql-client
 COPY --from=builder /out/app ./main
 COPY --from=builder /out/migration ./migrate
 COPY --from=builder /app/db/migrations ./db/migrations
+COPY --from=builder /app/elastic ./elastic
 COPY --from=builder /app/logs ./logs
 EXPOSE 8080
 

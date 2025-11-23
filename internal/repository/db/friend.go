@@ -8,7 +8,6 @@ import (
 	"project/domain"
 	"time"
 
-	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -550,7 +549,7 @@ FROM counts;
 	return &counts, nil
 }
 
-func (store *DBFriendStore) GetShortProfilesBySearchIDSAndFriendType(ctx context.Context, userID int, fType domain.FriendshipCountType, targetIDs []int, limit, offset int) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetUserIDsByFriendType(ctx context.Context, userID int, fType domain.FriendshipCountType) ([]int, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
@@ -561,78 +560,33 @@ func (store *DBFriendStore) GetShortProfilesBySearchIDSAndFriendType(ctx context
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	if len(targetIDs) == 0 {
-		return nil, nil
+	var statusClause string
+	switch fType {
+	case domain.CountNotFriends:
+		statusClause = `1=1`
+	case domain.CountAccepted:
+		statusClause = `fr.status = 'accepted'`
+	case domain.CountPending:
+		statusClause = `(fr.status = 'pending' AND fr.action_user_id != $1) OR (fr.status = 'rejected' AND fr.action_user_id = $1)`
+	case domain.CountSent:
+		statusClause = `(fr.status = 'pending' AND fr.action_user_id = $1) OR (fr.status = 'rejected' AND fr.action_user_id != $1)`
+	case domain.CountBlocked:
+		statusClause = `fr.status = 'blocked'`
+	default:
+		return nil, fmt.Errorf("unknown statusType: %s", fType)
 	}
 
-	var whereClause string
-	var query string
-	if fType == domain.CountNotFriends {
-		query = `
-        SELECT p.user_id,
-               COALESCE(p.first_name || ' ' || p.last_name, '') AS full_name,
-               COALESCE(p.avatar_path, '') AS avatar_path,
-               p.dob
-        FROM profiles p
-        WHERE p.user_id != $1
-          AND p.user_id = ANY($2)
-          AND NOT EXISTS (
-              SELECT 1
-              FROM friend_relationships fr
-              WHERE (fr.first_user_id = $1 AND fr.second_user_id = p.user_id)
-                 OR (fr.first_user_id = p.user_id AND fr.second_user_id = $1)
-          )
-        LIMIT $3 OFFSET $4
-    `
-	} else {
-		switch fType {
-		case domain.CountAccepted:
-			whereClause = `
-            (fr.first_user_id = $1 OR fr.second_user_id = $1)
-            AND fr.status = 'accepted'
-        `
-		case domain.CountPending:
-			whereClause = `
-            (fr.first_user_id = $1 OR fr.second_user_id = $1)
-            AND (
-                (fr.status = 'pending' AND fr.action_user_id != $1)
-                OR (fr.status = 'rejected' AND fr.action_user_id = $1)
-            )
-        `
-		case domain.CountSent:
-			whereClause = `
-            (fr.first_user_id = $1 OR fr.second_user_id = $1)
-            AND (
-                (fr.status = 'pending' AND fr.action_user_id = $1)
-                OR (fr.status = 'rejected' AND fr.action_user_id != $1)
-            )
-        `
-		case domain.CountBlocked:
-			whereClause = `
-            (fr.first_user_id = $1 OR fr.second_user_id = $1)
-            AND fr.status = 'blocked'
-        `
+	query := `
+SELECT CASE
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS related_user_id
+FROM friend_relationships fr
+WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
+  AND (` + statusClause + `)
+`
 
-		default:
-			return nil, fmt.Errorf("unknown statusType: %s", fType)
-		}
-
-		query = `
-        SELECT p.user_id,
-               COALESCE(p.first_name || ' ' || p.last_name, '') AS full_name,
-               COALESCE(p.avatar_path, '') AS avatar_path,
-               p.dob
-        FROM friend_relationships fr
-        JOIN profiles p ON p.user_id = CASE
-            WHEN fr.first_user_id = $1 THEN fr.second_user_id
-            ELSE fr.first_user_id
-        END
-        WHERE ` + whereClause + `
-          AND (fr.first_user_id = ANY($2) OR fr.second_user_id = ANY($2))
-			LIMIT $3 OFFSET $4
-    `
-	}
-	rows, err := store.db.QueryContext(ctx, query, userID, pq.Array(targetIDs), limit, offset)
+	rows, err := store.db.QueryContext(ctx, query, userID)
 	dblogger = dblogger.With(zap.Int("UserID", userID), zap.String("type", string(fType)))
 	if err != nil {
 		dblogger.Error("Failed to get rows", zap.Error(err))
@@ -640,20 +594,19 @@ func (store *DBFriendStore) GetShortProfilesBySearchIDSAndFriendType(ctx context
 	}
 	defer rows.Close()
 
-	var profiles []domain.ShortProfile
+	var ids []int
 	for rows.Next() {
-		var p domain.ShortProfile
-		if err := rows.Scan(&p.UserID, &p.FullName, &p.AvatarPath, &p.Dob); err != nil {
+		var id int
+		if err := rows.Scan(&id); err != nil {
 			dblogger.Error("Failed to scan row", zap.Error(err))
 			return nil, err
 		}
-		profiles = append(profiles, p)
+		ids = append(ids, id)
 	}
-
 	if err := rows.Err(); err != nil {
 		dblogger.Error("rows error", zap.Error(err))
 		return nil, err
 	}
 
-	return profiles, nil
+	return ids, nil
 }

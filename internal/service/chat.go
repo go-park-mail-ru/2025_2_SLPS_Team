@@ -78,7 +78,7 @@ func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.P
 		authorIDs = append(authorIDs, id)
 	}
 
-	authors, err := api.profileStore.GetShortProfileByUserIDs(ctx, authorIDs)
+	authors, err := api.profileStore.GetShortProfileMapByUserIDs(ctx, authorIDs)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to get authors", zap.Error(err), zap.Ints("authorIDs", authorIDs))
 		return nil, domain.ErrDB
