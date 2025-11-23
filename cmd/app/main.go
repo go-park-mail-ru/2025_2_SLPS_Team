@@ -213,7 +213,6 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	communityRouter.HandleFunc("/{id:[0-9]+}", community.DeleteCommunity).Methods("DELETE", "OPTIONS")
 	communityRouter.HandleFunc("/{id:[0-9]+}/subscribe", community.Subscribe).Methods("POST", "OPTIONS")
 	communityRouter.HandleFunc("/{id:[0-9]+}/unsubscribe", community.Unsubscribe).Methods("POST", "OPTIONS")
-	communityRouter.HandleFunc("/{id:[0-9]+}/subscribers/count", community.CountSubscribers).Methods("GET")
 	communityRouter.HandleFunc("/{id:[0-9]+}/posts", community.GetCommunityPosts).Methods("GET")
 
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
