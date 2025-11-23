@@ -660,14 +660,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Название сообщества",
+                        "description": "Название сообщества (3-48 символов)",
                         "name": "name",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Описание сообщества",
+                        "description": "Описание сообщества (до 512 символов)",
                         "name": "description",
                         "in": "formData"
                     },
@@ -688,7 +688,8 @@ const docTemplate = `{
                     "201": {
                         "description": "Сообщество успешно создано",
                         "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "400": {
@@ -748,11 +749,11 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список сообществ",
+                        "description": "Список сообществ пользователя",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.CommunityWithSubscription"
+                                "$ref": "#/definitions/domain.ShortCommunity"
                             }
                         }
                     },
@@ -778,7 +779,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Возвращает список сообществ, на которые пользователь не подписан",
+                "description": "Возвращает список сообществ, на которые пользователь не подписан (рекомендации)",
                 "produces": [
                     "application/json"
                 ],
@@ -807,11 +808,11 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список сообществ",
+                        "description": "Список рекомендуемых сообществ",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.CommunityWithSubscription"
+                                "$ref": "#/definitions/domain.ShortCommunity"
                             }
                         }
                     },
@@ -858,7 +859,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Информация о сообществе",
                         "schema": {
-                            "$ref": "#/definitions/domain.CommunityWithSubscription"
+                            "$ref": "#/definitions/domain.CommunityForViewWithSubscription"
                         }
                     },
                     "400": {
@@ -908,13 +909,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Название сообщества",
+                        "description": "Название сообщества (3-48 символов)",
                         "name": "name",
                         "in": "formData"
                     },
                     {
                         "type": "string",
-                        "description": "Описание сообщества",
+                        "description": "Описание сообщества (до 512 символов)",
                         "name": "description",
                         "in": "formData"
                     },
@@ -977,9 +978,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Удаляет сообщество (только создатель)",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1079,7 +1077,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список постов",
+                        "description": "Список постов сообщества",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -1137,61 +1135,6 @@ const docTemplate = `{
                         "description": "Успешная подписка",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Неверный ID сообщества",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Сообщество не найдено",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Внутренняя ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/communities/{id}/subscribers/count": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Возвращает количество подписчиков указанного сообщества",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "communities"
-                ],
-                "summary": "Получить количество подписчиков",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID сообщества",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Количество подписчиков",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "integer"
-                            }
                         }
                     },
                     "400": {
@@ -2660,7 +2603,7 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.CommunityWithSubscription": {
+        "domain.CommunityForViewWithSubscription": {
             "type": "object",
             "properties": {
                 "avatarPath": {
@@ -2671,9 +2614,6 @@ const docTemplate = `{
                 },
                 "createdAt": {
                     "type": "string"
-                },
-                "creatorID": {
-                    "type": "integer"
                 },
                 "description": {
                     "type": "string"
@@ -2689,9 +2629,6 @@ const docTemplate = `{
                 },
                 "subscribersCount": {
                     "type": "integer"
-                },
-                "updatedAt": {
-                    "type": "string"
                 }
             }
         },
@@ -2888,6 +2825,26 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "123123"
+                }
+            }
+        },
+        "domain.ShortCommunity": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "subscribersCount": {
+                    "type": "integer"
                 }
             }
         },
