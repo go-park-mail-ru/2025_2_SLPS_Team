@@ -8,6 +8,7 @@ import (
 	"project/domain"
 	"time"
 
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
