@@ -313,6 +313,18 @@ func (s *CommunityService) GetUserCommunitiesByID(ctx context.Context, targetUse
 	return communities, nil
 }
 
+func (s *CommunityService) GetMyCommunityIDs(ctx context.Context, userID int) ([]int, error) {
+	domain.Info(ctx, "Getting my community IDs", zap.Int("userID", userID))
+
+	communityIDs, err := s.communityStore.GetMyCommunityIDs(ctx, userID)
+	if err != nil {
+		domain.Error(ctx, "Failed to get my community IDs", err)
+		return nil, domain.ErrDB
+	}
+
+	return communityIDs, nil
+}
+
 func (s *CommunityService) GetCreatedCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.CommunityForMyCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
@@ -399,23 +411,4 @@ func (s *CommunityService) Unsubscribe(ctx context.Context, communityID int, use
 
 	domain.Info(ctx, "Unsubscribed successfully")
 	return nil
-}
-
-func (s *CommunityService) GetCommunityPosts(ctx context.Context, userID int, communityID int, params domain.PaginateQueryParams) ([]domain.Post, error) {
-	//offset, limit := domain.ValidatePaginationParams(params)
-	domain.Info(ctx, "Getting community posts", zap.Int("communityID", communityID))
-
-	// Проверяем существование сообщества
-	_, err := s.communityStore.GetCommunityByID(ctx, communityID)
-	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
-			return nil, domain.ErrNotFound
-		}
-		domain.Error(ctx, "Failed to get community", err)
-		return nil, domain.ErrDB
-	}
-
-	// Нужно поменять посты для поддержки сообществ
-	return []domain.Post{}, nil
 }

@@ -353,6 +353,47 @@ func (store *DBCommunityStore) GetUserCommunitiesByID(ctx context.Context, targe
 	return communities, nil
 }
 
+func (store *DBCommunityStore) GetMyCommunityIDs(ctx context.Context, userID int) ([]int, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "communityStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetMyCommunityIDs", zap.Int("userID", userID))
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	query := `
+		SELECT id
+		FROM communities
+		WHERE creator_id = $1
+		ORDER BY created_at DESC
+	`
+
+	dblogger = dblogger.With(zap.String("query", query))
+	rows, err := store.db.QueryContext(ctx, query, userID)
+	if err != nil {
+		dblogger.Error("Failed to query my community IDs", zap.Error(err))
+		return nil, fmt.Errorf("failed to query my community IDs: %w", err)
+	}
+	defer rows.Close()
+
+	communityIDs := []int{}
+	for rows.Next() {
+		var id int
+		err := rows.Scan(&id)
+		if err != nil {
+			dblogger.Error("Failed to scan community ID", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan community ID: %w", err)
+		}
+		communityIDs = append(communityIDs, id)
+	}
+
+	dblogger.Info("My community IDs retrieved successfully", zap.Int("count", len(communityIDs)))
+	return communityIDs, nil
+}
+
 func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.CommunityForMyCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")

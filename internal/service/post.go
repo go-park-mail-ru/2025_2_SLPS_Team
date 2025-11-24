@@ -25,21 +25,21 @@ func NewPostService(postStore domain.PostStore, userStore domain.UserStore, comm
 }
 
 // PostsPaginate возвращает посты с пагинацией
-func (s *PostService) PostsPaginate(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.PostFeedItem, error) {
+func (s *PostService) PostsPaginate(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting paginated posts", zap.Int("offset", offset), zap.Int("limit", limit))
 
-	postsWithAuthor, err := s.postStore.PostsPaginatedList(ctx, userID, limit, offset)
+	posts, err := s.postStore.PostsPaginatedList(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get posts", err)
 		return nil, domain.ErrDB
 	}
 
-	return postsWithAuthor, nil
+	return posts, nil
 }
 
 // GetPost возвращает пост по ID
-func (s *PostService) GetPost(ctx context.Context, userID int, postID uint) (*domain.Post, error) {
+func (s *PostService) GetPost(ctx context.Context, userID int, postID uint) (*domain.PostView, error) {
 	domain.Info(ctx, "Getting post by ID", zap.Uint("postID", postID))
 
 	post, err := s.postStore.GetPostByID(ctx, userID, postID)
@@ -206,8 +206,8 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 	var newPhotoPaths []string
 	if len(photoFiles) > 0 {
 		// Сохраняем старые пути
-		for i := range existingPost.PhotosPath {
-			oldPhotos = append(oldPhotos, &existingPost.PhotosPath[i])
+		for i := range existingPost.Photos {
+			oldPhotos = append(oldPhotos, &existingPost.Photos[i])
 		}
 
 		newPhotoPaths, err = UploadFiles(photoFiles)
@@ -221,8 +221,8 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 		}
 		updateRequest.Photos = newPhotoPaths
 	} else {
-		newPhotoPaths = existingPost.PhotosPath
-		updateRequest.Photos = existingPost.PhotosPath
+		newPhotoPaths = existingPost.Photos
+		updateRequest.Photos = existingPost.Photos
 	}
 
 	// Обновляем данные поста
@@ -240,8 +240,8 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 			newFiles := newAttachmentPaths[len(existingPost.Attachments):]
 			DeleteFiles(convertToPointerSlice(newFiles))
 		}
-		if len(newPhotoPaths) > len(existingPost.PhotosPath) {
-			newFiles := newPhotoPaths[len(existingPost.PhotosPath):]
+		if len(newPhotoPaths) > len(existingPost.Photos) {
+			newFiles := newPhotoPaths[len(existingPost.Photos):]
 			DeleteFiles(convertToPointerSlice(newFiles))
 		}
 		domain.Error(ctx, "Failed to update post", err, zap.Uint("postID", postID))
@@ -299,8 +299,8 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 	for i := range existingPost.Attachments {
 		filesToDelete = append(filesToDelete, &existingPost.Attachments[i])
 	}
-	for i := range existingPost.PhotosPath {
-		filesToDelete = append(filesToDelete, &existingPost.PhotosPath[i])
+	for i := range existingPost.Photos {
+		filesToDelete = append(filesToDelete, &existingPost.Photos[i])
 	}
 
 	// Удаляем файлы
@@ -318,14 +318,10 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 }
 
 // GetUserPosts возвращает посты пользователя
-func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int, userID uint, params domain.PaginateQueryParams) ([]domain.Post, error) {
-	// Валидация параметров
+func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int, userID uint, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
-	domain.Info(ctx, "Getting user posts",
-		zap.Uint("userID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
+	domain.Info(ctx, "Getting user posts", zap.Uint("userID", userID))
 
 	// Проверяем существование пользователя
 	_, err := s.userStore.GetUserByID(ctx, int(userID))
@@ -348,8 +344,9 @@ func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int, userID u
 	return posts, nil
 }
 
+
 // Получение постов сообщества
-func (s *PostService) GetCommunityPosts(ctx context.Context, userID int, communityID int, params domain.PaginateQueryParams) ([]domain.Post, error) {
+func (s *PostService) GetCommunityPosts(ctx context.Context, userID int, communityID int, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting community posts", zap.Int("communityID", communityID))
 

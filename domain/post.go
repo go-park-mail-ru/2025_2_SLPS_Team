@@ -19,6 +19,23 @@ type Post struct {
 	LikeCount   int      `json:"likeCount"`
 	IsLiked     bool     `json:"isLiked"`
 }
+// Унифицированная структура для отображения поста
+type PostView struct {
+	ID            uint     `json:"id"`
+	AuthorID      uint     `json:"authorID"` // ID пользователя-создателя
+	AuthorName    string   `json:"authorName"`
+	AuthorAvatar  *string  `json:"authorAvatar"`
+	CommunityID   *int     `json:"communityID,omitempty"`
+	CommunityName *string  `json:"communityName,omitempty"`
+	CommunityAvatar *string `json:"communityAvatar,omitempty"`
+	Text          string   `json:"text"`
+	Attachments   []string `json:"attachments"`
+	Photos        []string `json:"photos"`
+	LikeCount     int      `json:"likeCount"`
+	IsLiked       bool     `json:"isLiked"`
+	CreatedAt     time.Time `json:"createdAt"`
+	IsCommunityPost bool    `json:"isCommunityPost"`
+}
 
 type PostWithAuthor struct {
 	Post      Post         `json:"post"`
@@ -54,56 +71,54 @@ type PostFeedItem struct {
 	IsCommunity bool          `json:"isCommunity"`         // Флаг, указывающий тип поста
 }
 
-// PostService интерфейс для работы с постами
 type PostService interface {
 	// Получение постов с пагинацией (включая посты из сообществ)
-	PostsPaginate(ctx context.Context, userID int, params PaginateQueryParams) ([]PostFeedItem, error)
-
+	PostsPaginate(ctx context.Context, userID int, params PaginateQueryParams) ([]PostView, error)
+	
 	// Получение поста по ID
-	GetPost(ctx context.Context, userID int, postID uint) (*Post, error)
-
-	// Создание поста (может быть как от пользователя, так и от сообщества)
+	GetPost(ctx context.Context, userID int, postID uint) (*PostView, error)
+	
+	// Создание поста
 	CreatePost(ctx context.Context, userID int, text string, communityID *int, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*Post, error)
-
+	
 	// Обновление поста
 	UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error
-
+	
 	// Удаление поста
 	DeletePost(ctx context.Context, postID uint, userID int) error
-
+	
 	// Получение постов пользователя
-	GetUserPosts(ctx context.Context, selfUserID int, userID uint, params PaginateQueryParams) ([]Post, error)
-
+	GetUserPosts(ctx context.Context, selfUserID int, userID uint, params PaginateQueryParams) ([]PostView, error)
+	
 	// Получение постов сообщества
-	GetCommunityPosts(ctx context.Context, userID int, communityID int, params PaginateQueryParams) ([]Post, error)
-
+	GetCommunityPosts(ctx context.Context, userID int, communityID int, params PaginateQueryParams) ([]PostView, error)
+	
 	// Лайк/дизлайк поста
 	UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error
 }
 
-// PostStore интерфейс хранилища постов
 type PostStore interface {
-	// Получение постов с пагинацией (включая посты из сообществ, на которые подписан пользователь)
-	PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]PostFeedItem, error)
-
+	// Получение постов с пагинацией
+	PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]PostView, error)
+	
 	// Получение поста по ID
-	GetPostByID(ctx context.Context, userID int, id uint) (*Post, error)
-
+	GetPostByID(ctx context.Context, userID int, id uint) (*PostView, error)
+	
 	// Создание поста
 	CreatePost(ctx context.Context, post *Post) error
-
+	
 	// Обновление поста
 	UpdatePost(ctx context.Context, post *Post) error
-
+	
 	// Удаление поста
 	DeletePost(ctx context.Context, id uint, authorID uint) error
-
+	
 	// Получение постов пользователя
-	GetPostsByUser(ctx context.Context, selfUserID int, userID uint, limit, offset int) ([]Post, error)
-
+	GetPostsByUser(ctx context.Context, selfUserID int, userID uint, limit, offset int) ([]PostView, error)
+	
 	// Получение постов сообщества
-	GetCommunityPosts(ctx context.Context, userID int, communityID int, limit, offset int) ([]Post, error)
-
+	GetCommunityPosts(ctx context.Context, userID int, communityID int, limit, offset int) ([]PostView, error)
+	
 	// Лайк/дизлайк поста
 	UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error
 }

@@ -837,6 +837,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/communities/my-ids": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список ID всех сообществ, созданных текущим пользователем",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить ID созданных сообществ",
+                "responses": {
+                    "200": {
+                        "description": "Список ID созданных сообществ",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/communities/other": {
             "get": {
                 "security": [
@@ -1152,78 +1192,6 @@ const docTemplate = `{
                     },
                     "403": {
                         "description": "Доступ запрещен (не создатель)",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Сообщество не найдено",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Внутренняя ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/communities/{id}/posts": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Возвращает посты указанного сообщества с пагинацией",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "communities"
-                ],
-                "summary": "Получить посты сообщества",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID сообщества",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 1,
-                        "description": "Номер страницы",
-                        "name": "page",
-                        "in": "query"
-                    },
-                    {
-                        "maximum": 100,
-                        "minimum": 1,
-                        "type": "integer",
-                        "default": 20,
-                        "description": "Количество постов на странице",
-                        "name": "limit",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Список постов сообщества",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/domain.Post"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Неверные параметры запроса",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -2057,7 +2025,7 @@ const docTemplate = `{
         },
         "/posts": {
             "get": {
-                "description": "Возвращает список постов с поддержкой пагинации",
+                "description": "Возвращает список постов с поддержкой пагинации (включая посты из сообществ)",
                 "consumes": [
                     "application/json"
                 ],
@@ -2091,7 +2059,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Успешный ответ с постами",
                         "schema": {
-                            "$ref": "#/definitions/handler.PostsResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.PostView"
+                            }
                         }
                     },
                     "400": {
@@ -2187,6 +2158,77 @@ const docTemplate = `{
                 }
             }
         },
+        "/posts/communities/{id}": {
+            "get": {
+                "description": "Возвращает посты конкретного сообщества с пагинацией",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Получить посты сообщества",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество постов на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешный ответ с постами сообщества",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.PostView"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Сообщество не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/posts/{id}": {
             "get": {
                 "description": "Возвращает пост по его идентификатору",
@@ -2214,7 +2256,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Пост найден",
                         "schema": {
-                            "$ref": "#/definitions/domain.Post"
+                            "$ref": "#/definitions/domain.PostView"
                         }
                     },
                     "400": {
@@ -2715,7 +2757,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Успешный ответ с постами пользователя",
                         "schema": {
-                            "$ref": "#/definitions/handler.PostsResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.PostView"
+                            }
                         }
                     },
                     "400": {
@@ -2955,30 +3000,42 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Post": {
+        "domain.PostView": {
             "type": "object",
             "properties": {
                 "attachments": {
-                    "description": "в БД табличка post_attachments называется",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
+                "authorAvatar": {
+                    "type": "string"
+                },
                 "authorID": {
-                    "description": "в БД табличка posts называется",
+                    "description": "ID пользователя-создателя",
                     "type": "integer"
+                },
+                "authorName": {
+                    "type": "string"
+                },
+                "communityAvatar": {
+                    "type": "string"
                 },
                 "communityID": {
                     "type": "integer"
                 },
-                "created_at": {
-                    "description": "в БД табличка posts называется",
+                "communityName": {
+                    "type": "string"
+                },
+                "createdAt": {
                     "type": "string"
                 },
                 "id": {
-                    "description": "в БД табличка posts называется",
                     "type": "integer"
+                },
+                "isCommunityPost": {
+                    "type": "boolean"
                 },
                 "isLiked": {
                     "type": "boolean"
@@ -2987,18 +3044,12 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "photos": {
-                    "description": "в БД табличка post_photos называется",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "text": {
-                    "description": "в БД табличка posts называется",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "description": "в БД табличка posts называется",
                     "type": "string"
                 }
             }
@@ -3203,19 +3254,6 @@ const docTemplate = `{
             "properties": {
                 "messageID": {
                     "type": "integer"
-                }
-            }
-        },
-        "handler.PostsResponse": {
-            "description": "Ответ с пагинированным списком постов",
-            "type": "object",
-            "properties": {
-                "posts": {
-                    "description": "Список постов",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.Post"
-                    }
                 }
             }
         },

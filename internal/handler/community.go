@@ -342,6 +342,35 @@ func (h *CommunityHandler) GetUserCommunitiesByID(w http.ResponseWriter, r *http
 	}
 }
 
+// GetMyCommunityIDs возвращает все ID сообществ, созданных пользователем
+// @Summary Получить ID созданных сообществ
+// @Description Возвращает список ID всех сообществ, созданных текущим пользователем
+// @Tags communities
+// @Produce json
+// @Success 200 {array} int "Список ID созданных сообществ"
+// @Failure 401 {object} JSONResponse "Пользователь не авторизован"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Security ApiKeyAuth
+// @Router /communities/my-ids [get]
+func (h *CommunityHandler) GetMyCommunityIDs(w http.ResponseWriter, r *http.Request) {
+	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	if !ok {
+		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
+		domain.Warn(r.Context(), "User ID not found in context")
+		return
+	}
+
+	communityIDs, err := h.communityService.GetMyCommunityIDs(r.Context(), userID)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	if err := sendJSONData(r.Context(), w, communityIDs); err != nil {
+		return
+	}
+}
+
 // GetCreatedCommunities возвращает сообщества, созданные пользователем
 // @Summary Получить созданные сообщества
 // @Description Возвращает список сообществ, созданных текущим пользователем (только ID, название и аватар)
@@ -494,47 +523,4 @@ func (h *CommunityHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSONResponse(w, "Unsubscribed successfully", http.StatusOK)
-}
-
-// GetCommunityPosts возвращает посты сообщества
-// @Summary Получить посты сообщества
-// @Description Возвращает посты указанного сообщества с пагинацией
-// @Tags communities
-// @Produce json
-// @Param id path int true "ID сообщества"
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество постов на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {array} domain.Post "Список постов сообщества"
-// @Failure 400 {object} JSONResponse "Неверные параметры запроса"
-// @Failure 404 {object} JSONResponse "Сообщество не найдено"
-// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
-// @Security ApiKeyAuth
-// @Router /communities/{id}/posts [get]
-func (h *CommunityHandler) GetCommunityPosts(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	communityID, err := strconv.ParseUint(vars["id"], 10, 32)
-	if err != nil {
-		sendJSONResponse(w, "Invalid community ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", vars["id"]))
-		return
-	}
-
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
-		return
-	}
-
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-
-	posts, err := h.communityService.GetCommunityPosts(r.Context(), userID, int(communityID), qParams)
-	if err != nil {
-		sendJSONError(w, err)
-		return
-	}
-
-	if err := sendJSONData(r.Context(), w, posts); err != nil {
-		return
-	}
 }
