@@ -20,6 +20,7 @@ type Config struct {
 	LogLevel           string
 	FrontendOrigin     string
 	MigrationsPath     string
+	Origin             string
 }
 
 func NewConfig() *Config {
@@ -43,7 +44,7 @@ func NewConfig() *Config {
 	redisPassword := os.Getenv("REDIS_PASSWORD")
 	redisDB := os.Getenv("REDIS_DB")
 	redisURL := fmt.Sprintf("redis://:%s@%s:%s/%s", redisPassword, redisHost, redisPort, redisDB)
-
+	origin := os.Getenv("ORIGIN")
 	elasticUser := os.Getenv("ELASTIC_USER")
 	elasticPassword := os.Getenv("ELASTIC_PASSWORD")
 	elasticPort := os.Getenv("ELASTIC_PORT")
@@ -64,6 +65,7 @@ func NewConfig() *Config {
 		LogLevel:           os.Getenv("LOG_LEVEL"),
 		FrontendOrigin:     os.Getenv("FRONTEND_ORIGIN"),
 		MigrationsPath:     migrationsPath,
+		Origin:             origin,
 	}
 	return config
 }
