@@ -66,7 +66,7 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit,
 	}
 	defer rows.Close()
 
-	var posts []domain.PostView
+	posts := []domain.PostView{}
 
 	for rows.Next() {
 		var (
@@ -393,7 +393,7 @@ func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int, com
 	}
 	defer rows.Close()
 
-	var posts []domain.PostView
+	posts := []domain.PostView{}
 	for rows.Next() {
 		var postView domain.PostView
 		var commID sql.NullInt64
@@ -549,7 +549,7 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, selfUserID int, us
 	}
 	defer rows.Close()
 
-	var posts []domain.PostView
+	posts := []domain.PostView{}
 	for rows.Next() {
 		var postView domain.PostView
 		var commID sql.NullInt64
