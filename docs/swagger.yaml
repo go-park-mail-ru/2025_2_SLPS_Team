@@ -1109,31 +1109,6 @@ paths:
       summary: Получить сообщества пользователя
       tags:
       - communities
-  /communities/my-ids:
-    get:
-      description: Возвращает список ID всех сообществ, созданных текущим пользователем
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список ID созданных сообществ
-          schema:
-            items:
-              type: integer
-            type: array
-        "401":
-          description: Пользователь не авторизован
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-        "500":
-          description: Внутренняя ошибка сервера
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Получить ID созданных сообществ
-      tags:
-      - communities
   /communities/other:
     get:
       description: Возвращает список сообществ, на которые пользователь не подписан
@@ -1220,6 +1195,41 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Получить сообщества пользователя по ID
+      tags:
+      - communities
+  /communities/users/{userID}/subscribed-ids:
+    get:
+      description: Возвращает список ID сообществ, на которые подписан указанный пользователь
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список ID подписанных сообществ
+          schema:
+            items:
+              type: integer
+            type: array
+        "400":
+          description: Неверный ID пользователя
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить ID подписанных сообществ пользователя
       tags:
       - communities
   /friends:

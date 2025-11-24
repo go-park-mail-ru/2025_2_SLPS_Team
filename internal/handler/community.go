@@ -342,25 +342,28 @@ func (h *CommunityHandler) GetUserCommunitiesByID(w http.ResponseWriter, r *http
 	}
 }
 
-// GetMyCommunityIDs возвращает все ID сообществ, созданных пользователем
-// @Summary Получить ID созданных сообществ
-// @Description Возвращает список ID всех сообществ, созданных текущим пользователем
+// GetUserSubscribedCommunityIDs возвращает ID сообществ, на которые подписан указанный пользователь
+// @Summary Получить ID подписанных сообществ пользователя
+// @Description Возвращает список ID сообществ, на которые подписан указанный пользователь
 // @Tags communities
 // @Produce json
-// @Success 200 {array} int "Список ID созданных сообществ"
-// @Failure 401 {object} JSONResponse "Пользователь не авторизован"
+// @Param userID path int true "ID пользователя"
+// @Success 200 {array} int "Список ID подписанных сообществ"
+// @Failure 400 {object} JSONResponse "Неверный ID пользователя"
+// @Failure 404 {object} JSONResponse "Пользователь не найден"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
-// @Router /communities/my-ids [get]
-func (h *CommunityHandler) GetMyCommunityIDs(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
+// @Router /communities/users/{userID}/subscribed-ids [get]
+func (h *CommunityHandler) GetUserSubscribedCommunityIDs(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	targetUserID, err := strconv.Atoi(vars["userID"])
+	if err != nil {
+		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("userID", vars["userID"]))
 		return
 	}
 
-	communityIDs, err := h.communityService.GetMyCommunityIDs(r.Context(), userID)
+	communityIDs, err := h.communityService.GetUserSubscribedCommunityIDs(r.Context(), targetUserID)
 	if err != nil {
 		sendJSONError(w, err)
 		return
