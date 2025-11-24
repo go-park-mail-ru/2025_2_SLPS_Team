@@ -535,7 +535,7 @@ func (h *CommunityHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 //
 //	Можно фильтровать по типу подписки (например, подписан или нет).
 //
-// @Tags community
+// @Tags communities
 // @Produce json
 // @Param name query string true "Полное или частичное имя сообщества"
 // @Param type query string false "Тип подписки: subscriber, notSubscriber" default(recommended) Enums(subscriber, recommended)
@@ -544,7 +544,7 @@ func (h *CommunityHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 // @Success 200 {array} domain.ShortCommunity "Найденные сообщества"
 // @Failure 400 {string} string "Missing name query parameter"
 // @Failure 500 {string} string "Server error"
-// @Router /community/search [get]
+// @Router /communities/search [get]
 func (api *CommunityHandler) SearchCommunityByName(w http.ResponseWriter, r *http.Request) {
 
 	name := r.URL.Query().Get("name")

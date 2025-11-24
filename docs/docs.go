@@ -896,6 +896,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/communities/search": {
+            "get": {
+                "description": "Возвращает список сообществ, имя которых соответствует поисковому запросу.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "community"
+                ],
+                "summary": "Поиск сообществ по имени",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Полное или частичное имя сообщества",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "subscriber",
+                            "recommended"
+                        ],
+                        "type": "string",
+                        "default": "recommended",
+                        "description": "Тип подписки: subscriber, notSubscriber",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Лимит количества сообществ",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы для пагинации",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Найденные сообщества",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing name query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/communities/users/{id}": {
             "get": {
                 "security": [
