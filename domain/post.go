@@ -15,7 +15,7 @@ type Post struct {
 	UpdatedAt   time.Time `json:"updated_at"` //в БД табличка posts называется
 
 	Attachments []string `json:"attachments"` //в БД табличка post_attachments называется
-	PhotosPath  []string `json:"photos"`      //в БД табличка post_photos называется
+	Photos      []string `json:"photos"`      //в БД табличка post_photos называется
 	LikeCount   int      `json:"likeCount"`
 	IsLiked     bool     `json:"isLiked"`
 }

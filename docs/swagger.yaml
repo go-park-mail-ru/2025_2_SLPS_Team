@@ -1109,31 +1109,6 @@ paths:
       summary: Получить сообщества пользователя
       tags:
       - communities
-  /communities/my-ids:
-    get:
-      description: Возвращает список ID всех сообществ, созданных текущим пользователем
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список ID созданных сообществ
-          schema:
-            items:
-              type: integer
-            type: array
-        "401":
-          description: Пользователь не авторизован
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-        "500":
-          description: Внутренняя ошибка сервера
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Получить ID созданных сообществ
-      tags:
-      - communities
   /communities/other:
     get:
       description: Возвращает список сообществ, на которые пользователь не подписан
@@ -1174,6 +1149,54 @@ paths:
       summary: Получить другие сообщества
       tags:
       - communities
+  /communities/search:
+    get:
+      description: Возвращает список сообществ, имя которых соответствует поисковому
+        запросу.
+      parameters:
+      - description: Полное или частичное имя сообщества
+        in: query
+        name: name
+        required: true
+        type: string
+      - default: recommended
+        description: 'Тип подписки: subscriber, notSubscriber'
+        enum:
+        - subscriber
+        - recommended
+        in: query
+        name: type
+        type: string
+      - default: 20
+        description: Лимит количества сообществ
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Номер страницы для пагинации
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Найденные сообщества
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortCommunity'
+            type: array
+        "400":
+          description: Missing name query parameter
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      summary: Поиск сообществ по имени
+      tags:
+      - community
   /communities/users/{id}:
     get:
       description: Возвращает список сообществ, на которые подписан указанный пользователь
@@ -1220,6 +1243,41 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Получить сообщества пользователя по ID
+      tags:
+      - communities
+  /communities/users/{userID}/subscribed-ids:
+    get:
+      description: Возвращает список ID сообществ, на которые подписан указанный пользователь
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список ID подписанных сообществ
+          schema:
+            items:
+              type: integer
+            type: array
+        "400":
+          description: Неверный ID пользователя
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить ID подписанных сообществ пользователя
       tags:
       - communities
   /friends:

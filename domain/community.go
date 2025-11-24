@@ -63,6 +63,13 @@ type CommunitySubscriber struct {
 	FullName   string  `json:"fullName"`
 	AvatarPath *string `json:"avatarPath"`
 }
+type CommunityType string
+
+const (
+	Subscriber  CommunityType = "subscriber"
+	Recommended CommunityType = "recommended"
+	Owned       CommunityType = "owned"
+)
 
 type CommunityRequest struct {
 	Name        string `json:"name" valid:"required,length(3|48)"`
@@ -77,11 +84,19 @@ type CommunityService interface {
 	GetUserCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortCommunity, error)
 	GetOtherCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortCommunity, error)
 	GetUserCommunitiesByID(ctx context.Context, targetUserID int, params PaginateQueryParams) ([]ShortCommunity, error)
-	GetMyCommunityIDs(ctx context.Context, userID int) ([]int, error)
+	GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int) ([]int, error)
 	GetCreatedCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]CommunityForMyCommunity, error)
 	GetCommunitySubscribers(ctx context.Context, communityID int, params PaginateQueryParams) ([]CommunitySubscriber, error)
 	Subscribe(ctx context.Context, communityID int, userID int) error
 	Unsubscribe(ctx context.Context, communityID int, userID int) error
+	SearchShortCommunityByNameAndType(ctx context.Context, userID int, params PaginateQueryParams, name string, cType CommunityType) ([]ShortCommunity, error)
+}
+
+type ElasticCommunityStore interface {
+	CreateCommunity(ctx context.Context, name string, communityID int) error
+	UpdateCommunity(ctx context.Context, name string, communityID int) error
+	DeleteCommunity(ctx context.Context, communityID int) error
+	SearchCommunityIDsByName(ctx context.Context, name string, filterIDs []int, isTerms bool, limit, offset int) ([]int, error)
 }
 
 type CommunityStore interface {
@@ -92,10 +107,11 @@ type CommunityStore interface {
 	GetUserCommunities(ctx context.Context, userID int, limit, offset int) ([]ShortCommunity, error)
 	GetOtherCommunities(ctx context.Context, userID int, limit, offset int) ([]ShortCommunity, error)
 	GetUserCommunitiesByID(ctx context.Context, targetUserID int, limit, offset int) ([]ShortCommunity, error)
-	GetMyCommunityIDs(ctx context.Context, userID int) ([]int, error)
+	GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int) ([]int, error)
 	GetCreatedCommunities(ctx context.Context, userID int, limit, offset int) ([]CommunityForMyCommunity, error)
 	GetCommunitySubscribers(ctx context.Context, communityID int, limit, offset int) ([]CommunitySubscriber, error)
 	Subscribe(ctx context.Context, communityID int, userID int) error
 	Unsubscribe(ctx context.Context, communityID int, userID int) error
 	IsSubscribed(ctx context.Context, communityID int, userID int) (bool, error)
+	GetCommunitiesByIDs(ctx context.Context, communityIDs []int) ([]ShortCommunity, error)
 }

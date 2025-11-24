@@ -342,25 +342,28 @@ func (h *CommunityHandler) GetUserCommunitiesByID(w http.ResponseWriter, r *http
 	}
 }
 
-// GetMyCommunityIDs возвращает все ID сообществ, созданных пользователем
-// @Summary Получить ID созданных сообществ
-// @Description Возвращает список ID всех сообществ, созданных текущим пользователем
+// GetUserSubscribedCommunityIDs возвращает ID сообществ, на которые подписан указанный пользователь
+// @Summary Получить ID подписанных сообществ пользователя
+// @Description Возвращает список ID сообществ, на которые подписан указанный пользователь
 // @Tags communities
 // @Produce json
-// @Success 200 {array} int "Список ID созданных сообществ"
-// @Failure 401 {object} JSONResponse "Пользователь не авторизован"
+// @Param userID path int true "ID пользователя"
+// @Success 200 {array} int "Список ID подписанных сообществ"
+// @Failure 400 {object} JSONResponse "Неверный ID пользователя"
+// @Failure 404 {object} JSONResponse "Пользователь не найден"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
-// @Router /communities/my-ids [get]
-func (h *CommunityHandler) GetMyCommunityIDs(w http.ResponseWriter, r *http.Request) {
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
+// @Router /communities/users/{userID}/subscribed-ids [get]
+func (h *CommunityHandler) GetUserSubscribedCommunityIDs(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	targetUserID, err := strconv.Atoi(vars["userID"])
+	if err != nil {
+		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid user ID", zap.String("userID", vars["userID"]))
 		return
 	}
 
-	communityIDs, err := h.communityService.GetMyCommunityIDs(r.Context(), userID)
+	communityIDs, err := h.communityService.GetUserSubscribedCommunityIDs(r.Context(), targetUserID)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -523,4 +526,58 @@ func (h *CommunityHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSONResponse(w, "Unsubscribed successfully", http.StatusOK)
+}
+
+// SearchCommunityByName ищет сообщества по имени.
+//
+// @Summary Поиск сообществ по имени
+// @Description Возвращает список сообществ, имя которых соответствует поисковому запросу.
+//
+//	Можно фильтровать по типу подписки (например, подписан или нет).
+//
+// @Tags communities
+// @Produce json
+// @Param name query string true "Полное или частичное имя сообщества"
+// @Param type query string false "Тип подписки: subscriber, notSubscriber" default(recommended) Enums(subscriber, recommended)
+// @Param limit query int false "Лимит количества сообществ" default(20)
+// @Param page query int false "Номер страницы для пагинации" default(1)
+// @Success 200 {array} domain.ShortCommunity "Найденные сообщества"
+// @Failure 400 {string} string "Missing name query parameter"
+// @Failure 500 {string} string "Server error"
+// @Router /communities/search [get]
+func (api *CommunityHandler) SearchCommunityByName(w http.ResponseWriter, r *http.Request) {
+
+	name := r.URL.Query().Get("name")
+	if name == "" {
+		sendJSONResponse(w, "Missing name query parameter", http.StatusBadRequest)
+		domain.FromContext(r.Context()).Warn("name query parameter is missing")
+		return
+	}
+	cTypeStr := r.URL.Query().Get("type")
+	if cTypeStr == "" {
+		cTypeStr = string(domain.Subscriber) // значение по умолчанию
+	}
+
+	cType := domain.CommunityType(cTypeStr)
+
+	var qParams domain.PaginateQueryParams
+	decoder := schema.NewDecoder()
+	decoder.IgnoreUnknownKeys(true)
+	if err := decoder.Decode(&qParams, r.URL.Query()); err != nil {
+		sendJSONError(w, err)
+		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
+		return
+	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	com, err := api.communityService.SearchShortCommunityByNameAndType(r.Context(), userID, qParams, name, cType)
+	if err != nil {
+		sendJSONError(w, err)
+		domain.FromContext(r.Context()).Error("Fail search profiles by full name", zap.Error(err))
+		return
+	}
+
+	err = sendJSONData(r.Context(), w, com)
+	if err == nil {
+		domain.FromContext(r.Context()).Info("Profiles returned successfully")
+	}
 }
