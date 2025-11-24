@@ -115,21 +115,29 @@ func (e *ElasticProfileStore) DeleteProfile(ctx context.Context, userID int) err
 	return nil
 }
 
-func (e *ElasticProfileStore) SearchUserIDsByFullNameWithFilter(ctx context.Context, fullName string, filterIDs []int, isTerms bool, limit, offset int) ([]int, error) {
+func (e *ElasticProfileStore) SearchUserIDsByFullNameWithFilter(
+	ctx context.Context,
+	fullName string,
+	filterIDs []int,
+	isTerms bool,
+	limit, offset int,
+) ([]int, error) {
+
 	qEn := unidecode.Unidecode(fullName)
 	queries := []string{fullName, qEn}
+
 	if isTerms && len(filterIDs) == 0 {
 		return []int{}, nil
 	}
-	shouldClauses := []map[string]interface{}{}
+
+	shouldClauses := make([]map[string]interface{}, 0, len(queries))
 	for _, q := range queries {
 		shouldClauses = append(shouldClauses,
 			map[string]interface{}{
-				"multi_match": map[string]interface{}{
-					"query":     q,
-					"fields":    []string{"full_name", "full_name_translit"},
-					"fuzziness": "AUTO",
-					"type":      "best_fields",
+				"query_string": map[string]interface{}{
+					"query":            "*" + q + "*",
+					"fields":           []string{"full_name^3", "full_name_translit^1"},
+					"analyze_wildcard": true,
 				},
 			},
 		)

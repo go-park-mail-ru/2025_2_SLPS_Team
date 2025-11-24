@@ -1,12 +1,18 @@
 {
   "profile_index": {
     "settings": {
+      "index.max_ngram_diff": 19,
       "analysis": {
         "filter": {
           "russian_morphology": { "type": "snowball", "language": "russian" },
           "english_morphology": { "type": "snowball", "language": "english" },
-          "edge_ngram_filter": { "type": "edge_ngram", "min_gram": 2, "max_gram": 20 },
-          "name_phonetic": { "type": "phonetic", "encoder": "metaphone", "languageset": ["russian","english"], "replace": false },
+          "edge_ngram_filter": { "type": "edge_ngram", "min_gram": 1, "max_gram": 20 },
+          "name_phonetic": {
+            "type": "phonetic",
+            "encoder": "metaphone",
+            "languageset": ["russian","english"],
+            "replace": false
+          },
           "name_synonyms": { "type": "synonym", "synonyms_path": "elastic/synonyms_profile.txt" }
         },
         "analyzer": {
@@ -24,14 +30,7 @@
           },
           "name_search_analyzer": {
             "tokenizer": "standard",
-            "filter": [
-              "lowercase",
-              "asciifolding",
-              "russian_morphology",
-              "english_morphology",
-              "name_synonyms",
-              "name_phonetic"
-            ]
+            "filter": ["lowercase", "asciifolding"]
           }
         }
       }
@@ -54,12 +53,18 @@
   },
   "community_index": {
     "settings": {
+      "index.max_ngram_diff": 19,
       "analysis": {
         "filter": {
           "russian_morphology": { "type": "snowball", "language": "russian" },
           "english_morphology": { "type": "snowball", "language": "english" },
-          "edge_ngram_filter": { "type": "edge_ngram", "min_gram": 2, "max_gram": 20 },
-          "name_phonetic": { "type": "phonetic", "encoder": "metaphone", "languageset": ["russian", "english"], "replace": false },
+          "edge_ngram_filter": { "type": "edge_ngram", "min_gram": 1, "max_gram": 20 },
+          "name_phonetic": {
+            "type": "phonetic",
+            "encoder": "metaphone",
+            "languageset": ["russian","english"],
+            "replace": false
+          },
           "name_synonyms": { "type": "synonym", "synonyms_path": "elastic/synonyms_community.txt" }
         },
         "analyzer": {
@@ -77,23 +82,14 @@
           },
           "name_search_analyzer": {
             "tokenizer": "standard",
-            "filter": [
-              "lowercase",
-              "asciifolding",
-              "russian_morphology",
-              "english_morphology",
-              "name_synonyms",
-              "name_phonetic"
-            ]
+            "filter": ["lowercase", "asciifolding"]
           }
         }
       }
     },
     "mappings": {
       "properties": {
-        "community_id": {
-          "type": "integer"
-        },
+        "community_id": { "type": "integer" },
         "community_name": {
           "type": "text",
           "analyzer": "name_index_analyzer",
