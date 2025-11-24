@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"project/domain"
+	"project/shared/pb"
 
 	"go.uber.org/zap"
 )
@@ -14,6 +15,7 @@ type FriendService struct {
 	userStore           domain.UserStore
 	profileStore        domain.ProfileStore
 	elasticProfileStore domain.ElasticProfileStore
+	grpcProfileStore    pb.ProfileServiceClient
 }
 
 func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore, elasticProfileStore domain.ElasticProfileStore, profileStore domain.ProfileStore) domain.FriendService {

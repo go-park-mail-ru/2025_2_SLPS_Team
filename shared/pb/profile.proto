@@ -1,0 +1,155 @@
+syntax = "proto3";
+//    protoc --go_out=. --go-grpc_out=. proto/profile.proto
+package profile;
+
+option go_package = "/shared/pb;pb";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+// ==========================
+// ==== STRUCTS =============
+// ==========================
+
+message UserRelationsCounts {
+  int32 accepted = 1;
+  int32 pending  = 2;
+  int32 sent     = 3;
+  int32 blocked  = 4;
+}
+
+message Profile {
+  int32 userID = 1;
+
+  string firstName = 2;
+  string lastName  = 3;
+
+  optional string avatarPath = 4;
+  optional string headerPath = 5;
+  optional string aboutMyself = 6;
+
+  string gender = 7;
+
+  google.protobuf.Timestamp dob = 8;
+
+  UserRelationsCounts relationsCount = 9;
+
+  // вместо enum — строка
+  string relationStatus = 10;
+}
+
+message ShortProfile {
+  int32 userID = 1;
+  string fullName = 2;
+  optional string avatarPath = 3;
+  google.protobuf.Timestamp dob = 4;
+}
+
+// ==========================
+// ====== FILE UPLOAD =======
+// ==========================
+
+message FileData {
+  string filename = 1;
+  string mimeType = 2;
+  bytes content   = 3;
+}
+
+// ==========================
+// ===== REQUESTS/RESPONSES =
+// ==========================
+
+// ----- CreateProfile -----
+message CreateProfileRequest {
+  Profile profile = 1;
+}
+
+
+
+// ----- UpdateProfile -----
+message UpdateProfileRequest {
+  Profile profile = 1;
+  int32 userID = 2;
+
+  repeated FileData files = 3;
+}
+
+
+
+// ----- UpdateAvatar -----
+message UpdateAvatarRequest {
+  int32 userID = 1;
+
+  // ожидается ровно один файл
+  repeated FileData avatar = 2;
+}
+
+
+
+// ----- UpdateHeader -----
+message UpdateHeaderRequest {
+  int32 userID = 1;
+
+  repeated FileData header = 2;
+}
+
+
+
+// ----- GetProfileByUserID -----
+message GetProfileByUserIDRequest {
+  int32 selfUserID = 1;
+  int32 userID = 2;
+}
+
+message GetProfileByUserIDResponse {
+  Profile profile = 1;
+}
+
+// ----- DeleteAvatar -----
+message DeleteAvatarRequest {
+  int32 userID = 1;
+}
+
+
+
+// ----- GetShortProfileMapByUserIDs -----
+message GetShortProfileMapByUserIDsRequest {
+  repeated int32 userIDs = 1;
+}
+
+message GetShortProfileMapByUserIDsResponse {
+  map<int32, ShortProfile> profiles = 1;
+}
+
+// ----- GetShortProfileByUserIDs -----
+message GetShortProfileByUserIDsRequest {
+  repeated int32 userIDs = 1;
+}
+
+message GetShortProfileByUserIDsResponse {
+  repeated ShortProfile profiles = 1;
+}
+
+// ===============================
+// ===== SERVICE DEFINITION =====
+// ===============================
+
+service ProfileService {
+  rpc CreateProfile (CreateProfileRequest) returns (google.protobuf.Empty);
+
+  rpc UpdateProfile (UpdateProfileRequest) returns (google.protobuf.Empty);
+
+  rpc UpdateAvatar (UpdateAvatarRequest) returns (google.protobuf.Empty);
+
+  rpc UpdateHeader (UpdateHeaderRequest) returns (google.protobuf.Empty);
+
+  rpc GetProfileByUserID (GetProfileByUserIDRequest)
+      returns (GetProfileByUserIDResponse);
+
+  rpc DeleteAvatarByUserID (DeleteAvatarRequest)
+      returns (google.protobuf.Empty);
+
+  rpc GetShortProfileMapByUserIDs (GetShortProfileMapByUserIDsRequest)
+      returns (GetShortProfileMapByUserIDsResponse);
+
+  rpc GetShortProfileByUserIDs (GetShortProfileByUserIDsRequest)
+      returns (GetShortProfileByUserIDsResponse);
+}

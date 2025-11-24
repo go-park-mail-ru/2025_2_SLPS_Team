@@ -20,7 +20,7 @@ type Profile struct {
 }
 
 type ShortProfile struct {
-	UserID     int       `json:"userID"`
+	UserID     int32     `json:"userID"`
 	FullName   string    `json:"fullName"`
 	AvatarPath *string   `json:"avatarPath"`
 	Dob        time.Time `json:"dob"`
