@@ -21,7 +21,7 @@ func NewDBPostStore(db *sql.DB) domain.PostStore {
 }
 
 // Возвращает пагинированный слайс постов
-func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]domain.PostFeedItem, error) {
+func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]domain.PostView, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
@@ -33,128 +33,92 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit,
 	}()
 
 	query := `
-SELECT 
-    p.id,
-    p.author_id,
-    p.community_id,
-    p.text,
-    p.created_at,
-    p.updated_at,
-    u.user_id,
-    u.first_name || ' ' || u.last_name AS author_name,
-    u.avatar_path,
-    c.name as community_name,
-    c.avatar_path as community_avatar,
-    COALESCE(likes.count, 0) AS likes_count,
-    EXISTS (
-        SELECT 1
-        FROM post_likes pl
-        WHERE pl.post_id = p.id AND pl.user_id = $3
-    ) AS liked_by_user
-FROM posts p
-LEFT JOIN profiles u ON p.author_id = u.user_id
-LEFT JOIN communities c ON p.community_id = c.id
-LEFT JOIN (
-    SELECT post_id, COUNT(*) AS count
-    FROM post_likes
-    GROUP BY post_id
-) likes ON likes.post_id = p.id
-WHERE p.community_id IS NULL 
-OR p.community_id IN (SELECT community_id FROM community_subscriptions WHERE user_id = $3)
-ORDER BY p.created_at DESC
-LIMIT $1 OFFSET $2;`
+        SELECT 
+            p.id,
+            p.author_id,
+            p.community_id,
+            p.text,
+            p.created_at,
+            u.first_name || ' ' || u.last_name as user_name,
+            u.avatar_path as user_avatar,
+            c.name as community_name,
+            c.avatar_path as community_avatar,
+            COALESCE(likes.count, 0) AS likes_count,
+            EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $3) AS liked_by_user
+        FROM posts p
+        LEFT JOIN profiles u ON p.author_id = u.user_id
+        LEFT JOIN communities c ON p.community_id = c.id
+        LEFT JOIN (
+            SELECT post_id, COUNT(*) AS count
+            FROM post_likes
+            GROUP BY post_id
+        ) likes ON likes.post_id = p.id
+        WHERE p.community_id IS NULL 
+           OR p.community_id IN (SELECT community_id FROM community_subscriptions WHERE user_id = $3)
+        ORDER BY p.created_at DESC
+        LIMIT $1 OFFSET $2
+    `
 
 	rows, err := store.db.QueryContext(ctx, query, limit, offset, userID)
 	if err != nil {
-		dblogger.Error("Failed to query posts with authors", zap.Error(err))
+		dblogger.Error("Failed to query posts", zap.Error(err))
 		return nil, fmt.Errorf("failed to query posts: %w", err)
 	}
 	defer rows.Close()
 
-	var feedItems []domain.PostFeedItem
+	posts := []domain.PostView{}
 
 	for rows.Next() {
 		var (
-			post       domain.Post
-			authorID   sql.NullInt64
-			fullName   sql.NullString
-			avatarPath sql.NullString
+			postView   domain.PostView
 			commID     sql.NullInt64
 			commName   sql.NullString
 			commAvatar sql.NullString
 		)
 
 		err := rows.Scan(
-			&post.ID,
-			&post.AuthorID,
+			&postView.ID,
+			&postView.AuthorID,
 			&commID,
-			&post.Text,
-			&post.CreatedAt,
-			&post.UpdatedAt,
-			&authorID,
-			&fullName,
-			&avatarPath,
+			&postView.Text,
+			&postView.CreatedAt,
+			&postView.AuthorName,
+			&postView.AuthorAvatar,
 			&commName,
 			&commAvatar,
-			&post.LikeCount,
-			&post.IsLiked,
+			&postView.LikeCount,
+			&postView.IsLiked,
 		)
 		if err != nil {
-			dblogger.Error("Failed to scan post with author", zap.Error(err))
-			return nil, fmt.Errorf("failed to scan post with author: %w", err)
+			dblogger.Error("Failed to scan post", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
 
-		// Загружаем вложения и фото для поста
-		attachments, photos, err := store.getPostMedia(ctx, post.ID)
+		// Обрабатываем community_id
+		if commID.Valid {
+			communityID := int(commID.Int64)
+			postView.CommunityID = &communityID
+			postView.IsCommunityPost = true
+
+			if commName.Valid {
+				postView.CommunityName = &commName.String
+			}
+			if commAvatar.Valid {
+				postView.CommunityAvatar = &commAvatar.String
+			}
+		}
+
+		// Загружаем вложения и фото
+		attachments, photos, err := store.getPostMedia(ctx, postView.ID)
 		if err != nil {
 			dblogger.Error("Failed to load post media", zap.Error(err))
 			return nil, err
 		}
 
-		post.Attachments = attachments
-		post.PhotosPath = photos
+		postView.Attachments = attachments
+		postView.Photos = photos
 
-		// Обрабатываем community_id
-		if commID.Valid {
-			communityID := int(commID.Int64)
-			post.CommunityID = &communityID
-		}
-
-		// Создаем PostFeedItem
-		feedItem := domain.PostFeedItem{
-			Post:        post,
-			IsCommunity: commID.Valid,
-		}
-
-		// Добавляем автора для постов пользователей
-		if authorID.Valid && fullName.Valid {
-			var avatarPtr *string
-			if avatarPath.Valid {
-				avatarPtr = &avatarPath.String
-			}
-			author := &domain.ShortProfile{
-				UserID:     int(authorID.Int64),
-				FullName:   fullName.String,
-				AvatarPath: avatarPtr,
-			}
-			feedItem.Author = author
-		}
-
-		// Добавляем сообщество для постов сообществ
-		if commID.Valid && commName.Valid {
-			var commAvatarPtr *string
-			if commAvatar.Valid {
-				commAvatarPtr = &commAvatar.String
-			}
-			community := &domain.Community{
-				ID:         int(commID.Int64),
-				Name:       commName.String,
-				AvatarPath: commAvatarPtr,
-			}
-			feedItem.Community = community
-		}
-
-		feedItems = append(feedItems, feedItem)
+		posts = append(posts, postView)
 	}
 
 	if err := rows.Err(); err != nil {
@@ -162,13 +126,13 @@ LIMIT $1 OFFSET $2;`
 		return nil, err
 	}
 
-	return feedItems, nil
+	return posts, nil
 }
 
 // Возвращает пост по ID поста
-func (store *DBPostStore) GetPostByID(ctx context.Context, userID int, id uint) (*domain.Post, error) {
-	start := time.Now()                           //засекаем время начала операции
-	dblogger := domain.DBLogger(ctx, "postStore") //создаем специализированный логгер для БД с тегами layer="db" и repo="postStore"
+func (store *DBPostStore) GetPostByID(ctx context.Context, userID int, id uint) (*domain.PostView, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetPostByID", zap.Uint("postID", id))
 
@@ -178,42 +142,47 @@ func (store *DBPostStore) GetPostByID(ctx context.Context, userID int, id uint) 
 	}()
 
 	query := `
-SELECT 
-    p.id,
-    p.author_id,
-	p.community_id,
-    p.text,
-    p.created_at,
-    p.updated_at,
-    COALESCE(likes.count, 0) AS likes_count,
-    EXISTS (
-        SELECT 1
-        FROM post_likes pl
-        WHERE pl.post_id = p.id AND pl.user_id = $2
-    ) AS liked_by_user
-FROM posts p
-LEFT JOIN (
-    SELECT post_id, COUNT(*) AS count
-    FROM post_likes
-    GROUP BY post_id
-) likes ON likes.post_id = p.id
-LEFT JOIN post_likes ul 
-       ON ul.post_id = p.id AND ul.user_id = $2 
-WHERE p.id = $1; 
-    `
+		SELECT 
+			p.id,
+			p.author_id,
+			p.community_id,
+			p.text,
+			p.created_at,
+			u.first_name || ' ' || u.last_name as user_name,
+			u.avatar_path as user_avatar,
+			c.name as community_name,
+			c.avatar_path as community_avatar,
+			COALESCE(likes.count, 0) AS likes_count,
+			EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS liked_by_user
+		FROM posts p
+		LEFT JOIN profiles u ON p.author_id = u.user_id
+		LEFT JOIN communities c ON p.community_id = c.id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) AS count
+			FROM post_likes
+			GROUP BY post_id
+		) likes ON likes.post_id = p.id
+		WHERE p.id = $1
+	`
 
 	dblogger = dblogger.With(zap.String("query", query))
-	var post domain.Post
+	var postView domain.PostView
 	var commID sql.NullInt64
+	var commName sql.NullString
+	var commAvatar sql.NullString
+
 	err := store.db.QueryRowContext(ctx, query, id, userID).Scan(
-		&post.ID,
-		&post.AuthorID,
+		&postView.ID,
+		&postView.AuthorID,
 		&commID,
-		&post.Text,
-		&post.CreatedAt,
-		&post.UpdatedAt,
-		&post.LikeCount,
-		&post.IsLiked,
+		&postView.Text,
+		&postView.CreatedAt,
+		&postView.AuthorName,
+		&postView.AuthorAvatar,
+		&commName,
+		&commAvatar,
+		&postView.LikeCount,
+		&postView.IsLiked,
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -221,14 +190,23 @@ WHERE p.id = $1;
 		return nil, domain.ErrPostNotFound
 	}
 
-	if commID.Valid {
-		communityID := int(commID.Int64)
-		post.CommunityID = &communityID
-	}
-
 	if err != nil {
 		dblogger.Error("Failed to get post", zap.Error(err))
 		return nil, fmt.Errorf("failed to get post: %w", err)
+	}
+
+	// Обрабатываем community_id
+	if commID.Valid {
+		communityID := int(commID.Int64)
+		postView.CommunityID = &communityID
+		postView.IsCommunityPost = true
+
+		if commName.Valid {
+			postView.CommunityName = &commName.String
+		}
+		if commAvatar.Valid {
+			postView.CommunityAvatar = &commAvatar.String
+		}
 	}
 
 	// Загружаем attachments и photos
@@ -237,11 +215,11 @@ WHERE p.id = $1;
 		return nil, err
 	}
 
-	post.Attachments = attachments
-	post.PhotosPath = photos
+	postView.Attachments = attachments
+	postView.Photos = photos
 
 	dblogger.Info("Post retrieved successfully")
-	return &post, nil
+	return &postView, nil
 }
 
 // Создает новый пост с транзакцией
@@ -370,7 +348,7 @@ func (store *DBPostStore) UpdatePost(ctx context.Context, post *domain.Post) err
 }
 
 // Получает посты сообщества
-func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int, communityID int, limit, offset int) ([]domain.Post, error) {
+func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int, communityID int, limit, offset int) ([]domain.PostView, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
@@ -382,66 +360,82 @@ func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int, com
 	}()
 
 	query := `
-SELECT 
-    p.id,
-    p.author_id,
-    p.community_id,
-    p.text,
-    p.created_at,
-    p.updated_at,
-    COALESCE(likes.count, 0) AS likes_count,
-    EXISTS (
-        SELECT 1
-        FROM post_likes pl
-        WHERE pl.post_id = p.id AND pl.user_id = $2
-    ) AS liked_by_user
-FROM posts p
-LEFT JOIN (
-    SELECT post_id, COUNT(*) AS count
-    FROM post_likes
-    GROUP BY post_id
-) likes ON likes.post_id = p.id
-WHERE p.community_id = $1
-ORDER BY p.created_at DESC
-LIMIT $3 OFFSET $4;`
+		SELECT 
+			p.id,
+			p.author_id,
+			p.community_id,
+			p.text,
+			p.created_at,
+			u.first_name || ' ' || u.last_name as user_name,
+			u.avatar_path as user_avatar,
+			c.name as community_name,
+			c.avatar_path as community_avatar,
+			COALESCE(likes.count, 0) AS likes_count,
+			EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS liked_by_user
+		FROM posts p
+		LEFT JOIN profiles u ON p.author_id = u.user_id
+		LEFT JOIN communities c ON p.community_id = c.id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) AS count
+			FROM post_likes
+			GROUP BY post_id
+		) likes ON likes.post_id = p.id
+		WHERE p.community_id = $1
+		ORDER BY p.created_at DESC
+		LIMIT $3 OFFSET $4
+	`
 
 	dblogger = dblogger.With(zap.String("query", query))
 	rows, err := store.db.QueryContext(ctx, query, communityID, userID, limit, offset)
-
 	if err != nil {
 		dblogger.Error("Failed to query community posts", zap.Error(err))
 		return nil, fmt.Errorf("failed to query community posts: %w", err)
 	}
 	defer rows.Close()
 
-	posts := []domain.Post{}
+	posts := []domain.PostView{}
 	for rows.Next() {
-		var post domain.Post
-		var commID *int
+		var postView domain.PostView
+		var commID sql.NullInt64
+		var commName sql.NullString
+		var commAvatar sql.NullString
+
 		err := rows.Scan(
-			&post.ID,
-			&post.AuthorID,
+			&postView.ID,
+			&postView.AuthorID,
 			&commID,
-			&post.Text,
-			&post.CreatedAt,
-			&post.UpdatedAt,
-			&post.LikeCount,
-			&post.IsLiked,
+			&postView.Text,
+			&postView.CreatedAt,
+			&postView.AuthorName,
+			&postView.AuthorAvatar,
+			&commName,
+			&commAvatar,
+			&postView.LikeCount,
+			&postView.IsLiked,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan post", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
-		post.CommunityID = commID
 
-		attachments, photos, err := store.getPostMedia(ctx, post.ID)
+		// Обрабатываем community данные
+		postView.IsCommunityPost = true
+		if commName.Valid {
+			postView.CommunityName = &commName.String
+		}
+		if commAvatar.Valid {
+			postView.CommunityAvatar = &commAvatar.String
+		}
+
+		// Загружаем вложения и фото
+		attachments, photos, err := store.getPostMedia(ctx, postView.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		post.Attachments = attachments
-		post.PhotosPath = photos
-		posts = append(posts, post)
+		postView.Attachments = attachments
+		postView.Photos = photos
+		posts = append(posts, postView)
 	}
 
 	dblogger.Info("Community posts retrieved successfully", zap.Int("postsCount", len(posts)))
@@ -510,11 +504,11 @@ func (store *DBPostStore) DeletePost(ctx context.Context, id uint, authorID uint
 }
 
 // Получение постов пользователя с пагинацией
-func (store *DBPostStore) GetPostsByUser(ctx context.Context, seldUserID int, userID uint, limit, offset int) ([]domain.Post, error) {
+func (store *DBPostStore) GetPostsByUser(ctx context.Context, selfUserID int, userID uint, limit, offset int) ([]domain.PostView, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetPostsByUser", zap.Uint("userID", userID), zap.Int("offset", offset), zap.Int("limit", limit))
+	dbloggerCopy.Info("DB start GetPostsByUser", zap.Uint("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -522,61 +516,76 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, seldUserID int, us
 	}()
 
 	query := `
-SELECT 
-    p.id,
-    p.author_id,
-    p.text,
-    p.created_at,
-    p.updated_at,
-    COALESCE(likes.count, 0) AS likes_count,
-    EXISTS (
-        SELECT 1
-        FROM post_likes pl
-        WHERE pl.post_id = p.id AND pl.user_id = $2
-    ) AS liked_by_user
-FROM posts p
-LEFT JOIN (
-    SELECT post_id, COUNT(*) AS count
-    FROM post_likes
-    GROUP BY post_id
-) likes ON likes.post_id = p.id
-WHERE p.author_id = $1
-ORDER BY p.created_at DESC
-LIMIT $3 OFFSET $4;    `
-	dblogger = dblogger.With(zap.String("query", query))
-	rows, err := store.db.QueryContext(ctx, query, userID, seldUserID, limit, offset)
+		SELECT 
+			p.id,
+			p.author_id,
+			p.community_id,
+			p.text,
+			p.created_at,
+			u.first_name || ' ' || u.last_name as user_name,
+			u.avatar_path as user_avatar,
+			c.name as community_name,
+			c.avatar_path as community_avatar,
+			COALESCE(likes.count, 0) AS likes_count,
+			EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS liked_by_user
+		FROM posts p
+		LEFT JOIN profiles u ON p.author_id = u.user_id
+		LEFT JOIN communities c ON p.community_id = c.id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) AS count
+			FROM post_likes
+			GROUP BY post_id
+		) likes ON likes.post_id = p.id
+		WHERE p.author_id = $1 AND p.community_id IS NULL
+		ORDER BY p.created_at DESC
+		LIMIT $3 OFFSET $4
+	`
 
+	dblogger = dblogger.With(zap.String("query", query))
+	rows, err := store.db.QueryContext(ctx, query, userID, selfUserID, limit, offset)
 	if err != nil {
 		dblogger.Error("Failed to query user posts", zap.Error(err))
 		return nil, fmt.Errorf("failed to query user posts: %w", err)
 	}
 	defer rows.Close()
 
-	posts := []domain.Post{}
+	posts := []domain.PostView{}
 	for rows.Next() {
-		var post domain.Post
+		var postView domain.PostView
+		var commID sql.NullInt64
+		var commName sql.NullString
+		var commAvatar sql.NullString
+
 		err := rows.Scan(
-			&post.ID,
-			&post.AuthorID,
-			&post.Text,
-			&post.CreatedAt,
-			&post.UpdatedAt,
-			&post.LikeCount,
-			&post.IsLiked,
+			&postView.ID,
+			&postView.AuthorID,
+			&commID,
+			&postView.Text,
+			&postView.CreatedAt,
+			&postView.AuthorName,
+			&postView.AuthorAvatar,
+			&commName,
+			&commAvatar,
+			&postView.LikeCount,
+			&postView.IsLiked,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan post", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan post: %w", err)
 		}
 
-		attachments, photos, err := store.getPostMedia(ctx, post.ID)
+		// В постах пользователя community_id должен быть NULL
+		postView.IsCommunityPost = false
+
+		// Загружаем вложения и фото
+		attachments, photos, err := store.getPostMedia(ctx, postView.ID)
 		if err != nil {
 			return nil, err
 		}
 
-		post.Attachments = attachments
-		post.PhotosPath = photos
-		posts = append(posts, post)
+		postView.Attachments = attachments
+		postView.Photos = photos
+		posts = append(posts, postView)
 	}
 
 	dblogger.Info("User posts retrieved successfully", zap.Int("postsCount", len(posts)))
@@ -738,7 +747,7 @@ func (store *DBPostStore) updatePostPhotosTx(ctx context.Context, tx *sql.Tx, po
 
 func (store *DBPostStore) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error {
 	start := time.Now()
-	dblogger := domain.DBLogger(ctx, "chatStore")
+	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start UpdateLikeOnPostByUserID")
 

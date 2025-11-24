@@ -36,13 +36,13 @@ type PostsResponse struct {
 
 // PostsPaginate возвращает посты с пагинацией
 // @Summary Получить посты с пагинацией
-// @Description Возвращает список постов с поддержкой пагинации
+// @Description Возвращает список постов с поддержкой пагинации (включая посты из сообществ)
 // @Tags posts
 // @Accept json
 // @Produce json
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество постов на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {object} PostsResponse "Успешный ответ с постами"
+// @Success 200 {array} domain.PostView "Успешный ответ с постами"
 // @Failure 400 {object} JSONResponse "Неверные параметры запроса"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts [get]
@@ -74,7 +74,7 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 // @Accept json
 // @Produce json
 // @Param id path int true "ID поста" minimum(1)
-// @Success 200 {object} domain.Post "Пост найден"
+// @Success 200 {object} domain.PostView "Пост найден"
 // @Failure 400 {object} JSONResponse "Неверный ID поста"
 // @Failure 404 {object} JSONResponse "Пост не найден"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -277,7 +277,7 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 // @Param userID path int true "ID пользователя" minimum(1)
 // @Param page query int false "Номер страницы" default(1) minimum(1)
 // @Param limit query int false "Количество постов на странице" default(20) minimum(1) maximum(100)
-// @Success 200 {object} PostsResponse "Успешный ответ с постами пользователя"
+// @Success 200 {array} domain.PostView "Успешный ответ с постами пользователя"
 // @Failure 400 {object} JSONResponse "Неверные параметры запроса"
 // @Failure 404 {object} JSONResponse "Пользователь не найден"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -342,4 +342,45 @@ func (h *PostsHandler) UpdateLikeOnPost(w http.ResponseWriter, r *http.Request) 
 
 	domain.FromContext(r.Context()).Info("like updated")
 	sendJSONResponse(w, "like updated", http.StatusOK)
+}
+// GetCommunityPosts возвращает посты сообщества
+// @Summary Получить посты сообщества
+// @Description Возвращает посты конкретного сообщества с пагинацией
+// @Tags posts
+// @Accept json
+// @Produce json
+// @Param id path int true "ID сообщества" minimum(1)
+// @Param page query int false "Номер страницы" default(1) minimum(1)
+// @Param limit query int false "Количество постов на странице" default(20) minimum(1) maximum(100)
+// @Success 200 {array} domain.PostView "Успешный ответ с постами сообщества"
+// @Failure 400 {object} JSONResponse "Неверные параметры запроса"
+// @Failure 404 {object} JSONResponse "Сообщество не найдено"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Router /posts/communities/{id} [get]
+func (h *PostsHandler) GetCommunityPosts(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	communityID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		sendJSONResponse(w, "Invalid community ID", http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", vars["id"]))
+		return
+	}
+
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		return
+	}
+
+	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	posts, err := h.postService.GetCommunityPosts(r.Context(), userID, communityID, qParams)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	if err := sendJSONData(r.Context(), w, posts); err != nil {
+		return
+	}
 }
