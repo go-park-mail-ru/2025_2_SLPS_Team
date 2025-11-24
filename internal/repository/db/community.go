@@ -299,6 +299,60 @@ func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID i
 	return communities, nil
 }
 
+func (store *DBCommunityStore) GetUserCommunitiesByID(ctx context.Context, targetUserID int, limit, offset int) ([]domain.ShortCommunity, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "communityStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetUserCommunitiesByID", zap.Int("targetUserID", targetUserID))
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	query := `
+		SELECT 
+			c.id, 
+			c.name, 
+			c.description, 
+			c.avatar_path,
+			(SELECT COUNT(*) FROM community_subscriptions cs2 WHERE cs2.community_id = c.id) as subscribers_count
+		FROM communities c
+		INNER JOIN community_subscriptions cs ON c.id = cs.community_id
+		WHERE cs.user_id = $1
+		ORDER BY c.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	dblogger = dblogger.With(zap.String("query", query))
+	rows, err := store.db.QueryContext(ctx, query, targetUserID, limit, offset)
+	if err != nil {
+		dblogger.Error("Failed to query user communities by ID", zap.Error(err))
+		return nil, fmt.Errorf("failed to query user communities by ID: %w", err)
+	}
+	defer rows.Close()
+
+	communities := []domain.ShortCommunity{}
+	for rows.Next() {
+		var community domain.ShortCommunity
+		err := rows.Scan(
+			&community.ID,
+			&community.Name,
+			&community.Description,
+			&community.AvatarPath,
+			&community.SubscribersCount,
+		)
+		if err != nil {
+			dblogger.Error("Failed to scan community", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan community: %w", err)
+		}
+		communities = append(communities, community)
+	}
+
+	dblogger.Info("User communities by ID retrieved successfully", zap.Int("count", len(communities)))
+	return communities, nil
+}
+
 func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.CommunityForMyCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")

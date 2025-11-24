@@ -288,6 +288,31 @@ func (s *CommunityService) GetOtherCommunities(ctx context.Context, userID int, 
 	return communities, nil
 }
 
+func (s *CommunityService) GetUserCommunitiesByID(ctx context.Context, targetUserID int, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
+
+	domain.Info(ctx, "Getting user communities by ID", zap.Int("targetUserID", targetUserID))
+
+	// Проверяем существование пользователя
+	_, err := s.userStore.GetUserByID(ctx, targetUserID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			domain.Warn(ctx, "User not found", zap.Int("targetUserID", targetUserID))
+			return nil, domain.ErrNotFound
+		}
+		domain.Error(ctx, "Failed to get user", err)
+		return nil, domain.ErrDB
+	}
+
+	communities, err := s.communityStore.GetUserCommunitiesByID(ctx, targetUserID, limit, offset)
+	if err != nil {
+		domain.Error(ctx, "Failed to get user communities by ID", err)
+		return nil, domain.ErrDB
+	}
+
+	return communities, nil
+}
+
 func (s *CommunityService) GetCreatedCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.CommunityForMyCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 

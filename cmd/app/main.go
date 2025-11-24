@@ -208,6 +208,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	communityRouter.HandleFunc("", community.CreateCommunity).Methods("POST", "OPTIONS")
 	communityRouter.HandleFunc("/my", community.GetUserCommunities).Methods("GET")
 	communityRouter.HandleFunc("/other", community.GetOtherCommunities).Methods("GET")
+	communityRouter.HandleFunc("/users/{id:[0-9]+}", community.GetUserCommunitiesByID).Methods("GET")
 	communityRouter.HandleFunc("/created", community.GetCreatedCommunities).Methods("GET")
 	communityRouter.HandleFunc("/{id:[0-9]+}", community.GetCommunity).Methods("GET")
 	communityRouter.HandleFunc("/{id:[0-9]+}", community.UpdateCommunity).Methods("PUT", "OPTIONS")

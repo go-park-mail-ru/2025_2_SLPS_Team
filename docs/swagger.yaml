@@ -1147,6 +1147,54 @@ paths:
       summary: Получить другие сообщества
       tags:
       - communities
+  /communities/users/{id}:
+    get:
+      description: Возвращает список сообществ, на которые подписан указанный пользователь
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество сообществ на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список сообществ пользователя
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortCommunity'
+            type: array
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить сообщества пользователя по ID
+      tags:
+      - communities
   /friends:
     get:
       description: Возвращает список друзей пользователя с пагинацией

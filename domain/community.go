@@ -69,6 +69,7 @@ type CommunityService interface {
 	GetCommunity(ctx context.Context, userID int, communityID int) (*CommunityForView, error)
 	GetUserCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortCommunity, error)
 	GetOtherCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortCommunity, error)
+	GetUserCommunitiesByID(ctx context.Context, targetUserID int, params PaginateQueryParams) ([]ShortCommunity, error)
 	GetCreatedCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]CommunityForMyCommunity, error)
 	Subscribe(ctx context.Context, communityID int, userID int) error
 	Unsubscribe(ctx context.Context, communityID int, userID int) error
@@ -82,6 +83,7 @@ type CommunityStore interface {
 	GetCommunityByID(ctx context.Context, id int) (*Community, error)
 	GetUserCommunities(ctx context.Context, userID int, limit, offset int) ([]ShortCommunity, error)
 	GetOtherCommunities(ctx context.Context, userID int, limit, offset int) ([]ShortCommunity, error)
+	GetUserCommunitiesByID(ctx context.Context, targetUserID int, limit, offset int) ([]ShortCommunity, error)
 	GetCreatedCommunities(ctx context.Context, userID int, limit, offset int) ([]CommunityForMyCommunity, error)
 	Subscribe(ctx context.Context, communityID int, userID int) error
 	Unsubscribe(ctx context.Context, communityID int, userID int) error
