@@ -79,7 +79,7 @@ func (h *CommunityHandler) CreateCommunity(w http.ResponseWriter, r *http.Reques
 		"message":   "Community created successfully",
 		"community": community,
 	}
-	
+
 	if err := sendJSONData(r.Context(), w, response); err != nil {
 		return
 	}
@@ -193,11 +193,11 @@ func (h *CommunityHandler) DeleteCommunity(w http.ResponseWriter, r *http.Reques
 
 // GetCommunity возвращает информацию о сообществе
 // @Summary Получить информацию о сообществе
-// @Description Возвращает информацию о сообществе включая количество подписчиков и статус подписки текущего пользователя
+// @Description Возвращает информацию о сообществе включая количество подписчиков, статус подписки текущего пользователя, создателя
 // @Tags communities
 // @Produce json
 // @Param id path int true "ID сообщества"
-// @Success 200 {object} domain.CommunityForViewWithSubscription "Информация о сообществе"
+// @Success 200 {object} domain.CommunityForView "Информация о сообществе"
 // @Failure 400 {object} JSONResponse "Неверный ID сообщества"
 // @Failure 404 {object} JSONResponse "Сообщество не найдено"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -291,6 +291,45 @@ func (h *CommunityHandler) GetOtherCommunities(w http.ResponseWriter, r *http.Re
 	}
 
 	communities, err := h.communityService.GetOtherCommunities(r.Context(), userID, qParams)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	if err := sendJSONData(r.Context(), w, communities); err != nil {
+		return
+	}
+}
+
+// GetCreatedCommunities возвращает сообщества, созданные пользователем
+// @Summary Получить созданные сообщества
+// @Description Возвращает список сообществ, созданных текущим пользователем (только ID, название и аватар)
+// @Tags communities
+// @Produce json
+// @Param page query int false "Номер страницы" default(1) minimum(1)
+// @Param limit query int false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
+// @Success 200 {array} domain.CommunityForMyCommunity "Список созданных сообществ"
+// @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
+// @Failure 401 {object} JSONResponse "Пользователь не авторизован"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Security ApiKeyAuth
+// @Router /communities/created [get]
+func (h *CommunityHandler) GetCreatedCommunities(w http.ResponseWriter, r *http.Request) {
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		return
+	}
+
+	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	if !ok {
+		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
+		domain.Warn(r.Context(), "User ID not found in context")
+		return
+	}
+
+	communities, err := h.communityService.GetCreatedCommunities(r.Context(), userID, qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return

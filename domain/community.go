@@ -38,21 +38,23 @@ type ShortCommunityWithCoverPathAndCreatedAt struct {
 	SubscribersCount int       `json:"subscribersCount"`
 }
 
-//
-type CommunityForView struct {
-    ID               int       `json:"id"`
-    Name             string    `json:"name"`
-    Description      string    `json:"description"`
-    AvatarPath       *string   `json:"avatarPath"`
-    CoverPath        *string   `json:"coverPath"`
-    CreatedAt        time.Time `json:"createdAt"`
-    SubscribersCount int       `json:"subscribersCount"`
+type CommunityForMyCommunity struct {
+	ID         int     `json:"id"`
+	Name       string  `json:"name"`
+	AvatarPath *string `json:"avatarPath"`
 }
 
 // Надо когда юзер заходит на сообщество
-type CommunityForViewWithSubscription struct {
-    CommunityForView
-    IsSubscribed bool `json:"isSubscribed"`
+type CommunityForView struct {
+	ID               int       `json:"id"`
+	Name             string    `json:"name"`
+	Description      string    `json:"description"`
+	CreatorID        int       `json:"creatorID"`
+	AvatarPath       *string   `json:"avatarPath"`
+	CoverPath        *string   `json:"coverPath"`
+	CreatedAt        time.Time `json:"createdAt"`
+	SubscribersCount int       `json:"subscribersCount"`
+	IsSubscribed     bool      `json:"isSubscribed"`
 }
 
 type CommunityRequest struct {
@@ -64,9 +66,10 @@ type CommunityService interface {
 	CreateCommunity(ctx context.Context, userID int, req CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) (*Community, error)
 	UpdateCommunity(ctx context.Context, communityID int, userID int, req CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) error
 	DeleteCommunity(ctx context.Context, communityID int, userID int) error
-	GetCommunity(ctx context.Context, userID int, communityID int) (*CommunityForViewWithSubscription, error)
+	GetCommunity(ctx context.Context, userID int, communityID int) (*CommunityForView, error)
 	GetUserCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortCommunity, error)
 	GetOtherCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]ShortCommunity, error)
+	GetCreatedCommunities(ctx context.Context, userID int, params PaginateQueryParams) ([]CommunityForMyCommunity, error)
 	Subscribe(ctx context.Context, communityID int, userID int) error
 	Unsubscribe(ctx context.Context, communityID int, userID int) error
 	GetCommunityPosts(ctx context.Context, userID int, communityID int, params PaginateQueryParams) ([]Post, error)
@@ -79,6 +82,7 @@ type CommunityStore interface {
 	GetCommunityByID(ctx context.Context, id int) (*Community, error)
 	GetUserCommunities(ctx context.Context, userID int, limit, offset int) ([]ShortCommunity, error)
 	GetOtherCommunities(ctx context.Context, userID int, limit, offset int) ([]ShortCommunity, error)
+	GetCreatedCommunities(ctx context.Context, userID int, limit, offset int) ([]CommunityForMyCommunity, error)
 	Subscribe(ctx context.Context, communityID int, userID int) error
 	Unsubscribe(ctx context.Context, communityID int, userID int) error
 	IsSubscribed(ctx context.Context, communityID int, userID int) (bool, error)

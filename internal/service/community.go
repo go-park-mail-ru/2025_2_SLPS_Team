@@ -226,7 +226,7 @@ func (s *CommunityService) DeleteCommunity(ctx context.Context, communityID int,
 	return nil
 }
 
-func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communityID int) (*domain.CommunityForViewWithSubscription, error) {
+func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communityID int) (*domain.CommunityForView, error) {
 	domain.Info(ctx, "Getting community", zap.Int("communityID", communityID))
 
 	community, err := s.communityStore.GetCommunityByID(ctx, communityID)
@@ -247,17 +247,16 @@ func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communi
 	}
 
 	// Преобразуем в структуру без CreatorID
-	result := &domain.CommunityForViewWithSubscription{
-		CommunityForView: domain.CommunityForView{
-			ID:               community.ID,
-			Name:             community.Name,
-			Description:      community.Description,
-			AvatarPath:       community.AvatarPath,
-			CoverPath:        community.CoverPath,
-			CreatedAt:        community.CreatedAt,
-			SubscribersCount: community.SubscribersCount,
-		},
-		IsSubscribed: isSubscribed,
+	result := &domain.CommunityForView{
+		ID:               community.ID,
+		Name:             community.Name,
+		Description:      community.Description,
+		CreatorID:        community.CreatorID,
+		AvatarPath:       community.AvatarPath,
+		CoverPath:        community.CoverPath,
+		CreatedAt:        community.CreatedAt,
+		SubscribersCount: community.SubscribersCount,
+		IsSubscribed:     isSubscribed,
 	}
 
 	return result, nil
@@ -283,6 +282,19 @@ func (s *CommunityService) GetOtherCommunities(ctx context.Context, userID int, 
 	communities, err := s.communityStore.GetOtherCommunities(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get other communities", err)
+		return nil, domain.ErrDB
+	}
+
+	return communities, nil
+}
+
+func (s *CommunityService) GetCreatedCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.CommunityForMyCommunity, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
+
+	domain.Info(ctx, "Getting created communities", zap.Int("userID", userID))
+	communities, err := s.communityStore.GetCreatedCommunities(ctx, userID, limit, offset)
+	if err != nil {
+		domain.Error(ctx, "Failed to get created communities", err)
 		return nil, domain.ErrDB
 	}
 

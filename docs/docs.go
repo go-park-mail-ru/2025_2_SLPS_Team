@@ -713,6 +713,71 @@ const docTemplate = `{
                 }
             }
         },
+        "/communities/created": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список сообществ, созданных текущим пользователем (только ID, название и аватар)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить созданные сообщества",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество сообществ на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список созданных сообществ",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.CommunityForMyCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры пагинации",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/communities/my": {
             "get": {
                 "security": [
@@ -838,7 +903,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Возвращает информацию о сообществе включая количество подписчиков и статус подписки текущего пользователя",
+                "description": "Возвращает информацию о сообществе включая количество подписчиков, статус подписки текущего пользователя, создателя",
                 "produces": [
                     "application/json"
                 ],
@@ -859,7 +924,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Информация о сообществе",
                         "schema": {
-                            "$ref": "#/definitions/domain.CommunityForViewWithSubscription"
+                            "$ref": "#/definitions/domain.CommunityForView"
                         }
                     },
                     "400": {
@@ -2603,7 +2668,21 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.CommunityForViewWithSubscription": {
+        "domain.CommunityForMyCommunity": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CommunityForView": {
             "type": "object",
             "properties": {
                 "avatarPath": {
@@ -2614,6 +2693,9 @@ const docTemplate = `{
                 },
                 "createdAt": {
                     "type": "string"
+                },
+                "creatorID": {
+                    "type": "integer"
                 },
                 "description": {
                     "type": "string"

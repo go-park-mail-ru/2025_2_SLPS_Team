@@ -299,6 +299,55 @@ func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID i
 	return communities, nil
 }
 
+func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.CommunityForMyCommunity, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "communityStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetCreatedCommunities", zap.Int("userID", userID))
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	query := `
+		SELECT 
+			c.id, 
+			c.name, 
+			c.avatar_path
+		FROM communities c
+		WHERE c.creator_id = $1
+		ORDER BY c.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	dblogger = dblogger.With(zap.String("query", query))
+	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
+	if err != nil {
+		dblogger.Error("Failed to query created communities", zap.Error(err))
+		return nil, fmt.Errorf("failed to query created communities: %w", err)
+	}
+	defer rows.Close()
+
+	communities := []domain.CommunityForMyCommunity{}
+	for rows.Next() {
+		var community domain.CommunityForMyCommunity
+		err := rows.Scan(
+			&community.ID,
+			&community.Name,
+			&community.AvatarPath,
+		)
+		if err != nil {
+			dblogger.Error("Failed to scan community", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan community: %w", err)
+		}
+		communities = append(communities, community)
+	}
+
+	dblogger.Info("Created communities retrieved successfully", zap.Int("count", len(communities)))
+	return communities, nil
+}
+
 func (store *DBCommunityStore) Subscribe(ctx context.Context, communityID int, userID int) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
