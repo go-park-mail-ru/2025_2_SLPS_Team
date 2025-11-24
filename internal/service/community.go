@@ -313,12 +313,23 @@ func (s *CommunityService) GetUserCommunitiesByID(ctx context.Context, targetUse
 	return communities, nil
 }
 
-func (s *CommunityService) GetMyCommunityIDs(ctx context.Context, userID int) ([]int, error) {
-	domain.Info(ctx, "Getting my community IDs", zap.Int("userID", userID))
+func (s *CommunityService) GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int) ([]int, error) {
+	domain.Info(ctx, "Getting user subscribed community IDs", zap.Int("targetUserID", targetUserID))
 
-	communityIDs, err := s.communityStore.GetMyCommunityIDs(ctx, userID)
+	// Проверяем существование пользователя
+	_, err := s.userStore.GetUserByID(ctx, targetUserID)
 	if err != nil {
-		domain.Error(ctx, "Failed to get my community IDs", err)
+		if errors.Is(err, domain.ErrUserNotFound) {
+			domain.Warn(ctx, "User not found", zap.Int("targetUserID", targetUserID))
+			return nil, domain.ErrUserNotFound
+		}
+		domain.Error(ctx, "Failed to get user", err)
+		return nil, domain.ErrDB
+	}
+
+	communityIDs, err := s.communityStore.GetUserSubscribedCommunityIDs(ctx, targetUserID)
+	if err != nil {
+		domain.Error(ctx, "Failed to get user subscribed community IDs", err)
 		return nil, domain.ErrDB
 	}
 

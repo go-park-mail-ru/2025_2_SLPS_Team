@@ -8,6 +8,7 @@ import (
 	"project/domain"
 	"time"
 
+	"github.com/lib/pq"
 	"go.uber.org/zap"
 )
 
@@ -353,11 +354,11 @@ func (store *DBCommunityStore) GetUserCommunitiesByID(ctx context.Context, targe
 	return communities, nil
 }
 
-func (store *DBCommunityStore) GetMyCommunityIDs(ctx context.Context, userID int) ([]int, error) {
+func (store *DBCommunityStore) GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int) ([]int, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetMyCommunityIDs", zap.Int("userID", userID))
+	dbloggerCopy.Info("DB start GetUserSubscribedCommunityIDs", zap.Int("targetUserID", targetUserID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -365,17 +366,17 @@ func (store *DBCommunityStore) GetMyCommunityIDs(ctx context.Context, userID int
 	}()
 
 	query := `
-		SELECT id
-		FROM communities
-		WHERE creator_id = $1
+		SELECT community_id
+		FROM community_subscriptions 
+		WHERE user_id = $1
 		ORDER BY created_at DESC
 	`
 
 	dblogger = dblogger.With(zap.String("query", query))
-	rows, err := store.db.QueryContext(ctx, query, userID)
+	rows, err := store.db.QueryContext(ctx, query, targetUserID)
 	if err != nil {
-		dblogger.Error("Failed to query my community IDs", zap.Error(err))
-		return nil, fmt.Errorf("failed to query my community IDs: %w", err)
+		dblogger.Error("Failed to query user subscribed community IDs", zap.Error(err))
+		return nil, fmt.Errorf("failed to query user subscribed community IDs: %w", err)
 	}
 	defer rows.Close()
 
@@ -390,7 +391,7 @@ func (store *DBCommunityStore) GetMyCommunityIDs(ctx context.Context, userID int
 		communityIDs = append(communityIDs, id)
 	}
 
-	dblogger.Info("My community IDs retrieved successfully", zap.Int("count", len(communityIDs)))
+	dblogger.Info("User subscribed community IDs retrieved successfully", zap.Int("count", len(communityIDs)))
 	return communityIDs, nil
 }
 
@@ -577,4 +578,65 @@ func (store *DBCommunityStore) IsSubscribed(ctx context.Context, communityID int
 
 	dblogger.Info("Subscription check completed", zap.Bool("isSubscribed", exists))
 	return exists, nil
+}
+
+func (store *DBCommunityStore) GetCommunitiesByIDs(ctx context.Context, communityIDs []int) ([]domain.ShortCommunity, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "communityStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetCommunitiesByIDs", zap.Ints("communityIDs", communityIDs))
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	if len(communityIDs) == 0 {
+		return []domain.ShortCommunity{}, nil
+	}
+
+	query := `
+		SELECT 
+			c.id,
+			c.name,
+			c.description,
+			c.avatar_path,
+			(SELECT COUNT(*) FROM community_subscriptions WHERE community_id = c.id) as subscribers_count
+		FROM communities c
+		WHERE c.id = ANY($1)
+		ORDER BY c.created_at DESC
+	`
+
+	dblogger = dblogger.With(zap.String("query", query), zap.Any("communityIDs", communityIDs))
+	rows, err := store.db.QueryContext(ctx, query, pq.Array(communityIDs))
+	if err != nil {
+		dblogger.Error("Failed to query communities by IDs", zap.Error(err))
+		return nil, fmt.Errorf("failed to query communities by IDs: %w", err)
+	}
+	defer rows.Close()
+
+	communities := []domain.ShortCommunity{}
+	for rows.Next() {
+		var community domain.ShortCommunity
+		err := rows.Scan(
+			&community.ID,
+			&community.Name,
+			&community.Description,
+			&community.AvatarPath,
+			&community.SubscribersCount,
+		)
+		if err != nil {
+			dblogger.Error("Failed to scan community", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan community: %w", err)
+		}
+		communities = append(communities, community)
+	}
+
+	if err := rows.Err(); err != nil {
+		dblogger.Error("Rows iteration error", zap.Error(err))
+		return nil, err
+	}
+
+	dblogger.Info("Communities by IDs retrieved successfully", zap.Int("count", len(communities)))
+	return communities, nil
 }

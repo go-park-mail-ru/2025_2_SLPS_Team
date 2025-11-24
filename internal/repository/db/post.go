@@ -269,7 +269,7 @@ func (store *DBPostStore) CreatePost(ctx context.Context, post *domain.Post) err
 	if err := store.savePostAttachmentsTx(ctx, tx, post.ID, post.Attachments); err != nil {
 		return err
 	}
-	if err := store.savePostPhotosTx(ctx, tx, post.ID, post.PhotosPath); err != nil {
+	if err := store.savePostPhotosTx(ctx, tx, post.ID, post.Photos); err != nil {
 		return err
 	}
 
@@ -333,7 +333,7 @@ func (store *DBPostStore) UpdatePost(ctx context.Context, post *domain.Post) err
 		return err
 	}
 
-	if err := store.updatePostPhotosTx(ctx, tx, post.ID, post.PhotosPath); err != nil {
+	if err := store.updatePostPhotosTx(ctx, tx, post.ID, post.Photos); err != nil {
 		return err
 	}
 

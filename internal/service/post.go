@@ -120,7 +120,7 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, c
 		CommunityID: communityID,
 		Text:        createRequest.Text,
 		Attachments: createRequest.Attachments,
-		PhotosPath:  createRequest.Photos,
+		Photos:  createRequest.Photos,
 	}
 
 	// Сохраняем в БД
@@ -232,7 +232,7 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 		Text:        updateRequest.Text,
 		CreatedAt:   existingPost.CreatedAt,
 		Attachments: updateRequest.Attachments,
-		PhotosPath:  updateRequest.Photos,
+		Photos:  updateRequest.Photos,
 	}
 
 	if err := s.postStore.UpdatePost(ctx, updatedPost); err != nil {
