@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"log"
 	"project/domain"
 
 	"go.uber.org/zap"
@@ -312,19 +311,16 @@ func (s *FriendService) SearchShortProfilesByFullNameAndRelationType(ctx context
 	if fType == domain.CountNotFriends {
 		isTerms = false
 	}
-	log.Println(isTerms)
 	filterIDs, err := s.friendStore.GetUserIDsByFriendType(ctx, userID, fType)
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail find user relations by type", zap.Error(err))
 		return nil, domain.ErrDB
 	}
-	log.Println(filterIDs)
 	foundIDs, err := s.elasticProfileStore.SearchUserIDsByFullNameWithFilter(ctx, fullName, filterIDs, isTerms, limit, offset)
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
 		return nil, domain.ErrDB
 	}
-	log.Println(foundIDs)
 	profiles, err := s.profileStore.GetShortProfileByUserIDs(ctx, foundIDs)
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail get short Profiles by user IDs", zap.Error(err))

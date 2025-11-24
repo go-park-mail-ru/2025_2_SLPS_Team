@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"project/domain"
 	"strconv"
 
 	"github.com/elastic/go-elasticsearch/v8"
@@ -18,7 +19,7 @@ type ElasticCommunityStore struct {
 	index  string
 }
 
-func NewElasticCommunityStore(client *elasticsearch.Client, index string) *ElasticCommunityStore {
+func NewElasticCommunityStore(client *elasticsearch.Client, index string) domain.ElasticCommunityStore {
 	return &ElasticCommunityStore{
 		client: client,
 		index:  index,

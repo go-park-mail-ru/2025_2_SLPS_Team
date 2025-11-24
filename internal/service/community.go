@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"mime/multipart"
 	"project/domain"
 
@@ -11,16 +12,18 @@ import (
 )
 
 type CommunityService struct {
-	communityStore domain.CommunityStore
-	postStore      domain.PostStore
-	userStore      domain.UserStore
+	communityStore        domain.CommunityStore
+	postStore             domain.PostStore
+	userStore             domain.UserStore
+	elasticCommunityStore domain.ElasticCommunityStore
 }
 
-func NewCommunityService(communityStore domain.CommunityStore, postStore domain.PostStore, userStore domain.UserStore) domain.CommunityService {
+func NewCommunityService(communityStore domain.CommunityStore, postStore domain.PostStore, userStore domain.UserStore, elasticCommunityStore domain.ElasticCommunityStore) domain.CommunityService {
 	return &CommunityService{
-		communityStore: communityStore,
-		postStore:      postStore,
-		userStore:      userStore,
+		communityStore:        communityStore,
+		postStore:             postStore,
+		userStore:             userStore,
+		elasticCommunityStore: elasticCommunityStore,
 	}
 }
 
@@ -76,6 +79,11 @@ func (s *CommunityService) CreateCommunity(ctx context.Context, userID int, req 
 		}
 		domain.Error(ctx, "Failed to create community", err)
 		return nil, domain.ErrDB
+	}
+
+	err = s.elasticCommunityStore.CreateCommunity(ctx, community.Name, community.ID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to create community index in es", zap.Error(err))
 	}
 
 	// Автоматически подписываем создателя
@@ -173,6 +181,11 @@ func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int,
 		return domain.ErrDB
 	}
 
+	err = s.elasticCommunityStore.UpdateCommunity(ctx, updatedCommunity.Name, updatedCommunity.ID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update community index in es", zap.Error(err))
+	}
+
 	// Удаляем старые файлы
 	if oldAvatarPath != nil {
 		DeleteFile(*oldAvatarPath)
@@ -212,6 +225,11 @@ func (s *CommunityService) DeleteCommunity(ctx context.Context, communityID int,
 	if err := s.communityStore.DeleteCommunity(ctx, communityID, userID); err != nil {
 		domain.Error(ctx, "Failed to delete community", err)
 		return domain.ErrDB
+	}
+
+	err = s.elasticCommunityStore.DeleteCommunity(ctx, communityID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to delete community index in es", zap.Error(err))
 	}
 
 	// Удаляем файлы
@@ -422,4 +440,32 @@ func (s *CommunityService) Unsubscribe(ctx context.Context, communityID int, use
 
 	domain.Info(ctx, "Unsubscribed successfully")
 	return nil
+}
+
+func (s *CommunityService) SearchShortCommunityByNameAndType(ctx context.Context, userID int, params domain.PaginateQueryParams, name string, cType domain.CommunityType) ([]domain.ShortCommunity, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
+	isTerms := true
+	if cType == domain.Recommended {
+		isTerms = false
+	}
+	log.Println(isTerms)
+	filterIDs, err := s.communityStore.GetUserSubscribedCommunityIDs(ctx, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail find user relations by type", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+	log.Println(filterIDs)
+	foundIDs, err := s.elasticCommunityStore.SearchCommunityIDsByName(ctx, name, filterIDs, isTerms, limit, offset)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+	log.Println(foundIDs)
+	com, err := s.communityStore.GetCommunitiesByIDs(ctx, foundIDs)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail get short Profiles by user IDs", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+
+	return com, nil
 }

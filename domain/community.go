@@ -63,6 +63,13 @@ type CommunitySubscriber struct {
 	FullName   string  `json:"fullName"`
 	AvatarPath *string `json:"avatarPath"`
 }
+type CommunityType string
+
+const (
+	Subscriber  CommunityType = "subscriber"
+	Recommended CommunityType = "recommended"
+	Owned       CommunityType = "owned"
+)
 
 type CommunityRequest struct {
 	Name        string `json:"name" valid:"required,length(3|48)"`
@@ -82,6 +89,14 @@ type CommunityService interface {
 	GetCommunitySubscribers(ctx context.Context, communityID int, params PaginateQueryParams) ([]CommunitySubscriber, error)
 	Subscribe(ctx context.Context, communityID int, userID int) error
 	Unsubscribe(ctx context.Context, communityID int, userID int) error
+	SearchShortCommunityByNameAndType(ctx context.Context, userID int, params PaginateQueryParams, name string, cType CommunityType) ([]ShortCommunity, error)
+}
+
+type ElasticCommunityStore interface {
+	CreateCommunity(ctx context.Context, name string, communityID int) error
+	UpdateCommunity(ctx context.Context, name string, communityID int) error
+	DeleteCommunity(ctx context.Context, communityID int) error
+	SearchCommunityIDsByName(ctx context.Context, name string, filterIDs []int, isTerms bool, limit, offset int) ([]int, error)
 }
 
 type CommunityStore interface {
