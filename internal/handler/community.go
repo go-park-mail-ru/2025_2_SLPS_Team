@@ -381,6 +381,47 @@ func (h *CommunityHandler) GetCreatedCommunities(w http.ResponseWriter, r *http.
 	}
 }
 
+// GetCommunitySubscribers возвращает список подписчиков сообщества
+// @Summary Получить подписчиков сообщества
+// @Description Возвращает список подписчиков указанного сообщества
+// @Tags communities
+// @Produce json
+// @Param id path int true "ID сообщества"
+// @Param page query int false "Номер страницы" default(1) minimum(1)
+// @Param limit query int false "Количество подписчиков на странице" default(20) minimum(1) maximum(100)
+// @Success 200 {array} domain.CommunitySubscriber "Список подписчиков"
+// @Failure 400 {object} JSONResponse "Неверные параметры запроса"
+// @Failure 404 {object} JSONResponse "Сообщество не найдено"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Security ApiKeyAuth
+// @Router /communities/{id}/subscribers [get]
+func (h *CommunityHandler) GetCommunitySubscribers(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	communityID, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		sendJSONResponse(w, "Invalid community ID", http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", vars["id"]))
+		return
+	}
+
+	var qParams domain.PaginateQueryParams
+	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
+		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
+		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+		return
+	}
+
+	subscribers, err := h.communityService.GetCommunitySubscribers(r.Context(), communityID, qParams)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	if err := sendJSONData(r.Context(), w, subscribers); err != nil {
+		return
+	}
+}
+
 // Subscribe подписывает пользователя на сообщество
 // @Summary Подписаться на сообщество
 // @Description Подписывает текущего пользователя на указанное сообщество

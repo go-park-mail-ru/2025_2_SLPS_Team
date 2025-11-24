@@ -402,6 +402,56 @@ func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID
 	return communities, nil
 }
 
+func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, communityID int, limit, offset int) ([]domain.CommunitySubscriber, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "communityStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetCommunitySubscribers", zap.Int("communityID", communityID))
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	query := `
+		SELECT 
+			p.user_id,
+			p.first_name || ' ' || p.last_name as full_name,
+			p.avatar_path
+		FROM profiles p
+		INNER JOIN community_subscriptions cs ON p.user_id = cs.user_id
+		WHERE cs.community_id = $1
+		ORDER BY cs.created_at DESC
+		LIMIT $2 OFFSET $3
+	`
+
+	dblogger = dblogger.With(zap.String("query", query))
+	rows, err := store.db.QueryContext(ctx, query, communityID, limit, offset)
+	if err != nil {
+		dblogger.Error("Failed to query community subscribers", zap.Error(err))
+		return nil, fmt.Errorf("failed to query community subscribers: %w", err)
+	}
+	defer rows.Close()
+
+	subscribers := []domain.CommunitySubscriber{}
+	for rows.Next() {
+		var subscriber domain.CommunitySubscriber
+		err := rows.Scan(
+			&subscriber.UserID,
+			&subscriber.FullName,
+			&subscriber.AvatarPath,
+		)
+		if err != nil {
+			dblogger.Error("Failed to scan subscriber", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan subscriber: %w", err)
+		}
+		subscribers = append(subscribers, subscriber)
+	}
+
+	dblogger.Info("Community subscribers retrieved successfully", zap.Int("count", len(subscribers)))
+	return subscribers, nil
+}
+
 func (store *DBCommunityStore) Subscribe(ctx context.Context, communityID int, userID int) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")

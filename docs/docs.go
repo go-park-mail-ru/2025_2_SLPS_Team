@@ -1295,6 +1295,78 @@ const docTemplate = `{
                 }
             }
         },
+        "/communities/{id}/subscribers": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список подписчиков указанного сообщества",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить подписчиков сообщества",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество подписчиков на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список подписчиков",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.CommunitySubscriber"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Сообщество не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/communities/{id}/unsubscribe": {
             "post": {
                 "security": [
@@ -2782,6 +2854,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "subscribersCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.CommunitySubscriber": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "fullName": {
+                    "type": "string"
+                },
+                "userID": {
                     "type": "integer"
                 }
             }

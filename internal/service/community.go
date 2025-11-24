@@ -326,6 +326,31 @@ func (s *CommunityService) GetCreatedCommunities(ctx context.Context, userID int
 	return communities, nil
 }
 
+func (s *CommunityService) GetCommunitySubscribers(ctx context.Context, communityID int, params domain.PaginateQueryParams) ([]domain.CommunitySubscriber, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
+
+	domain.Info(ctx, "Getting community subscribers", zap.Int("communityID", communityID))
+
+	// Проверяем существование сообщества
+	_, err := s.communityStore.GetCommunityByID(ctx, communityID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
+			return nil, domain.ErrNotFound
+		}
+		domain.Error(ctx, "Failed to get community", err)
+		return nil, domain.ErrDB
+	}
+
+	subscribers, err := s.communityStore.GetCommunitySubscribers(ctx, communityID, limit, offset)
+	if err != nil {
+		domain.Error(ctx, "Failed to get community subscribers", err)
+		return nil, domain.ErrDB
+	}
+
+	return subscribers, nil
+}
+
 func (s *CommunityService) Subscribe(ctx context.Context, communityID int, userID int) error {
 	domain.Info(ctx, "Subscribing to community", zap.Int("communityID", communityID), zap.Int("userID", userID))
 
