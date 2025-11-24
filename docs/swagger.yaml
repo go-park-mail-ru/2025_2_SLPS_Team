@@ -27,7 +27,16 @@ definitions:
         example: "1990-01-01T00:00:00Z"
         type: string
     type: object
-  domain.CommunityWithSubscription:
+  domain.CommunityForMyCommunity:
+    properties:
+      avatarPath:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  domain.CommunityForView:
     properties:
       avatarPath:
         type: string
@@ -47,8 +56,6 @@ definitions:
         type: string
       subscribersCount:
         type: integer
-      updatedAt:
-        type: string
     type: object
   domain.FriendshipStatus:
     enum:
@@ -184,6 +191,19 @@ definitions:
       password:
         example: "123123"
         type: string
+    type: object
+  domain.ShortCommunity:
+    properties:
+      avatarPath:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      subscribersCount:
+        type: integer
     type: object
   domain.ShortProfile:
     properties:
@@ -716,12 +736,12 @@ paths:
       - multipart/form-data
       description: Создает новое сообщество с возможностью загрузки аватара и обложки
       parameters:
-      - description: Название сообщества
+      - description: Название сообщества (3-48 символов)
         in: formData
         name: name
         required: true
         type: string
-      - description: Описание сообщества
+      - description: Описание сообщества (до 512 символов)
         in: formData
         name: description
         type: string
@@ -739,7 +759,8 @@ paths:
         "201":
           description: Сообщество успешно создано
           schema:
-            $ref: '#/definitions/handler.JSONResponse'
+            additionalProperties: true
+            type: object
         "400":
           description: Неверные данные запроса
           schema:
@@ -759,8 +780,6 @@ paths:
       - communities
   /communities/{id}:
     delete:
-      consumes:
-      - application/json
       description: Удаляет сообщество (только создатель)
       parameters:
       - description: ID сообщества
@@ -801,8 +820,8 @@ paths:
       tags:
       - communities
     get:
-      description: Возвращает информацию о сообществе включая количество подписчиков
-        и статус подписки текущего пользователя
+      description: Возвращает информацию о сообществе включая количество подписчиков,
+        статус подписки текущего пользователя, создателя
       parameters:
       - description: ID сообщества
         in: path
@@ -815,7 +834,7 @@ paths:
         "200":
           description: Информация о сообществе
           schema:
-            $ref: '#/definitions/domain.CommunityWithSubscription'
+            $ref: '#/definitions/domain.CommunityForView'
         "400":
           description: Неверный ID сообщества
           schema:
@@ -843,11 +862,11 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Название сообщества
+      - description: Название сообщества (3-48 символов)
         in: formData
         name: name
         type: string
-      - description: Описание сообщества
+      - description: Описание сообщества (до 512 символов)
         in: formData
         name: description
         type: string
@@ -917,7 +936,7 @@ paths:
       - application/json
       responses:
         "200":
-          description: Список постов
+          description: Список постов сообщества
           schema:
             items:
               $ref: '#/definitions/domain.Post'
@@ -972,41 +991,6 @@ paths:
       summary: Подписаться на сообщество
       tags:
       - communities
-  /communities/{id}/subscribers/count:
-    get:
-      description: Возвращает количество подписчиков указанного сообщества
-      parameters:
-      - description: ID сообщества
-        in: path
-        name: id
-        required: true
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Количество подписчиков
-          schema:
-            additionalProperties:
-              type: integer
-            type: object
-        "400":
-          description: Неверный ID сообщества
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-        "404":
-          description: Сообщество не найдено
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-        "500":
-          description: Внутренняя ошибка сервера
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-      security:
-      - ApiKeyAuth: []
-      summary: Получить количество подписчиков
-      tags:
-      - communities
   /communities/{id}/unsubscribe:
     post:
       description: Отписывает текущего пользователя от указанного сообщества
@@ -1040,6 +1024,50 @@ paths:
       summary: Отписаться от сообщества
       tags:
       - communities
+  /communities/created:
+    get:
+      description: Возвращает список сообществ, созданных текущим пользователем (только
+        ID, название и аватар)
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество сообществ на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список созданных сообществ
+          schema:
+            items:
+              $ref: '#/definitions/domain.CommunityForMyCommunity'
+            type: array
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить созданные сообщества
+      tags:
+      - communities
   /communities/my:
     get:
       description: Возвращает список сообществ, на которые подписан пользователь
@@ -1061,10 +1089,10 @@ paths:
       - application/json
       responses:
         "200":
-          description: Список сообществ
+          description: Список сообществ пользователя
           schema:
             items:
-              $ref: '#/definitions/domain.CommunityWithSubscription'
+              $ref: '#/definitions/domain.ShortCommunity'
             type: array
         "400":
           description: Неверные параметры пагинации
@@ -1082,6 +1110,7 @@ paths:
   /communities/other:
     get:
       description: Возвращает список сообществ, на которые пользователь не подписан
+        (рекомендации)
       parameters:
       - default: 1
         description: Номер страницы
@@ -1100,10 +1129,10 @@ paths:
       - application/json
       responses:
         "200":
-          description: Список сообществ
+          description: Список рекомендуемых сообществ
           schema:
             items:
-              $ref: '#/definitions/domain.CommunityWithSubscription'
+              $ref: '#/definitions/domain.ShortCommunity'
             type: array
         "400":
           description: Неверные параметры пагинации
@@ -1116,6 +1145,54 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Получить другие сообщества
+      tags:
+      - communities
+  /communities/users/{id}:
+    get:
+      description: Возвращает список сообществ, на которые подписан указанный пользователь
+      parameters:
+      - description: ID пользователя
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: Номер страницы
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество сообществ на странице
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список сообществ пользователя
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortCommunity'
+            type: array
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить сообщества пользователя по ID
       tags:
       - communities
   /friends:

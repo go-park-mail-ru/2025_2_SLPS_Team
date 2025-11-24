@@ -654,14 +654,14 @@
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Название сообщества",
+                        "description": "Название сообщества (3-48 символов)",
                         "name": "name",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
-                        "description": "Описание сообщества",
+                        "description": "Описание сообщества (до 512 символов)",
                         "name": "description",
                         "in": "formData"
                     },
@@ -682,11 +682,77 @@
                     "201": {
                         "description": "Сообщество успешно создано",
                         "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "400": {
                         "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/created": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список сообществ, созданных текущим пользователем (только ID, название и аватар)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить созданные сообщества",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество сообществ на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список созданных сообществ",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.CommunityForMyCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры пагинации",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -742,11 +808,11 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список сообществ",
+                        "description": "Список сообществ пользователя",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.CommunityWithSubscription"
+                                "$ref": "#/definitions/domain.ShortCommunity"
                             }
                         }
                     },
@@ -772,7 +838,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Возвращает список сообществ, на которые пользователь не подписан",
+                "description": "Возвращает список сообществ, на которые пользователь не подписан (рекомендации)",
                 "produces": [
                     "application/json"
                 ],
@@ -801,16 +867,88 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список сообществ",
+                        "description": "Список рекомендуемых сообществ",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.CommunityWithSubscription"
+                                "$ref": "#/definitions/domain.ShortCommunity"
                             }
                         }
                     },
                     "400": {
                         "description": "Неверные параметры пагинации",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список сообществ, на которые подписан указанный пользователь",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить сообщества пользователя по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "default": 20,
+                        "description": "Количество сообществ на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список сообществ пользователя",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -831,7 +969,7 @@
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Возвращает информацию о сообществе включая количество подписчиков и статус подписки текущего пользователя",
+                "description": "Возвращает информацию о сообществе включая количество подписчиков, статус подписки текущего пользователя, создателя",
                 "produces": [
                     "application/json"
                 ],
@@ -852,7 +990,7 @@
                     "200": {
                         "description": "Информация о сообществе",
                         "schema": {
-                            "$ref": "#/definitions/domain.CommunityWithSubscription"
+                            "$ref": "#/definitions/domain.CommunityForView"
                         }
                     },
                     "400": {
@@ -902,13 +1040,13 @@
                     },
                     {
                         "type": "string",
-                        "description": "Название сообщества",
+                        "description": "Название сообщества (3-48 символов)",
                         "name": "name",
                         "in": "formData"
                     },
                     {
                         "type": "string",
-                        "description": "Описание сообщества",
+                        "description": "Описание сообщества (до 512 символов)",
                         "name": "description",
                         "in": "formData"
                     },
@@ -971,9 +1109,6 @@
                     }
                 ],
                 "description": "Удаляет сообщество (только создатель)",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -1073,7 +1208,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список постов",
+                        "description": "Список постов сообщества",
                         "schema": {
                             "type": "array",
                             "items": {
@@ -1131,61 +1266,6 @@
                         "description": "Успешная подписка",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Неверный ID сообщества",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "Сообщество не найдено",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Внутренняя ошибка сервера",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    }
-                }
-            }
-        },
-        "/communities/{id}/subscribers/count": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Возвращает количество подписчиков указанного сообщества",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "communities"
-                ],
-                "summary": "Получить количество подписчиков",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "description": "ID сообщества",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Количество подписчиков",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "integer"
-                            }
                         }
                     },
                     "400": {
@@ -2654,7 +2734,21 @@
                 }
             }
         },
-        "domain.CommunityWithSubscription": {
+        "domain.CommunityForMyCommunity": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CommunityForView": {
             "type": "object",
             "properties": {
                 "avatarPath": {
@@ -2683,9 +2777,6 @@
                 },
                 "subscribersCount": {
                     "type": "integer"
-                },
-                "updatedAt": {
-                    "type": "string"
                 }
             }
         },
@@ -2882,6 +2973,26 @@
                 "password": {
                     "type": "string",
                     "example": "123123"
+                }
+            }
+        },
+        "domain.ShortCommunity": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "subscribersCount": {
+                    "type": "integer"
                 }
             }
         },
