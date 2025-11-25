@@ -58,8 +58,14 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 	}
 
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
-	files := r.MultipartForm.File["avatar"]
+	headers := r.MultipartForm.File["avatar"]
+	files, err := domain.MultipartListToFiles(headers)
+	if err != nil {
+		http.Error(w, "Can't parse headers to files", http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error("Can't parse headers to files", zap.Error(err))
+		return
 
+	}
 	err = api.profileService.UpdateProfile(r.Context(), req, userID, files)
 	if err != nil {
 		sendJSONError(w, err)
@@ -94,7 +100,14 @@ func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) 
 
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	files := r.MultipartForm.File["avatar"]
+	headers := r.MultipartForm.File["avatar"]
+	files, err := domain.MultipartListToFiles(headers)
+	if err != nil {
+		http.Error(w, "Can't parse headers to files", http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error("Can't parse headers to files", zap.Error(err))
+		return
+
+	}
 
 	err = api.profileService.UpdateAvatar(r.Context(), userID, files)
 	if err != nil {
@@ -128,7 +141,15 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 	}
 
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
-	files := r.MultipartForm.File["header"]
+	headers := r.MultipartForm.File["header"]
+
+	files, err := domain.MultipartListToFiles(headers)
+	if err != nil {
+		http.Error(w, "Can't parse headers to files", http.StatusBadRequest)
+		domain.FromContext(r.Context()).Error("Can't parse headers to files", zap.Error(err))
+		return
+
+	}
 
 	err = api.profileService.UpdateHeader(r.Context(), userID, files)
 	if err != nil {

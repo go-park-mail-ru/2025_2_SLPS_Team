@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"mime/multipart"
 	"project/domain"
 
 	"github.com/asaskevich/govalidator"
@@ -56,7 +55,7 @@ func (s *PostService) GetPost(ctx context.Context, userID int32, postID uint) (*
 }
 
 // CreatePost создает новый пост
-func (s *PostService) CreatePost(ctx context.Context, userID int32, text string, communityID *int32, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
+func (s *PostService) CreatePost(ctx context.Context, userID int32, text string, communityID *int32, attachmentFiles []*domain.File, photoFiles []*domain.File) (*domain.Post, error) {
 
 	// Создаем структуру для валидации
 	createRequest := domain.PostCreateRequest{
@@ -145,7 +144,7 @@ func (s *PostService) CreatePost(ctx context.Context, userID int32, text string,
 }
 
 // UpdatePost обновляет пост
-func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int32, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error {
+func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int32, text string, attachmentFiles []*domain.File, photoFiles []*domain.File) error {
 	// Создаем структуру для валидации
 	updateRequest := domain.PostUpdateRequest{
 		Text: text,

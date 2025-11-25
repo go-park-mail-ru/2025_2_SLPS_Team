@@ -132,10 +132,23 @@ func (h *CommunityHandler) UpdateCommunity(w http.ResponseWriter, r *http.Reques
 
 	var avatarFile, coverFile *multipart.FileHeader
 	if avatars, ok := r.MultipartForm.File["avatar"]; ok && len(avatars) > 0 {
-		avatarFile = avatars[0]
+
+		avatarFiles, err := domain.MultipartListToFiles(avatars)
+		if err != nil {
+			http.Error(w, "Can't parse headers to files", http.StatusBadRequest)
+			domain.FromContext(r.Context()).Error("Can't parse headers to files", zap.Error(err))
+			return
+
+		}
 	}
 	if covers, ok := r.MultipartForm.File["cover"]; ok && len(covers) > 0 {
-		coverFile = covers[0]
+		coverfiles, err := domain.MultipartListToFiles(covers)
+		if err != nil {
+			http.Error(w, "Can't parse headers to files", http.StatusBadRequest)
+			domain.FromContext(r.Context()).Error("Can't parse headers to files", zap.Error(err))
+			return
+
+		}
 	}
 
 	req := domain.CommunityRequest{
@@ -143,7 +156,7 @@ func (h *CommunityHandler) UpdateCommunity(w http.ResponseWriter, r *http.Reques
 		Description: description,
 	}
 
-	err = h.communityService.UpdateCommunity(r.Context(), int32(communityID), userID, req, avatarFile, coverFile)
+	err = h.communityService.UpdateCommunity(r.Context(), int32(communityID), userID, req, avatarFiles, coverFiles)
 	if err != nil {
 		sendJSONError(w, err)
 		return

@@ -2,7 +2,6 @@ package domain
 
 import (
 	"context"
-	"mime/multipart"
 	"time"
 )
 
@@ -80,10 +79,10 @@ type PostService interface {
 	GetPost(ctx context.Context, userID int32, postID uint) (*PostView, error)
 
 	// Создание поста
-	CreatePost(ctx context.Context, userID int32, text string, communityID *int32, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*Post, error)
+	CreatePost(ctx context.Context, userID int32, text string, communityID *int32, attachmentFiles []*File, photoFiles []*File) (*Post, error)
 
 	// Обновление поста
-	UpdatePost(ctx context.Context, postID uint, userID int32, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error
+	UpdatePost(ctx context.Context, postID uint, userID int32, text string, attachmentFiles []*File, photoFiles []*File) error
 
 	// Удаление поста
 	DeletePost(ctx context.Context, postID uint, userID int32) error

@@ -144,3 +144,35 @@ func FromProtoShortProfileMap(pbResp *pb.GetShortProfileMapByUserIDsResponse) ma
 
 	return profiles
 }
+func FileToProto(f *domain.File) *pb.FileData {
+	return &pb.FileData{
+		Filename: f.Filename,
+		MimeType: f.ContentType,
+		Content:  f.Data,
+	}
+}
+func ProtoToFile(p *pb.FileData) *domain.File {
+	return &domain.File{
+		Filename:    p.Filename,
+		ContentType: p.MimeType,
+		Data:        p.Content,
+	}
+}
+
+// Преобразование слайса domain.File -> слайс pb.FileData
+func FilesToProto(files []*domain.File) []*pb.FileData {
+	result := make([]*pb.FileData, 0, len(files))
+	for _, f := range files {
+		result = append(result, FileToProto(f))
+	}
+	return result
+}
+
+// Преобразование слайса pb.FileData -> слайс domain.File
+func ProtoToFiles(list []*pb.FileData) []*domain.File {
+	result := make([]*domain.File, 0, len(list))
+	for _, p := range list {
+		result = append(result, ProtoToFile(p))
+	}
+	return result
+}

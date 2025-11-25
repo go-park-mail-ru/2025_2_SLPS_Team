@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"mime/multipart"
 	"net/url"
 	"os"
 	"path"
@@ -19,7 +18,7 @@ import (
 
 const uploadDir = "./uploads"
 
-func UploadFile(header *multipart.FileHeader) (string, error) {
+func UploadFile(header *domain.File) (string, error) {
 
 	file, err := header.Open()
 	if err != nil {
@@ -49,7 +48,7 @@ func UploadFile(header *multipart.FileHeader) (string, error) {
 	return fileName, nil
 }
 
-func UploadFiles(files []*multipart.FileHeader) ([]string, error) {
+func UploadFiles(files []*domain.File) ([]string, error) {
 	var fileNames []string
 
 	for _, header := range files {
@@ -86,7 +85,7 @@ func DeleteFiles(fileNames []*string) error {
 }
 
 func HandleFileUpload(
-	files []*multipart.FileHeader,
+	files []*domain.File,
 	oldPaths []*string,
 ) ([]string, error) {
 	var newPaths []string

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"mime/multipart"
 	"project/domain"
 	"project/shared/mapper/generated"
 	"project/shared/pb"
@@ -31,7 +30,7 @@ func NewCommunityService(communityStore domain.CommunityStore, postStore domain.
 	}
 }
 
-func (s *CommunityService) CreateCommunity(ctx context.Context, userID int32, req domain.CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) (*domain.Community, error) {
+func (s *CommunityService) CreateCommunity(ctx context.Context, userID int32, req domain.CommunityRequest, avatarFiles []*domain.File, coverFiles []*domain.File) (*domain.Community, error) {
 	// Валидация
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
@@ -43,8 +42,8 @@ func (s *CommunityService) CreateCommunity(ctx context.Context, userID int32, re
 
 	// Обработка аватара
 	var avatarPath *string
-	if avatarFile != nil {
-		path, err := UploadFile(avatarFile)
+	if avatarFiles != nil {
+		path, err := UploadFile(avatarFiles[0])
 		if err != nil {
 			domain.Error(ctx, "Failed to upload avatar", err)
 			return nil, domain.ErrService
@@ -54,8 +53,8 @@ func (s *CommunityService) CreateCommunity(ctx context.Context, userID int32, re
 
 	// Обработка обложки
 	var coverPath *string
-	if coverFile != nil {
-		path, err := UploadFile(coverFile)
+	if coverFiles != nil {
+		path, err := UploadFile(coverFiles[0])
 		if err != nil {
 			if avatarPath != nil {
 				DeleteFile(*avatarPath)
@@ -100,7 +99,7 @@ func (s *CommunityService) CreateCommunity(ctx context.Context, userID int32, re
 	return community, nil
 }
 
-func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int32, userID int32, req domain.CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) error {
+func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int32, userID int32, req domain.CommunityRequest, avatarFiles []*domain.File, coverFiles []*domain.File) error {
 	// Валидация
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
@@ -135,9 +134,9 @@ func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int3
 
 	// Обрабатываем новый аватар
 	var newAvatarPath *string
-	if avatarFile != nil {
+	if avatarFiles != nil {
 		oldAvatarPath = existingCommunity.AvatarPath
-		path, err := UploadFile(avatarFile)
+		path, err := UploadFile(avatarFiles[0])
 		if err != nil {
 			domain.Error(ctx, "Failed to upload new avatar", err)
 			return domain.ErrService
@@ -149,9 +148,9 @@ func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int3
 
 	// Обрабатываем новую обложку
 	var newCoverPath *string
-	if coverFile != nil {
+	if coverFiles != nil {
 		oldCoverPath = existingCommunity.CoverPath
-		path, err := UploadFile(coverFile)
+		path, err := UploadFile(coverFiles[0])
 		if err != nil {
 			if newAvatarPath != existingCommunity.AvatarPath {
 				DeleteFile(*newAvatarPath)
@@ -325,7 +324,6 @@ func (s *CommunityService) GetUserCommunitiesByID(ctx context.Context, targetUse
 		domain.Error(ctx, "Failed to get user", err)
 		return nil, domain.ErrDB
 	}
-
 	communities, err := s.communityStore.GetUserCommunitiesByID(ctx, targetUserID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user communities by ID", err)

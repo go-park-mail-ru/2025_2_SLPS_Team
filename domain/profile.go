@@ -2,7 +2,6 @@ package domain
 
 import (
 	"context"
-	"mime/multipart"
 	"time"
 )
 
@@ -27,11 +26,14 @@ type ShortProfile struct {
 }
 
 type ProfileService interface {
-	UpdateProfile(ctx context.Context, profile Profile, userID int32, files []*multipart.FileHeader) error
-	UpdateAvatar(ctx context.Context, userID int32, files []*multipart.FileHeader) error
-	UpdateHeader(ctx context.Context, userID int32, files []*multipart.FileHeader) error
+	CreateProfile(ctx context.Context, profile Profile) error
+	UpdateProfile(ctx context.Context, profile Profile, userID int32, files []*File) error
+	UpdateAvatar(ctx context.Context, userID int32, files []*File) error
+	UpdateHeader(ctx context.Context, userID int32, files []*File) error
 	GetProfileByUserID(ctx context.Context, selfUserID, userID int32) (*Profile, error)
 	DeleteAvatarByUserID(ctx context.Context, userID int32) error
+	GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int32) (map[int32]ShortProfile, error)
+	GetShortProfileByUserIDs(ctx context.Context, userIDs []int32) ([]ShortProfile, error)
 }
 
 type ElasticProfileStore interface {
@@ -42,6 +44,7 @@ type ElasticProfileStore interface {
 }
 
 type ProfileStore interface {
+	CreateProfile(ctx context.Context, profile Profile) error
 	UpdateProfile(ctx context.Context, profile Profile, userID int32) error
 	UpdateAvatar(ctx context.Context, avatarPath string, userID int32) error
 	UpdateHeader(ctx context.Context, avatarPath string, UserID int32) error

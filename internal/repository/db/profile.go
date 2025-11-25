@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"project/domain"
 	"time"
 
@@ -17,6 +18,28 @@ type DBProfileStore struct {
 
 func NewDBProfileStore(db *sql.DB) domain.ProfileStore {
 	return &DBProfileStore{db: db}
+}
+
+func (store *DBProfileStore) CreateProfile(ctx context.Context, profile domain.Profile) error {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "profileStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start CreateProfile")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	queryProfile := `INSERT INTO profiles 
+        (user_id, first_name, last_name, gender, dob) 
+        VALUES ($1, $2, $3, $4, $5)`
+	_, err := store.db.ExecContext(ctx, queryProfile, profile.UserID, profile.FirstName, profile.LastName, profile.Gender, profile.Dob)
+	if err != nil {
+		dblogger.Error("Failed to insert profile", zap.String("query", queryProfile))
+		return fmt.Errorf("insert profile: %w", err)
+	}
+
 }
 
 func (store *DBProfileStore) UpdateProfile(ctx context.Context, profile domain.Profile, userID int32) error {

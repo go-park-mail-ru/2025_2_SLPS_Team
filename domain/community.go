@@ -2,7 +2,6 @@ package domain
 
 import (
 	"context"
-	"mime/multipart"
 	"time"
 )
 
@@ -77,8 +76,8 @@ type CommunityRequest struct {
 }
 
 type CommunityService interface {
-	CreateCommunity(ctx context.Context, userID int32, req CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) (*Community, error)
-	UpdateCommunity(ctx context.Context, communityID int32, userID int32, req CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) error
+	CreateCommunity(ctx context.Context, userID int32, req CommunityRequest, avatarFiles []*File, coverFiles []*File) (*Community, error)
+	UpdateCommunity(ctx context.Context, communityID int32, userID int32, req CommunityRequest, avatarFiles []*File, coverFiles []*File) error
 	DeleteCommunity(ctx context.Context, communityID int32, userID int32) error
 	GetCommunity(ctx context.Context, userID int32, communityID int32) (*CommunityForView, error)
 	GetUserCommunities(ctx context.Context, userID int32, params PaginateQueryParams) ([]ShortCommunity, error)
