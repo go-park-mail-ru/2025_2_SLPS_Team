@@ -903,7 +903,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "community"
+                    "communities"
                 ],
                 "summary": "Поиск сообществ по имени",
                 "parameters": [
