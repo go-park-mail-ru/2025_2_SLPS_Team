@@ -39,14 +39,15 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, actionUserID, tar
 		zap.Int32("targetUserID", targetUserID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, targetUserID)
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: targetUserID})
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Friend user not found", zap.Int32("targetUserID", targetUserID))
-			return domain.ErrNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err, zap.Int32("targetUserID", targetUserID))
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return domain.ErrDB
+	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return domain.ErrNotExist
 	}
 
 	// Проверяем текущий статус дружбы
@@ -343,11 +344,11 @@ func (s *FriendService) SearchShortProfilesByFullNameAndRelationType(ctx context
 		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
 		return nil, domain.ErrDB
 	}
-	profiles, err := s.profileStore.GetShortProfileByUserIDs(ctx, foundIDs)
+	resp, err := s.profileService.GetShortProfileByUserIDs(ctx, &pb.GetShortProfileByUserIDsRequest{UserIDs: foundIDs})
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail get short Profiles by user IDs", zap.Error(err))
 		return nil, domain.ErrDB
 	}
 
-	return profiles, nil
+	return generated.FromProtoShortProfileSlice(resp), nil
 }

@@ -7,9 +7,6 @@ import (
 	domain "project/domain"
 	mapper "project/shared/mapper"
 	pb "project/shared/pb"
-	"time"
-
-	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func FromProtoProfile(source *pb.Profile) domain.Profile {
@@ -245,4 +242,31 @@ func ProtoToUser(p *pb.User) domain.User {
 		Password: p.Password,
 		Role:     p.Role,
 	}
+}
+func ToPbShortProfileList(profiles []domain.ShortProfile) *pb.ShortProfileList {
+	pbProfiles := make([]*pb.ShortProfile, len(profiles))
+	for i, p := range profiles {
+		pbProfiles[i] = &pb.ShortProfile{
+			UserID:     p.UserID,
+			FullName:   p.FullName,
+			AvatarPath: p.AvatarPath,
+			Dob:        mapper.Conv_TimeToProto(p.Dob),
+		}
+	}
+	return &pb.ShortProfileList{Profiles: pbProfiles}
+}
+func FromPbShortProfileList(pbList *pb.ShortProfileList) []domain.ShortProfile {
+	if pbList == nil {
+		return nil
+	}
+	profiles := make([]domain.ShortProfile, len(pbList.Profiles))
+	for i, p := range pbList.Profiles {
+		profiles[i] = domain.ShortProfile{
+			UserID:     p.UserID,
+			FullName:   p.FullName,
+			AvatarPath: p.AvatarPath,
+			Dob:        mapper.Conv_ProtoToTime(p.Dob),
+		}
+	}
+	return profiles
 }

@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"project/domain"
+	"project/shared/pb"
 
 	"strconv"
 
@@ -12,10 +13,10 @@ import (
 )
 
 type FriendHandler struct {
-	friendService domain.FriendService
+	friendService pb.FriendServiceClient
 }
 
-func NewFriendHandler(friendService domain.FriendService) *FriendHandler {
+func NewFriendHandler(friendService pb.FriendServiceClient) *FriendHandler {
 	return &FriendHandler{
 		friendService: friendService,
 	}
@@ -57,8 +58,9 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	err = h.friendService.SendFriendRequest(r.Context(), userID, int32(friendID))
+	_, err = h.friendService.SendFriendRequest(r.Context(), &pb.SendFriendRequestRequest{ActionUserID: userID, TargetUserID: int32(friendID)})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -95,8 +97,9 @@ func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	err = h.friendService.AcceptFriendRequest(r.Context(), userID, int32(friendID))
+	_, err = h.friendService.AcceptFriendRequest(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: int32(friendID)})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -133,8 +136,9 @@ func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	err = h.friendService.RejectFriendRequest(r.Context(), userID, int32(friendID))
+	_, err = h.friendService.RejectFriendRequest(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: int32(friendID)})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -171,8 +175,9 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.friendService.RemoveFriend(r.Context(), userID, int32(friendID))
+	_, err = h.friendService.RemoveFriend(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: int32(friendID)})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -207,8 +212,9 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	friends, err := h.friendService.GetFriends(r.Context(), userID, qParams)
+	friends, err := h.friendService.GetFriends(r.Context(), &pb.GetFriendsRequest{UserID: userID, Page: qParams.Page, Limit: qParams.Limit})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -245,8 +251,9 @@ func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	users, err := h.friendService.GetAllUsers(r.Context(), userID, qParams)
+	users, err := h.friendService.GetAllUsers(r.Context(), &pb.GetAllUsersRequest{UserID: userID, Limit: qParams.Limit, Page: qParams.Page})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -283,8 +290,9 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	requests, err := h.friendService.GetFriendRequests(r.Context(), userID, qParams)
+	requests, err := h.friendService.GetFriendRequests(r.Context(), &pb.GetFriendRequestsRequest{UserID: userID, Page: qParams.Page, Limit: qParams.Limit})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -321,8 +329,9 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	requests, err := h.friendService.GetSentRequests(r.Context(), userID, qParams)
+	requests, err := h.friendService.GetSentRequests(r.Context(), &pb.GetSentRequestsRequest{UserID: userID, Limit: qParams.Limit, Page: qParams.Page})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -359,14 +368,15 @@ func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	status, err := h.friendService.GetFriendshipStatus(r.Context(), userID, int32(friendID))
+	status, err := h.friendService.GetFriendshipStatus(r.Context(), &pb.GetFriendshipStatusRequest{UserID: userID, FriendID: int32(friendID)})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
 
 	response := FriendshipStatusResponse{
-		Status: status,
+		Status: domain.FriendshipStatus(status.Status),
 	}
 
 	if err := sendJSONData(r.Context(), w, response); err != nil {
@@ -395,7 +405,7 @@ func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	count, err := h.friendService.CountUserRelations(r.Context(), int32(userID))
+	count, err := h.friendService.CountUserRelations(r.Context(), &pb.CountUserRelationsRequest{UserID: int32(userID)})
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -444,7 +454,7 @@ func (api *FriendHandler) SearchProfilesByFullName(w http.ResponseWriter, r *htt
 		return
 	}
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
-	profiles, err := api.friendService.SearchShortProfilesByFullNameAndRelationType(r.Context(), userID, qParams, fullName, fType)
+	profiles, err := api.friendService.SearchShortProfilesByFullNameAndRelationType(r.Context(), &pb.SearchProfilesRequest{FullName: fullName, UserID: userID, Limit: qParams.Limit, Page: qParams.Page, Type: string(fType)})
 	if err != nil {
 		sendJSONError(w, err)
 		domain.FromContext(r.Context()).Error("Fail search profiles by full name", zap.Error(err))

@@ -1,0 +1,100 @@
+syntax = "proto3";
+//    protoc --go_out=. --go-grpc_out=. shared/pb/friend.proto
+package friends;
+
+option go_package = "/shared/pb;pb";
+
+import "google/protobuf/empty.proto";
+
+import "shared/pb/profile.proto";
+message UserIDsPair {
+  int32 userID = 1;
+  int32 friendID = 2;
+}
+
+message SendFriendRequestRequest {
+  int32 actionUserID = 1;
+  int32 targetUserID = 2;
+}
+
+message GetFriendsRequest {
+  int32 userID = 1;
+  int32 limit = 2;
+  int32 page = 3;
+}
+
+message GetAllUsersRequest {
+  int32 userID = 1;
+  int32 limit = 2;
+  int32 page = 3;
+}
+
+message SearchProfilesRequest {
+  int32 userID = 1;
+  int32 limit = 2;
+  int32 page = 3;
+  string fullName = 4;
+  string type = 5;
+}
+
+message GetFriendRequestsRequest {
+  int32 userID = 1;
+  int32 limit = 2;
+  int32 page = 3;
+}
+
+message GetSentRequestsRequest {
+  int32 userID = 1;
+  int32 limit = 2;
+  int32 page = 3;
+}
+
+message GetFriendshipStatusRequest {
+  int32 userID = 1;
+  int32 friendID = 2;
+}
+
+message CountUserRelationsRequest {
+  int32 userID = 1;
+}
+
+
+
+
+
+message ShortProfileList {
+  repeated profile.ShortProfile profiles = 1;
+}
+
+message FriendshipStatusResponse {
+  string status = 1;
+}
+
+message UserRelationsCountsResponse {
+  int32 accepted = 1;
+  int32 pending = 2;
+  int32 sent = 3;
+  int32 blocked = 4;
+}
+
+service FriendService {
+  rpc SendFriendRequest (SendFriendRequestRequest) returns (google.protobuf.Empty);
+  rpc AcceptFriendRequest (UserIDsPair) returns (google.protobuf.Empty);
+  rpc RejectFriendRequest (UserIDsPair) returns (google.protobuf.Empty);
+  rpc RemoveFriend (UserIDsPair) returns (google.protobuf.Empty);
+
+  rpc GetFriends (GetFriendsRequest) returns (ShortProfileList);
+  rpc GetAllUsers (GetAllUsersRequest) returns (ShortProfileList);
+
+  rpc SearchShortProfilesByFullNameAndRelationType (SearchProfilesRequest)
+      returns (ShortProfileList);
+
+  rpc GetFriendRequests (GetFriendRequestsRequest) returns (ShortProfileList);
+  rpc GetSentRequests (GetSentRequestsRequest) returns (ShortProfileList);
+
+  rpc GetFriendshipStatus (GetFriendshipStatusRequest)
+      returns (FriendshipStatusResponse);
+
+  rpc CountUserRelations (CountUserRelationsRequest)
+      returns (UserRelationsCountsResponse);
+}
