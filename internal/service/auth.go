@@ -150,7 +150,7 @@ func (api *AuthService) GetUserRole(ctx context.Context, userID int32) (string, 
 	return user.Role, nil
 }
 
-func (api *AuthService) IsUserExists(ctx context.Context, userID int) (bool, error) {
+func (api *AuthService) IsUserExists(ctx context.Context, userID int32) (bool, error) {
 	isExists, err := api.userStore.IsUserExists(ctx, userID)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))

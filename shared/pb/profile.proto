@@ -1,5 +1,5 @@
 syntax = "proto3";
-//    protoc --go_out=. --go-grpc_out=. proto/profile.proto
+//    protoc --go_out=. --go-grpc_out=. shared/pb/profile.proto
 package profile;
 
 option go_package = "/shared/pb;pb";

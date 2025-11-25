@@ -7,6 +7,9 @@ import (
 	domain "project/domain"
 	mapper "project/shared/mapper"
 	pb "project/shared/pb"
+	"time"
+
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 func FromProtoProfile(source *pb.Profile) domain.Profile {
@@ -199,4 +202,47 @@ func ProtoToFiles(list []*pb.FileData) []*domain.File {
 		result = append(result, ProtoToFile(p))
 	}
 	return result
+}
+func RegisterRequestToProto(req domain.RegisterRequest) *pb.RegisterRequest {
+	return &pb.RegisterRequest{
+		FirstName:       req.FirstName,
+		LastName:        req.LastName,
+		Email:           req.Email,
+		Password:        req.Password,
+		ConfirmPassword: req.ConfirmPassword,
+		Dob:             mapper.Conv_TimeToProto(req.Dob),
+		Gender:          req.Gender,
+	}
+}
+
+// gRPC -> Go
+func ProtoToRegisterRequest(p *pb.RegisterRequest) domain.RegisterRequest {
+
+	return domain.RegisterRequest{
+		FirstName:       p.FirstName,
+		LastName:        p.LastName,
+		Email:           p.Email,
+		Password:        p.Password,
+		ConfirmPassword: p.ConfirmPassword,
+		Dob:             mapper.Conv_ProtoToTime(p.Dob),
+		Gender:          p.Gender,
+	}
+}
+func UserToProto(u domain.User) *pb.User {
+	return &pb.User{
+		Id:       u.ID,
+		Email:    u.Email,
+		Password: u.Password,
+		Role:     u.Role,
+	}
+}
+
+// gRPC -> Go
+func ProtoToUser(p *pb.User) domain.User {
+	return domain.User{
+		ID:       p.Id,
+		Email:    p.Email,
+		Password: p.Password,
+		Role:     p.Role,
+	}
 }
