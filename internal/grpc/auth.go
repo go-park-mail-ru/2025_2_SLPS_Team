@@ -24,7 +24,7 @@ func (g GrpcAuthHandler) Register(ctx context.Context, in *pb.RegisterRequest) (
 
 	userID, err := g.ser.Register(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, domain.ToGrpcError(err)
 	}
 
 	return &pb.LoginResponse{UserId: userID}, nil
@@ -38,7 +38,7 @@ func (g GrpcAuthHandler) Login(ctx context.Context, in *pb.LoginRequest) (*pb.Lo
 
 	userID, err := g.ser.Login(ctx, req)
 	if err != nil {
-		return nil, err
+		return nil, domain.ToGrpcError(err)
 	}
 
 	return &pb.LoginResponse{UserId: userID}, nil
@@ -47,16 +47,18 @@ func (g GrpcAuthHandler) Login(ctx context.Context, in *pb.LoginRequest) (*pb.Lo
 func (g GrpcAuthHandler) Logout(ctx context.Context, in *pb.SessionCookieRequest) (*emptypb.Empty, error) {
 	err := g.ser.Logout(ctx, in.SessionCookie)
 	if err != nil {
-		return nil, err
+		return nil, domain.ToGrpcError(err)
 	}
+
 	return &emptypb.Empty{}, nil
 }
 
 func (g GrpcAuthHandler) IsLoggedIn(ctx context.Context, in *pb.SessionCookieRequest) (*pb.SessionResponse, error) {
 	session, err := g.ser.IsLoggedIn(ctx, in.SessionCookie)
 	if err != nil {
-		return nil, err
+		return nil, domain.ToGrpcError(err)
 	}
+
 	return &pb.SessionResponse{
 		UserId:    session.UserID,
 		CsrfToken: session.CSRFToken,
@@ -66,8 +68,9 @@ func (g GrpcAuthHandler) IsLoggedIn(ctx context.Context, in *pb.SessionCookieReq
 func (g GrpcAuthHandler) AddSession(ctx context.Context, in *pb.UserIDRequest) (*pb.SIDAndCSRFToken, error) {
 	sidAndCSRF, err := g.ser.AddSession(ctx, in.UserId)
 	if err != nil {
-		return nil, err
+		return nil, domain.ToGrpcError(err)
 	}
+
 	return &pb.SIDAndCSRFToken{
 		Sid:       sidAndCSRF.SID,
 		CsrfToken: sidAndCSRF.CSRFToken,
@@ -77,8 +80,9 @@ func (g GrpcAuthHandler) AddSession(ctx context.Context, in *pb.UserIDRequest) (
 func (g GrpcAuthHandler) GetUserRole(ctx context.Context, in *pb.UserIDRequest) (*pb.UserRoleResponse, error) {
 	role, err := g.ser.GetUserRole(ctx, in.UserId)
 	if err != nil {
-		return nil, err
+		return nil, domain.ToGrpcError(err)
 	}
+
 	return &pb.UserRoleResponse{
 		Role: role,
 	}, nil
@@ -87,8 +91,9 @@ func (g GrpcAuthHandler) GetUserRole(ctx context.Context, in *pb.UserIDRequest) 
 func (g GrpcAuthHandler) IsUserExists(ctx context.Context, in *pb.UserIDRequest) (*pb.UserExistsResponse, error) {
 	exists, err := g.ser.IsUserExists(ctx, in.UserId)
 	if err != nil {
-		return nil, err
+		return nil, domain.ToGrpcError(err)
 	}
+
 	return &pb.UserExistsResponse{
 		Exists: exists,
 	}, nil
