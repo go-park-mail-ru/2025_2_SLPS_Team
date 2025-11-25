@@ -38,15 +38,25 @@ type PostView struct {
 	IsCommunityPost bool      `json:"isCommunityPost"`
 }
 
+// Структура для данных из БД без информации о профиле
+type PostDB struct {
+	ID              uint      `json:"id"`
+	AuthorID        uint      `json:"authorID"`
+	CommunityID     *int32    `json:"communityID,omitempty"`
+	Text            string    `json:"text"`
+	CreatedAt       time.Time `json:"createdAt"`
+	CommunityName   *string   `json:"communityName,omitempty"`
+	CommunityAvatar *string   `json:"communityAvatar,omitempty"`
+	LikeCount       int32     `json:"likeCount"`
+	IsLiked         bool      `json:"isLiked"`
+	Attachments     []string  `json:"attachments"`
+	Photos          []string  `json:"photos"`
+}
+
 type PostWithAuthor struct {
 	Post      Post         `json:"post"`
 	Author    ShortProfile `json:"author"`
 	Community *Community   `json:"community,omitempty"` // Информация о сообществе для постов в сообществах
-}
-
-type PostWithShortUser struct {
-	Post   Post         `json:"post"`
-	Author ShortProfile `json:"author"`
 }
 
 // PostCreateRequest - запрос на создание поста для валидации
@@ -100,10 +110,10 @@ type PostService interface {
 
 type PostStore interface {
 	// Получение постов с пагинацией
-	PostsPaginatedList(ctx context.Context, userID, limit, offset int32) ([]PostView, error)
+	PostsPaginatedList(ctx context.Context, userID, limit, offset int32) ([]PostDB, error)
 
 	// Получение поста по ID
-	GetPostByID(ctx context.Context, userID int32, id uint) (*PostView, error)
+	GetPostByID(ctx context.Context, userID int32, id uint) (*PostDB, error)
 
 	// Создание поста
 	CreatePost(ctx context.Context, post *Post) error
@@ -115,10 +125,10 @@ type PostStore interface {
 	DeletePost(ctx context.Context, id uint, authorID uint) error
 
 	// Получение постов пользователя
-	GetPostsByUser(ctx context.Context, selfUserID int32, userID uint, limit, offset int32) ([]PostView, error)
+	GetPostsByUser(ctx context.Context, selfUserID int32, userID uint, limit, offset int32) ([]PostDB, error)
 
 	// Получение постов сообщества
-	GetCommunityPosts(ctx context.Context, userID int32, communityID int32, limit, offset int32) ([]PostView, error)
+	GetCommunityPosts(ctx context.Context, userID int32, communityID int32, limit, offset int32) ([]PostDB, error)
 
 	// Лайк/дизлайк поста
 	UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int32) error
