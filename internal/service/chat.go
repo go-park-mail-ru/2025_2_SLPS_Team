@@ -10,16 +10,16 @@ import (
 )
 
 type ChatService struct {
-	userStore      domain.UserStore
 	chatStore      domain.ChatStore
+	authService    pb.AuthServiceClient
 	profileService pb.ProfileServiceClient
 	messageStore   domain.MessageStore
 	wsHub          domain.WSHub
 }
 
-func NewChatService(userStore domain.UserStore, profileService pb.ProfileServiceClient, chatStore domain.ChatStore, messageStore domain.MessageStore, wsHub domain.WSHub) domain.ChatService {
+func NewChatService(authService pb.AuthServiceClient, profileService pb.ProfileServiceClient, chatStore domain.ChatStore, messageStore domain.MessageStore, wsHub domain.WSHub) domain.ChatService {
 	return &ChatService{
-		userStore:      userStore,
+		authService:    authService,
 		chatStore:      chatStore,
 		profileService: profileService,
 		messageStore:   messageStore,
@@ -29,15 +29,17 @@ func NewChatService(userStore domain.UserStore, profileService pb.ProfileService
 
 func (api *ChatService) GetOrCreateChatWithUser(ctx context.Context, selfUserID int32, userID int32) (int32, error) {
 
-	isUserExist, err := api.userStore.IsUserExists(ctx, userID)
+	resp, err := api.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: userID})
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return 0, domain.ErrDB
 	}
+	isUserExist := resp.Exists
 	if !isUserExist {
 		domain.FromContext(ctx).Warn("User not found")
 		return 0, domain.ErrNotExist
 	}
+
 	if userID == selfUserID {
 		domain.FromContext(ctx).Warn("Failed to create or get chat with same self user")
 		return 0, domain.ErrInvalidInput

@@ -12,17 +12,16 @@ import (
 
 type FriendService struct {
 	friendStore         domain.FriendStore
-	userStore           domain.UserStore
-	profileStore        domain.ProfileStore
+	authService         pb.AuthServiceClient
 	elasticProfileStore domain.ElasticProfileStore
 	profileService      pb.ProfileServiceClient
 }
 
-func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore, elasticProfileStore domain.ElasticProfileStore, profileStore domain.ProfileStore) domain.FriendService {
+func NewFriendService(friendStore domain.FriendStore, authService pb.AuthServiceClient, elasticProfileStore domain.ElasticProfileStore, profileService pb.ProfileServiceClient) domain.FriendService {
 	return &FriendService{
 		friendStore:         friendStore,
-		userStore:           userStore,
-		profileStore:        profileStore,
+		authService:         authService,
+		profileService:      profileService,
 		elasticProfileStore: elasticProfileStore,
 	}
 }
@@ -293,14 +292,15 @@ func (s *FriendService) CountUserRelations(ctx context.Context, userID int32) (*
 		zap.Int32("userID", userID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, userID)
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: userID})
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "User not found", zap.Int32("userID", userID))
-			return nil, domain.ErrNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err, zap.Int32("userID", userID))
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return nil, domain.ErrDB
+	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return nil, domain.ErrNotExist
 	}
 
 	count, err := s.friendStore.CountUserRelations(ctx, userID)

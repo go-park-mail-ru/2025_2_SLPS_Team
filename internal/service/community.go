@@ -15,16 +15,16 @@ import (
 type CommunityService struct {
 	communityStore        domain.CommunityStore
 	postStore             domain.PostStore
-	userStore             domain.UserStore
+	authService           pb.AuthServiceClient
 	elasticCommunityStore domain.ElasticCommunityStore
 	profileClient         pb.ProfileServiceClient
 }
 
-func NewCommunityService(communityStore domain.CommunityStore, postStore domain.PostStore, userStore domain.UserStore, elasticCommunityStore domain.ElasticCommunityStore, profileClient pb.ProfileServiceClient) domain.CommunityService {
+func NewCommunityService(communityStore domain.CommunityStore, postStore domain.PostStore, authService pb.AuthServiceClient, elasticCommunityStore domain.ElasticCommunityStore, profileClient pb.ProfileServiceClient) domain.CommunityService {
 	return &CommunityService{
 		communityStore:        communityStore,
 		postStore:             postStore,
-		userStore:             userStore,
+		authService:           authService,
 		elasticCommunityStore: elasticCommunityStore,
 		profileClient:         profileClient,
 	}
@@ -315,15 +315,17 @@ func (s *CommunityService) GetUserCommunitiesByID(ctx context.Context, targetUse
 	domain.Info(ctx, "Getting user communities by ID", zap.Int32("targetUserID", targetUserID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, targetUserID)
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: targetUserID})
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "User not found", zap.Int32("targetUserID", targetUserID))
-			return nil, domain.ErrNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err)
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return nil, domain.ErrDB
 	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return nil, domain.ErrNotExist
+	}
+
 	communities, err := s.communityStore.GetUserCommunitiesByID(ctx, targetUserID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user communities by ID", err)

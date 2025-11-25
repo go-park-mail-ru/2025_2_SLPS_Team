@@ -3,19 +3,20 @@ package service
 import (
 	"context"
 	"project/domain"
+	"project/shared/pb"
 
 	"go.uber.org/zap"
 )
 
 type ApplicationService struct {
-	userStore        domain.UserStore
+	authService      pb.AuthServiceClient
 	wsHub            domain.WSHub
 	applicationStore domain.ApplicationStore
 }
 
-func NewApplicationService(userStore domain.UserStore, applicationStore domain.ApplicationStore, wsHub domain.WSHub) domain.ApplicationService {
+func NewApplicationService(authService pb.AuthServiceClient, applicationStore domain.ApplicationStore, wsHub domain.WSHub) domain.ApplicationService {
 	return &ApplicationService{
-		userStore:        userStore,
+		authService:      authService,
 		wsHub:            wsHub,
 		applicationStore: applicationStore,
 	}
@@ -23,12 +24,15 @@ func NewApplicationService(userStore domain.UserStore, applicationStore domain.A
 func (s *ApplicationService) GetApplications(ctx context.Context, params domain.PaginateQueryParams) ([]domain.Application, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
-	isAdmin, err := s.userStore.IsUserAdmin(ctx)
+	userID, _ := ctx.Value(domain.UserIDKey).(int32)
+
+	resp, err := s.authService.GetUserRole(ctx, &pb.UserIDRequest{UserId: userID})
+	role := resp.Role
 	if err != nil {
 		domain.FromContext(ctx).Error("can`t find user", zap.Error(err))
 		return nil, err
 	}
-	if isAdmin {
+	if role == "admin" {
 		return s.applicationStore.GetApplications(ctx, limit, offset)
 	}
 	return s.applicationStore.GetApplicationsByUser(ctx, limit, offset)
@@ -39,11 +43,16 @@ func (s *ApplicationService) UpdateApplicationText(ctx context.Context, id int32
 }
 
 func (s *ApplicationService) UpdateApplicationStatus(ctx context.Context, id int32, newStatus string) error {
-	isAdmin, err := s.userStore.IsUserAdmin(ctx)
+	userID, _ := ctx.Value(domain.UserIDKey).(int32)
+
+	resp, err := s.authService.GetUserRole(ctx, &pb.UserIDRequest{UserId: userID})
+	role := resp.Role
 	if err != nil {
-		return err
+		domain.FromContext(ctx).Error("can`t find user", zap.Error(err))
+		return nil
 	}
-	if !isAdmin && newStatus != "closed" {
+
+	if role != "admin" && newStatus != "closed" {
 		return domain.ErrAccessDenied
 	}
 	return s.applicationStore.UpdateApplicationStatus(ctx, id, newStatus)

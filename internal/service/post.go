@@ -12,17 +12,17 @@ import (
 
 type PostService struct {
 	postStore      domain.PostStore
-	userStore      domain.UserStore
+	authService    pb.AuthServiceClient
 	communityStore domain.CommunityStore
-	profileClient  pb.ProfileServiceClient
+	profileService pb.ProfileServiceClient
 }
 
-func NewPostService(postStore domain.PostStore, userStore domain.UserStore, communityStore domain.CommunityStore, profileClient pb.ProfileServiceClient) domain.PostService {
+func NewPostService(postStore domain.PostStore, authService pb.AuthServiceClient, communityStore domain.CommunityStore, profileService pb.ProfileServiceClient) domain.PostService {
 	return &PostService{
 		postStore:      postStore,
-		userStore:      userStore,
+		authService:    authService,
 		communityStore: communityStore,
-		profileClient:  profileClient,
+		profileService: profileService,
 	}
 }
 
@@ -339,14 +339,15 @@ func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int32, userID
 	domain.Info(ctx, "Getting user posts", zap.Uint("userID", userID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, int32(userID))
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: int32(userID)})
 	if err != nil {
-		if errors.Is(err, domain.ErrUserNotFound) {
-			domain.Warn(ctx, "User not found", zap.Uint("userID", userID))
-			return nil, domain.ErrUserNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err, zap.Uint("userID", userID))
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return nil, domain.ErrDB
+	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return nil, domain.ErrNotExist
 	}
 
 	// Получаем посты из БД без информации о профиле
@@ -434,7 +435,7 @@ func (s *PostService) enrichPostsWithProfiles(ctx context.Context, postsDB []dom
 	}
 
 	// Получаем профили через gRPC
-	profilesResp, err := s.profileClient.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
+	profilesResp, err := s.profileService.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
 		UserIDs: authorIDs,
 	})
 	if err != nil {
@@ -490,7 +491,7 @@ func (s *PostService) enrichPostsWithProfiles(ctx context.Context, postsDB []dom
 // enrichPostWithProfile обогащает один пост данными профиля через gRPC
 func (s *PostService) enrichPostWithProfile(ctx context.Context, postDB *domain.PostDB) (*domain.PostView, error) {
 	// Получаем профиль автора через gRPC
-	profilesResp, err := s.profileClient.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
+	profilesResp, err := s.profileService.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
 		UserIDs: []int32{int32(postDB.AuthorID)},
 	})
 	if err != nil {
