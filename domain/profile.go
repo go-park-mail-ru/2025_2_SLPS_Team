@@ -34,6 +34,7 @@ type ProfileService interface {
 	DeleteAvatarByUserID(ctx context.Context, userID int32) error
 	GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int32) (map[int32]ShortProfile, error)
 	GetShortProfileByUserIDs(ctx context.Context, userIDs []int32) ([]ShortProfile, error)
+	GetOtherShortProfileByUserIDs(ctx context.Context, userIDs []int32, limit, offset int32) ([]ShortProfile, error)
 }
 
 type ElasticProfileStore interface {
@@ -51,6 +52,7 @@ type ProfileStore interface {
 	GetProfileByUserID(ctx context.Context, userID int32) (Profile, error)
 	GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int32) (map[int32]ShortProfile, error)
 	GetShortProfileByUserIDs(ctx context.Context, userIDs []int32) ([]ShortProfile, error)
+	GetOtherShortProfileByUserIDs(ctx context.Context, userIDs []int32, limit, offset int32) ([]ShortProfile, error)
 	GetAvatarByUserID(ctx context.Context, userID int32) (*string, error)
 	GetHeaderByUserID(ctx context.Context, userID int32) (*string, error)
 	DeleteAvatarByUserID(ctx context.Context, userID int32) (*string, error)

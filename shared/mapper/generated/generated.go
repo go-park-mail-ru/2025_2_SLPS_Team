@@ -123,6 +123,30 @@ func FromProtoShortProfileSlice(pbResp *pb.GetShortProfileByUserIDsResponse) []d
 	return profiles
 }
 
+func ToProtoOtherShortProfileSlice(profiles []domain.ShortProfile) *pb.GetOtherShortProfileByUserIDsResponse {
+	resp := &pb.GetOtherShortProfileByUserIDsResponse{
+		Profiles: make([]*pb.ShortProfile, 0, len(profiles)),
+	}
+
+	for _, p := range profiles {
+		pbSp := ToProtoShortProfile(p) // используем существующую функцию
+		resp.Profiles = append(resp.Profiles, pbSp)
+	}
+
+	return resp
+}
+
+func FromProtoOtherShortProfileSlice(pbResp *pb.GetOtherShortProfileByUserIDsResponse) []domain.ShortProfile {
+	profiles := make([]domain.ShortProfile, 0, len(pbResp.Profiles))
+
+	for _, pbSp := range pbResp.Profiles {
+		sp := FromProtoShortProfile(pbSp) // используем существующую функцию
+		profiles = append(profiles, sp)
+	}
+
+	return profiles
+}
+
 func ToProtoShortProfileMap(profiles map[int32]domain.ShortProfile) *pb.GetShortProfileMapByUserIDsResponse {
 	resp := &pb.GetShortProfileMapByUserIDsResponse{
 		Profiles: make(map[int32]*pb.ShortProfile, len(profiles)),

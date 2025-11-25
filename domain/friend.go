@@ -84,11 +84,11 @@ type FriendStore interface {
 	DeleteFriendship(ctx context.Context, userID1, userID2 int32) error
 
 	// Получение списков с пагинацией
-	GetUserFriends(ctx context.Context, userID, limit, offset int32) ([]ShortProfile, error)
-	GetAllUsers(ctx context.Context, userID int32, limit, offset int32) ([]ShortProfile, error)
+	GetUserFriends(ctx context.Context, userID, limit, offset int32) ([]int32, error)
+	GetAllUsers(ctx context.Context, userID int32) ([]int32, error)
 
-	GetFriendshipRequests(ctx context.Context, userID, limit, offset int32) ([]ShortProfile, error)
-	GetSentRequests(ctx context.Context, userID, limit, offset int32) ([]ShortProfile, error)
+	GetFriendshipRequests(ctx context.Context, userID, limit, offset int32) ([]int32, error)
+	GetSentRequests(ctx context.Context, userID, limit, offset int32) ([]int32, error)
 	GetUserIDsByFriendType(ctx context.Context, userID int32, fType FriendshipCountType) ([]int32, error)
 	// Вспомогательные методы
 	AreFriends(ctx context.Context, userID1, userID2 int32) (bool, error)

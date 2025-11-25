@@ -22,14 +22,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ProfileService_CreateProfile_FullMethodName               = "/profile.ProfileService/CreateProfile"
-	ProfileService_UpdateProfile_FullMethodName               = "/profile.ProfileService/UpdateProfile"
-	ProfileService_UpdateAvatar_FullMethodName                = "/profile.ProfileService/UpdateAvatar"
-	ProfileService_UpdateHeader_FullMethodName                = "/profile.ProfileService/UpdateHeader"
-	ProfileService_GetProfileByUserID_FullMethodName          = "/profile.ProfileService/GetProfileByUserID"
-	ProfileService_DeleteAvatarByUserID_FullMethodName        = "/profile.ProfileService/DeleteAvatarByUserID"
-	ProfileService_GetShortProfileMapByUserIDs_FullMethodName = "/profile.ProfileService/GetShortProfileMapByUserIDs"
-	ProfileService_GetShortProfileByUserIDs_FullMethodName    = "/profile.ProfileService/GetShortProfileByUserIDs"
+	ProfileService_CreateProfile_FullMethodName                 = "/profile.ProfileService/CreateProfile"
+	ProfileService_UpdateProfile_FullMethodName                 = "/profile.ProfileService/UpdateProfile"
+	ProfileService_UpdateAvatar_FullMethodName                  = "/profile.ProfileService/UpdateAvatar"
+	ProfileService_UpdateHeader_FullMethodName                  = "/profile.ProfileService/UpdateHeader"
+	ProfileService_GetProfileByUserID_FullMethodName            = "/profile.ProfileService/GetProfileByUserID"
+	ProfileService_DeleteAvatarByUserID_FullMethodName          = "/profile.ProfileService/DeleteAvatarByUserID"
+	ProfileService_GetShortProfileMapByUserIDs_FullMethodName   = "/profile.ProfileService/GetShortProfileMapByUserIDs"
+	ProfileService_GetShortProfileByUserIDs_FullMethodName      = "/profile.ProfileService/GetShortProfileByUserIDs"
+	ProfileService_GetOtherShortProfileByUserIDs_FullMethodName = "/profile.ProfileService/GetOtherShortProfileByUserIDs"
 )
 
 // ProfileServiceClient is the client API for ProfileService service.
@@ -44,6 +45,7 @@ type ProfileServiceClient interface {
 	DeleteAvatarByUserID(ctx context.Context, in *DeleteAvatarRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	GetShortProfileMapByUserIDs(ctx context.Context, in *GetShortProfileMapByUserIDsRequest, opts ...grpc.CallOption) (*GetShortProfileMapByUserIDsResponse, error)
 	GetShortProfileByUserIDs(ctx context.Context, in *GetShortProfileByUserIDsRequest, opts ...grpc.CallOption) (*GetShortProfileByUserIDsResponse, error)
+	GetOtherShortProfileByUserIDs(ctx context.Context, in *GetOtherShortProfileByUserIDsRequest, opts ...grpc.CallOption) (*GetOtherShortProfileByUserIDsResponse, error)
 }
 
 type profileServiceClient struct {
@@ -134,6 +136,16 @@ func (c *profileServiceClient) GetShortProfileByUserIDs(ctx context.Context, in 
 	return out, nil
 }
 
+func (c *profileServiceClient) GetOtherShortProfileByUserIDs(ctx context.Context, in *GetOtherShortProfileByUserIDsRequest, opts ...grpc.CallOption) (*GetOtherShortProfileByUserIDsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetOtherShortProfileByUserIDsResponse)
+	err := c.cc.Invoke(ctx, ProfileService_GetOtherShortProfileByUserIDs_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ProfileServiceServer is the server API for ProfileService service.
 // All implementations must embed UnimplementedProfileServiceServer
 // for forward compatibility.
@@ -146,6 +158,7 @@ type ProfileServiceServer interface {
 	DeleteAvatarByUserID(context.Context, *DeleteAvatarRequest) (*emptypb.Empty, error)
 	GetShortProfileMapByUserIDs(context.Context, *GetShortProfileMapByUserIDsRequest) (*GetShortProfileMapByUserIDsResponse, error)
 	GetShortProfileByUserIDs(context.Context, *GetShortProfileByUserIDsRequest) (*GetShortProfileByUserIDsResponse, error)
+	GetOtherShortProfileByUserIDs(context.Context, *GetOtherShortProfileByUserIDsRequest) (*GetOtherShortProfileByUserIDsResponse, error)
 	mustEmbedUnimplementedProfileServiceServer()
 }
 
@@ -179,6 +192,9 @@ func (UnimplementedProfileServiceServer) GetShortProfileMapByUserIDs(context.Con
 }
 func (UnimplementedProfileServiceServer) GetShortProfileByUserIDs(context.Context, *GetShortProfileByUserIDsRequest) (*GetShortProfileByUserIDsResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetShortProfileByUserIDs not implemented")
+}
+func (UnimplementedProfileServiceServer) GetOtherShortProfileByUserIDs(context.Context, *GetOtherShortProfileByUserIDsRequest) (*GetOtherShortProfileByUserIDsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetOtherShortProfileByUserIDs not implemented")
 }
 func (UnimplementedProfileServiceServer) mustEmbedUnimplementedProfileServiceServer() {}
 func (UnimplementedProfileServiceServer) testEmbeddedByValue()                        {}
@@ -345,6 +361,24 @@ func _ProfileService_GetShortProfileByUserIDs_Handler(srv interface{}, ctx conte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ProfileService_GetOtherShortProfileByUserIDs_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetOtherShortProfileByUserIDsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ProfileServiceServer).GetOtherShortProfileByUserIDs(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ProfileService_GetOtherShortProfileByUserIDs_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ProfileServiceServer).GetOtherShortProfileByUserIDs(ctx, req.(*GetOtherShortProfileByUserIDsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ProfileService_ServiceDesc is the grpc.ServiceDesc for ProfileService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -383,6 +417,10 @@ var ProfileService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetShortProfileByUserIDs",
 			Handler:    _ProfileService_GetShortProfileByUserIDs_Handler,
+		},
+		{
+			MethodName: "GetOtherShortProfileByUserIDs",
+			Handler:    _ProfileService_GetOtherShortProfileByUserIDs_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

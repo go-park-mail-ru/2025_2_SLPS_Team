@@ -219,3 +219,18 @@ func (api *ProfileService) GetShortProfileByUserIDs(ctx context.Context, userIDs
 
 	return profiles, nil
 }
+
+func (api *ProfileService) GetOtherShortProfileByUserIDs(ctx context.Context, userIDs []int32, limit, offset int32) ([]domain.ShortProfile, error) {
+
+	profiles, err := api.profileStore.GetOtherShortProfileByUserIDs(ctx, userIDs, limit, offset)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			domain.FromContext(ctx).Warn("User not found", zap.Int32s("userID", userIDs))
+			return nil, domain.ErrNotFound
+		}
+		domain.FromContext(ctx).Error("Failed to get profile", zap.Error(err), zap.Int32s("userID", userIDs))
+		return nil, domain.ErrDB
+	}
+
+	return profiles, nil
+}

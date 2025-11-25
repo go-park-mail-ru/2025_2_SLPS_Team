@@ -151,7 +151,7 @@ func (store *DBFriendStore) UpdateFriendshipStatus(ctx context.Context, actionUs
 }
 
 // GetUserFriends получает список друзей пользователя с профилями (с пагинацией)
-func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int32, limit, offset int32) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int32, limit, offset int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
@@ -164,19 +164,15 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int32, li
 
 	// Запрос для получения друзей с пагинацией
 	query := `
-		SELECT p.user_id, p.first_name || ' '||p.last_name, p.avatar_path, p.dob
-		FROM profiles p
-		WHERE p.user_id IN (
-			SELECT CASE 
-				WHEN fr.first_user_id = $1 THEN fr.second_user_id 
-				ELSE fr.first_user_id
-			END as friend_id
-			FROM friend_relationships fr
-			WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
-			AND fr.status = 'accepted'
-		)
-		ORDER BY p.first_name, p.last_name
-		LIMIT $2 OFFSET $3
+SELECT CASE 
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS friend_id
+FROM friend_relationships fr
+WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
+  AND fr.status = 'accepted'
+ORDER BY friend_id
+LIMIT $2 OFFSET $3;
 	`
 
 	dblogger = dblogger.With(zap.String("query", query))
@@ -187,20 +183,17 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int32, li
 	}
 	defer rows.Close()
 
-	friends := []domain.ShortProfile{}
+	var friendIDs []int32
 	for rows.Next() {
-		var friend domain.ShortProfile
+		var friendID int32
 		err := rows.Scan(
-			&friend.UserID,
-			&friend.FullName,
-			&friend.AvatarPath,
-			&friend.Dob,
+			&friendID,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan friend profile", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
-		friends = append(friends, friend)
+		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -209,20 +202,18 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int32, li
 	}
 
 	dblogger.Info("User friends retrieved successfully",
-		zap.Int("friendsCount", len(friends)))
+		zap.Int("friendsCount", len(friendIDs)))
 
-	return friends, nil
+	return friendIDs, nil
 }
 
-func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int32, limit, offset int32) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetAllUsers",
 		zap.Int32("userID", userID),
-		zap.Int32("offset", offset),
-		zap.Int32("limit", limit))
-
+	)
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
@@ -230,46 +221,34 @@ func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int32, limit
 
 	// Исправленный запрос - убираем условие AND fr.first_user_id IS NULL
 	query := `
-		SELECT 
-			p.user_id,
-            COALESCE(p.first_name || ' ' || p.last_name, '') AS full_name,
-            COALESCE(p.avatar_path, '') AS avatar_path,
-            p.dob
-        FROM profiles p
-        WHERE p.user_id != $1
-          AND NOT EXISTS (
-              SELECT 1
-              FROM friend_relationships fr
-              WHERE (fr.first_user_id = $1 AND fr.second_user_id = p.user_id)
-                 OR (fr.first_user_id = p.user_id AND fr.second_user_id = $1)
-          )
-        LIMIT $2 OFFSET $3
+SELECT CASE 
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS friend_id
+FROM friend_relationships fr
+    WHERE (fr.first_user_id = $1 or fr.second_user_id = $1)
+ORDER BY friend_id
 	`
 
 	dblogger = dblogger.With(zap.String("query", query))
-	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
+	rows, err := store.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		dblogger.Error("Failed to query all users", zap.Error(err))
 		return nil, fmt.Errorf("failed to query all users: %w", err)
 	}
 	defer rows.Close()
 
-	users := []domain.ShortProfile{}
+	var friendIDs []int32
 	for rows.Next() {
-		var user domain.ShortProfile
-
+		var friendID int32
 		err := rows.Scan(
-			&user.UserID,
-			&user.FullName,
-			&user.AvatarPath,
-			&user.Dob,
+			&friendID,
 		)
 		if err != nil {
-			dblogger.Error("Failed to scan user profile", zap.Error(err))
-			return nil, fmt.Errorf("failed to scan user profile: %w", err)
+			dblogger.Error("Failed to scan friend profile", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
-
-		users = append(users, user)
+		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -278,13 +257,13 @@ func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int32, limit
 	}
 
 	dblogger.Info("All users retrieved successfully",
-		zap.Int("usersCount", len(users)))
+		zap.Int("usersCount", len(friendIDs)))
 
-	return users, nil
+	return friendIDs, nil
 }
 
 // GetFriendshipRequests получает входящие запросы в друзья с профилями (с пагинацией) ВОЗРАСТ
-func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID int32, limit, offset int32) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID int32, limit, offset int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
@@ -299,13 +278,11 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	}()
 
 	query := `
-		SELECT 
-			p.user_id, 
-			p.first_name || ' ' || p.last_name as full_name, 
-			p.avatar_path as avatar_path,
-			p.dob
+SELECT CASE 
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS friend_id
 		FROM friend_relationships fr
-		JOIN profiles p ON p.user_id = fr.action_user_id
 		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) 
 		AND fr.action_user_id != $1 
 		AND fr.status = 'pending'
@@ -321,20 +298,17 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	}
 	defer rows.Close()
 
-	friends := []domain.ShortProfile{}
+	var friendIDs []int32
 	for rows.Next() {
-		var friend domain.ShortProfile
+		var friendID int32
 		err := rows.Scan(
-			&friend.UserID,
-			&friend.FullName,
-			&friend.AvatarPath,
-			&friend.Dob,
+			&friendID,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan friend profile", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
-		friends = append(friends, friend)
+		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -343,13 +317,13 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	}
 
 	dblogger.Info("Friendship requests retrieved successfully",
-		zap.Int("requestsCount", len(friends)))
+		zap.Int("requestsCount", len(friendIDs)))
 
-	return friends, nil
+	return friendIDs, nil
 }
 
 // GetSentRequests получает отправленные запросы в друзья (с пагинацией)
-func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int32, limit, offset int32) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int32, limit, offset int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
@@ -364,16 +338,11 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int32, l
 	}()
 
 	query := `
-		SELECT 
-			p.user_id, 
-			COALESCE(p.first_name || ' ' || p.last_name, '') as full_name, 
-			COALESCE(p.avatar_path, '') as avatar_path,
-			p.dob
+SELECT CASE 
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS friend_id
 		FROM friend_relationships fr
-		JOIN profiles p ON p.user_id = CASE 
-			WHEN fr.first_user_id = $1 THEN fr.second_user_id 
-			ELSE fr.first_user_id 
-		END
 		WHERE fr.action_user_id = $1 AND fr.status = 'pending'
 		ORDER BY fr.created_at DESC
 		LIMIT $2 OFFSET $3
@@ -387,20 +356,17 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int32, l
 	}
 	defer rows.Close()
 
-	friends := []domain.ShortProfile{}
+	var friendIDs []int32
 	for rows.Next() {
-		var friend domain.ShortProfile
+		var friendID int32
 		err := rows.Scan(
-			&friend.UserID,
-			&friend.FullName,
-			&friend.AvatarPath,
-			&friend.Dob,
+			&friendID,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan friend profile", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
-		friends = append(friends, friend)
+		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -409,9 +375,9 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int32, l
 	}
 
 	dblogger.Info("Sent requests retrieved successfully",
-		zap.Int("requestsCount", len(friends)))
+		zap.Int("requestsCount", len(friendIDs)))
 
-	return friends, nil
+	return friendIDs, nil
 }
 
 // DeleteFriendship удаляет запись о дружбе.

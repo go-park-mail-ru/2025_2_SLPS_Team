@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"project/domain"
+	"project/shared/mapper/generated"
 	"project/shared/pb"
 
 	"go.uber.org/zap"
@@ -14,7 +15,7 @@ type FriendService struct {
 	userStore           domain.UserStore
 	profileStore        domain.ProfileStore
 	elasticProfileStore domain.ElasticProfileStore
-	grpcProfileStore    pb.ProfileServiceClient
+	profileService      pb.ProfileServiceClient
 }
 
 func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore, elasticProfileStore domain.ElasticProfileStore, profileStore domain.ProfileStore) domain.FriendService {
@@ -185,13 +186,18 @@ func (s *FriendService) GetFriends(ctx context.Context, userID int32, params dom
 		zap.Int32("offset", offset),
 		zap.Int32("limit", limit))
 
-	friends, err := s.friendStore.GetUserFriends(ctx, userID, limit, offset)
+	friendIDs, err := s.friendStore.GetUserFriends(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user friends", err)
 		return nil, domain.ErrDB
 	}
 
-	return friends, nil
+	friends, err := s.profileService.GetShortProfileByUserIDs(ctx, &pb.GetShortProfileByUserIDsRequest{UserIDs: friendIDs})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", friendIDs))
+		return nil, domain.ErrDB
+	}
+	return generated.FromProtoShortProfileSlice(friends), nil
 }
 
 // GetAllUsers получает всех пользователей с пагинацией
@@ -204,13 +210,17 @@ func (s *FriendService) GetAllUsers(ctx context.Context, userID int32, params do
 		zap.Int32("offset", offset),
 		zap.Int32("limit", limit))
 
-	users, err := s.friendStore.GetAllUsers(ctx, userID, limit, offset)
+	userIDs, err := s.friendStore.GetAllUsers(ctx, userID)
 	if err != nil {
 		domain.Error(ctx, "Failed to get all users", err)
 		return nil, domain.ErrDB
 	}
-
-	return users, nil
+	friends, err := s.profileService.GetOtherShortProfileByUserIDs(ctx, &pb.GetOtherShortProfileByUserIDsRequest{UserIDs: userIDs, Limit: limit, Offset: offset})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", userIDs))
+		return nil, domain.ErrDB
+	}
+	return generated.FromProtoOtherShortProfileSlice(friends), nil
 }
 
 // GetFriendRequests получает входящие запросы в друзья
@@ -223,13 +233,18 @@ func (s *FriendService) GetFriendRequests(ctx context.Context, userID int32, par
 		zap.Int32("offset", offset),
 		zap.Int32("limit", limit))
 
-	requests, err := s.friendStore.GetFriendshipRequests(ctx, userID, limit, offset)
+	requestIDs, err := s.friendStore.GetFriendshipRequests(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get friendship requests", err)
 		return nil, domain.ErrDB
 	}
 
-	return requests, nil
+	friends, err := s.profileService.GetShortProfileByUserIDs(ctx, &pb.GetShortProfileByUserIDsRequest{UserIDs: requestIDs})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", requestIDs))
+		return nil, domain.ErrDB
+	}
+	return generated.FromProtoShortProfileSlice(friends), nil
 }
 
 // GetSentRequests получает отправленные запросы в друзья
@@ -242,13 +257,18 @@ func (s *FriendService) GetSentRequests(ctx context.Context, userID int32, param
 		zap.Int32("offset", offset),
 		zap.Int32("limit", limit))
 
-	requests, err := s.friendStore.GetSentRequests(ctx, userID, limit, offset)
+	requestIDs, err := s.friendStore.GetSentRequests(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get sent requests", err)
 		return nil, domain.ErrDB
 	}
 
-	return requests, nil
+	friends, err := s.profileService.GetShortProfileByUserIDs(ctx, &pb.GetShortProfileByUserIDsRequest{UserIDs: requestIDs})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", requestIDs))
+		return nil, domain.ErrDB
+	}
+	return generated.FromProtoShortProfileSlice(friends), nil
 }
 
 // GetFriendshipStatus получает статус дружбы с пользователем

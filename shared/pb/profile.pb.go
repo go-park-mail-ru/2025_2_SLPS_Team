@@ -61,8 +61,8 @@ func (x *UserRelationsCounts) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use UserRelationsCounts.ProtoReflect.Descriptor instead.
-func (*UserRelationsCounts) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{0}
+func (*UserRelationsCounts) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *UserRelationsCounts) GetAccepted() int32 {
@@ -136,8 +136,8 @@ func (x *Profile) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use Profile.ProtoReflect.Descriptor instead.
-func (*Profile) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{1}
+func (*Profile) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Profile) GetUserID() int32 {
@@ -246,8 +246,8 @@ func (x *ShortProfile) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use ShortProfile.ProtoReflect.Descriptor instead.
-func (*ShortProfile) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{2}
+func (*ShortProfile) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ShortProfile) GetUserID() int32 {
@@ -313,8 +313,8 @@ func (x *FileData) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use FileData.ProtoReflect.Descriptor instead.
-func (*FileData) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{3}
+func (*FileData) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *FileData) GetFilename() string {
@@ -372,8 +372,8 @@ func (x *CreateProfileRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use CreateProfileRequest.ProtoReflect.Descriptor instead.
-func (*CreateProfileRequest) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{4}
+func (*CreateProfileRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CreateProfileRequest) GetProfile() *Profile {
@@ -419,8 +419,8 @@ func (x *UpdateProfileRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use UpdateProfileRequest.ProtoReflect.Descriptor instead.
-func (*UpdateProfileRequest) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{5}
+func (*UpdateProfileRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *UpdateProfileRequest) GetProfile() *Profile {
@@ -480,8 +480,8 @@ func (x *UpdateAvatarRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use UpdateAvatarRequest.ProtoReflect.Descriptor instead.
-func (*UpdateAvatarRequest) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{6}
+func (*UpdateAvatarRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *UpdateAvatarRequest) GetUserID() int32 {
@@ -533,8 +533,8 @@ func (x *UpdateHeaderRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use UpdateHeaderRequest.ProtoReflect.Descriptor instead.
-func (*UpdateHeaderRequest) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{7}
+func (*UpdateHeaderRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateHeaderRequest) GetUserID() int32 {
@@ -586,8 +586,8 @@ func (x *GetProfileByUserIDRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use GetProfileByUserIDRequest.ProtoReflect.Descriptor instead.
-func (*GetProfileByUserIDRequest) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{8}
+func (*GetProfileByUserIDRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetProfileByUserIDRequest) GetSelfUserID() int32 {
@@ -637,8 +637,8 @@ func (x *GetProfileByUserIDResponse) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use GetProfileByUserIDResponse.ProtoReflect.Descriptor instead.
-func (*GetProfileByUserIDResponse) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{9}
+func (*GetProfileByUserIDResponse) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetProfileByUserIDResponse) GetProfile() *Profile {
@@ -682,8 +682,8 @@ func (x *DeleteAvatarRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use DeleteAvatarRequest.ProtoReflect.Descriptor instead.
-func (*DeleteAvatarRequest) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{10}
+func (*DeleteAvatarRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *DeleteAvatarRequest) GetUserID() int32 {
@@ -727,8 +727,8 @@ func (x *GetShortProfileMapByUserIDsRequest) ProtoReflect() protoreflect.Message
 }
 
 // Deprecated: Use GetShortProfileMapByUserIDsRequest.ProtoReflect.Descriptor instead.
-func (*GetShortProfileMapByUserIDsRequest) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{11}
+func (*GetShortProfileMapByUserIDsRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetShortProfileMapByUserIDsRequest) GetUserIDs() []int32 {
@@ -771,8 +771,8 @@ func (x *GetShortProfileMapByUserIDsResponse) ProtoReflect() protoreflect.Messag
 }
 
 // Deprecated: Use GetShortProfileMapByUserIDsResponse.ProtoReflect.Descriptor instead.
-func (*GetShortProfileMapByUserIDsResponse) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{12}
+func (*GetShortProfileMapByUserIDsResponse) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *GetShortProfileMapByUserIDsResponse) GetProfiles() map[int32]*ShortProfile {
@@ -816,8 +816,8 @@ func (x *GetShortProfileByUserIDsRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use GetShortProfileByUserIDsRequest.ProtoReflect.Descriptor instead.
-func (*GetShortProfileByUserIDsRequest) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{13}
+func (*GetShortProfileByUserIDsRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *GetShortProfileByUserIDsRequest) GetUserIDs() []int32 {
@@ -860,11 +860,116 @@ func (x *GetShortProfileByUserIDsResponse) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use GetShortProfileByUserIDsResponse.ProtoReflect.Descriptor instead.
-func (*GetShortProfileByUserIDsResponse) Descriptor() ([]byte, []int32) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{14}
+func (*GetShortProfileByUserIDsResponse) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *GetShortProfileByUserIDsResponse) GetProfiles() []*ShortProfile {
+	if x != nil {
+		return x.Profiles
+	}
+	return nil
+}
+
+// ----- GetOtherShortProfileByUserIDs -----
+type GetOtherShortProfileByUserIDsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserIDs       []int32                `protobuf:"varint,1,rep,packed,name=userIDs,proto3" json:"userIDs,omitempty"`
+	Limit         int32                  `protobuf:"varint,2,opt,name=limit,proto3" json:"limit,omitempty"`
+	Offset        int32                  `protobuf:"varint,3,opt,name=offset,proto3" json:"offset,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOtherShortProfileByUserIDsRequest) Reset() {
+	*x = GetOtherShortProfileByUserIDsRequest{}
+	mi := &file_shared_pb_profile_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOtherShortProfileByUserIDsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOtherShortProfileByUserIDsRequest) ProtoMessage() {}
+
+func (x *GetOtherShortProfileByUserIDsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_shared_pb_profile_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOtherShortProfileByUserIDsRequest.ProtoReflect.Descriptor instead.
+func (*GetOtherShortProfileByUserIDsRequest) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *GetOtherShortProfileByUserIDsRequest) GetUserIDs() []int32 {
+	if x != nil {
+		return x.UserIDs
+	}
+	return nil
+}
+
+func (x *GetOtherShortProfileByUserIDsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+func (x *GetOtherShortProfileByUserIDsRequest) GetOffset() int32 {
+	if x != nil {
+		return x.Offset
+	}
+	return 0
+}
+
+type GetOtherShortProfileByUserIDsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Profiles      []*ShortProfile        `protobuf:"bytes,1,rep,name=profiles,proto3" json:"profiles,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOtherShortProfileByUserIDsResponse) Reset() {
+	*x = GetOtherShortProfileByUserIDsResponse{}
+	mi := &file_shared_pb_profile_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOtherShortProfileByUserIDsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOtherShortProfileByUserIDsResponse) ProtoMessage() {}
+
+func (x *GetOtherShortProfileByUserIDsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_shared_pb_profile_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOtherShortProfileByUserIDsResponse.ProtoReflect.Descriptor instead.
+func (*GetOtherShortProfileByUserIDsResponse) Descriptor() ([]byte, []int) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetOtherShortProfileByUserIDsResponse) GetProfiles() []*ShortProfile {
 	if x != nil {
 		return x.Profiles
 	}
@@ -943,7 +1048,13 @@ const file_shared_pb_profile_proto_rawDesc = "" +
 	"\x1fGetShortProfileByUserIDsRequest\x12\x18\n" +
 	"\auserIDs\x18\x01 \x03(\x05R\auserIDs\"U\n" +
 	" GetShortProfileByUserIDsResponse\x121\n" +
-	"\bprofiles\x18\x01 \x03(\v2\x15.profile.ShortProfileR\bprofiles2\xc4\x05\n" +
+	"\bprofiles\x18\x01 \x03(\v2\x15.profile.ShortProfileR\bprofiles\"n\n" +
+	"$GetOtherShortProfileByUserIDsRequest\x12\x18\n" +
+	"\auserIDs\x18\x01 \x03(\x05R\auserIDs\x12\x14\n" +
+	"\x05limit\x18\x02 \x01(\x05R\x05limit\x12\x16\n" +
+	"\x06offset\x18\x03 \x01(\x05R\x06offset\"Z\n" +
+	"%GetOtherShortProfileByUserIDsResponse\x121\n" +
+	"\bprofiles\x18\x01 \x03(\v2\x15.profile.ShortProfileR\bprofiles2\xc4\x06\n" +
 	"\x0eProfileService\x12F\n" +
 	"\rCreateProfile\x12\x1d.profile.CreateProfileRequest\x1a\x16.google.protobuf.Empty\x12F\n" +
 	"\rUpdateProfile\x12\x1d.profile.UpdateProfileRequest\x1a\x16.google.protobuf.Empty\x12D\n" +
@@ -952,7 +1063,8 @@ const file_shared_pb_profile_proto_rawDesc = "" +
 	"\x12GetProfileByUserID\x12\".profile.GetProfileByUserIDRequest\x1a#.profile.GetProfileByUserIDResponse\x12L\n" +
 	"\x14DeleteAvatarByUserID\x12\x1c.profile.DeleteAvatarRequest\x1a\x16.google.protobuf.Empty\x12x\n" +
 	"\x1bGetShortProfileMapByUserIDs\x12+.profile.GetShortProfileMapByUserIDsRequest\x1a,.profile.GetShortProfileMapByUserIDsResponse\x12o\n" +
-	"\x18GetShortProfileByUserIDs\x12(.profile.GetShortProfileByUserIDsRequest\x1a).profile.GetShortProfileByUserIDsResponseB\x0fZ\r/shared/pb;pbb\x06proto3"
+	"\x18GetShortProfileByUserIDs\x12(.profile.GetShortProfileByUserIDsRequest\x1a).profile.GetShortProfileByUserIDsResponse\x12~\n" +
+	"\x1dGetOtherShortProfileByUserIDs\x12-.profile.GetOtherShortProfileByUserIDsRequest\x1a..profile.GetOtherShortProfileByUserIDsResponseB\x0fZ\r/shared/pb;pbb\x06proto3"
 
 var (
 	file_shared_pb_profile_proto_rawDescOnce sync.Once
@@ -966,61 +1078,66 @@ func file_shared_pb_profile_proto_rawDescGZIP() []byte {
 	return file_shared_pb_profile_proto_rawDescData
 }
 
-var file_shared_pb_profile_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_shared_pb_profile_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_shared_pb_profile_proto_goTypes = []any{
-	(*UserRelationsCounts)(nil),                 // 0: profile.UserRelationsCounts
-	(*Profile)(nil),                             // 1: profile.Profile
-	(*ShortProfile)(nil),                        // 2: profile.ShortProfile
-	(*FileData)(nil),                            // 3: profile.FileData
-	(*CreateProfileRequest)(nil),                // 4: profile.CreateProfileRequest
-	(*UpdateProfileRequest)(nil),                // 5: profile.UpdateProfileRequest
-	(*UpdateAvatarRequest)(nil),                 // 6: profile.UpdateAvatarRequest
-	(*UpdateHeaderRequest)(nil),                 // 7: profile.UpdateHeaderRequest
-	(*GetProfileByUserIDRequest)(nil),           // 8: profile.GetProfileByUserIDRequest
-	(*GetProfileByUserIDResponse)(nil),          // 9: profile.GetProfileByUserIDResponse
-	(*DeleteAvatarRequest)(nil),                 // 10: profile.DeleteAvatarRequest
-	(*GetShortProfileMapByUserIDsRequest)(nil),  // 11: profile.GetShortProfileMapByUserIDsRequest
-	(*GetShortProfileMapByUserIDsResponse)(nil), // 12: profile.GetShortProfileMapByUserIDsResponse
-	(*GetShortProfileByUserIDsRequest)(nil),     // 13: profile.GetShortProfileByUserIDsRequest
-	(*GetShortProfileByUserIDsResponse)(nil),    // 14: profile.GetShortProfileByUserIDsResponse
-	nil,                                         // 15: profile.GetShortProfileMapByUserIDsResponse.ProfilesEntry
-	(*timestamppb.Timestamp)(nil),               // 16: google.protobuf.Timestamp
-	(*emptypb.Empty)(nil),                       // 17: google.protobuf.Empty
+	(*UserRelationsCounts)(nil),                   // 0: profile.UserRelationsCounts
+	(*Profile)(nil),                               // 1: profile.Profile
+	(*ShortProfile)(nil),                          // 2: profile.ShortProfile
+	(*FileData)(nil),                              // 3: profile.FileData
+	(*CreateProfileRequest)(nil),                  // 4: profile.CreateProfileRequest
+	(*UpdateProfileRequest)(nil),                  // 5: profile.UpdateProfileRequest
+	(*UpdateAvatarRequest)(nil),                   // 6: profile.UpdateAvatarRequest
+	(*UpdateHeaderRequest)(nil),                   // 7: profile.UpdateHeaderRequest
+	(*GetProfileByUserIDRequest)(nil),             // 8: profile.GetProfileByUserIDRequest
+	(*GetProfileByUserIDResponse)(nil),            // 9: profile.GetProfileByUserIDResponse
+	(*DeleteAvatarRequest)(nil),                   // 10: profile.DeleteAvatarRequest
+	(*GetShortProfileMapByUserIDsRequest)(nil),    // 11: profile.GetShortProfileMapByUserIDsRequest
+	(*GetShortProfileMapByUserIDsResponse)(nil),   // 12: profile.GetShortProfileMapByUserIDsResponse
+	(*GetShortProfileByUserIDsRequest)(nil),       // 13: profile.GetShortProfileByUserIDsRequest
+	(*GetShortProfileByUserIDsResponse)(nil),      // 14: profile.GetShortProfileByUserIDsResponse
+	(*GetOtherShortProfileByUserIDsRequest)(nil),  // 15: profile.GetOtherShortProfileByUserIDsRequest
+	(*GetOtherShortProfileByUserIDsResponse)(nil), // 16: profile.GetOtherShortProfileByUserIDsResponse
+	nil,                           // 17: profile.GetShortProfileMapByUserIDsResponse.ProfilesEntry
+	(*timestamppb.Timestamp)(nil), // 18: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),         // 19: google.protobuf.Empty
 }
 var file_shared_pb_profile_proto_depIdxs = []int32{
-	16, // 0: profile.Profile.dob:type_name -> google.protobuf.Timestamp
+	18, // 0: profile.Profile.dob:type_name -> google.protobuf.Timestamp
 	0,  // 1: profile.Profile.relationsCount:type_name -> profile.UserRelationsCounts
-	16, // 2: profile.ShortProfile.dob:type_name -> google.protobuf.Timestamp
+	18, // 2: profile.ShortProfile.dob:type_name -> google.protobuf.Timestamp
 	1,  // 3: profile.CreateProfileRequest.profile:type_name -> profile.Profile
 	1,  // 4: profile.UpdateProfileRequest.profile:type_name -> profile.Profile
 	3,  // 5: profile.UpdateProfileRequest.files:type_name -> profile.FileData
 	3,  // 6: profile.UpdateAvatarRequest.avatar:type_name -> profile.FileData
 	3,  // 7: profile.UpdateHeaderRequest.header:type_name -> profile.FileData
 	1,  // 8: profile.GetProfileByUserIDResponse.profile:type_name -> profile.Profile
-	15, // 9: profile.GetShortProfileMapByUserIDsResponse.profiles:type_name -> profile.GetShortProfileMapByUserIDsResponse.ProfilesEntry
+	17, // 9: profile.GetShortProfileMapByUserIDsResponse.profiles:type_name -> profile.GetShortProfileMapByUserIDsResponse.ProfilesEntry
 	2,  // 10: profile.GetShortProfileByUserIDsResponse.profiles:type_name -> profile.ShortProfile
-	2,  // 11: profile.GetShortProfileMapByUserIDsResponse.ProfilesEntry.value:type_name -> profile.ShortProfile
-	4,  // 12: profile.ProfileService.CreateProfile:input_type -> profile.CreateProfileRequest
-	5,  // 13: profile.ProfileService.UpdateProfile:input_type -> profile.UpdateProfileRequest
-	6,  // 14: profile.ProfileService.UpdateAvatar:input_type -> profile.UpdateAvatarRequest
-	7,  // 15: profile.ProfileService.UpdateHeader:input_type -> profile.UpdateHeaderRequest
-	8,  // 16: profile.ProfileService.GetProfileByUserID:input_type -> profile.GetProfileByUserIDRequest
-	10, // 17: profile.ProfileService.DeleteAvatarByUserID:input_type -> profile.DeleteAvatarRequest
-	11, // 18: profile.ProfileService.GetShortProfileMapByUserIDs:input_type -> profile.GetShortProfileMapByUserIDsRequest
-	13, // 19: profile.ProfileService.GetShortProfileByUserIDs:input_type -> profile.GetShortProfileByUserIDsRequest
-	17, // 20: profile.ProfileService.CreateProfile:output_type -> google.protobuf.Empty
-	17, // 21: profile.ProfileService.UpdateProfile:output_type -> google.protobuf.Empty
-	17, // 22: profile.ProfileService.UpdateAvatar:output_type -> google.protobuf.Empty
-	17, // 23: profile.ProfileService.UpdateHeader:output_type -> google.protobuf.Empty
-	9,  // 24: profile.ProfileService.GetProfileByUserID:output_type -> profile.GetProfileByUserIDResponse
-	17, // 25: profile.ProfileService.DeleteAvatarByUserID:output_type -> google.protobuf.Empty
-	12, // 26: profile.ProfileService.GetShortProfileMapByUserIDs:output_type -> profile.GetShortProfileMapByUserIDsResponse
-	14, // 27: profile.ProfileService.GetShortProfileByUserIDs:output_type -> profile.GetShortProfileByUserIDsResponse
-	20, // [20:28] is the sub-list for method output_type
-	12, // [12:20] is the sub-list for method input_type
-	12, // [12:12] is the sub-list for extension type_name
-	12, // [12:12] is the sub-list for extension extendee
-	0,  // [0:12] is the sub-list for field type_name
+	2,  // 11: profile.GetOtherShortProfileByUserIDsResponse.profiles:type_name -> profile.ShortProfile
+	2,  // 12: profile.GetShortProfileMapByUserIDsResponse.ProfilesEntry.value:type_name -> profile.ShortProfile
+	4,  // 13: profile.ProfileService.CreateProfile:input_type -> profile.CreateProfileRequest
+	5,  // 14: profile.ProfileService.UpdateProfile:input_type -> profile.UpdateProfileRequest
+	6,  // 15: profile.ProfileService.UpdateAvatar:input_type -> profile.UpdateAvatarRequest
+	7,  // 16: profile.ProfileService.UpdateHeader:input_type -> profile.UpdateHeaderRequest
+	8,  // 17: profile.ProfileService.GetProfileByUserID:input_type -> profile.GetProfileByUserIDRequest
+	10, // 18: profile.ProfileService.DeleteAvatarByUserID:input_type -> profile.DeleteAvatarRequest
+	11, // 19: profile.ProfileService.GetShortProfileMapByUserIDs:input_type -> profile.GetShortProfileMapByUserIDsRequest
+	13, // 20: profile.ProfileService.GetShortProfileByUserIDs:input_type -> profile.GetShortProfileByUserIDsRequest
+	15, // 21: profile.ProfileService.GetOtherShortProfileByUserIDs:input_type -> profile.GetOtherShortProfileByUserIDsRequest
+	19, // 22: profile.ProfileService.CreateProfile:output_type -> google.protobuf.Empty
+	19, // 23: profile.ProfileService.UpdateProfile:output_type -> google.protobuf.Empty
+	19, // 24: profile.ProfileService.UpdateAvatar:output_type -> google.protobuf.Empty
+	19, // 25: profile.ProfileService.UpdateHeader:output_type -> google.protobuf.Empty
+	9,  // 26: profile.ProfileService.GetProfileByUserID:output_type -> profile.GetProfileByUserIDResponse
+	19, // 27: profile.ProfileService.DeleteAvatarByUserID:output_type -> google.protobuf.Empty
+	12, // 28: profile.ProfileService.GetShortProfileMapByUserIDs:output_type -> profile.GetShortProfileMapByUserIDsResponse
+	14, // 29: profile.ProfileService.GetShortProfileByUserIDs:output_type -> profile.GetShortProfileByUserIDsResponse
+	16, // 30: profile.ProfileService.GetOtherShortProfileByUserIDs:output_type -> profile.GetOtherShortProfileByUserIDsResponse
+	22, // [22:31] is the sub-list for method output_type
+	13, // [13:22] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_shared_pb_profile_proto_init() }
@@ -1036,7 +1153,7 @@ func file_shared_pb_profile_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_shared_pb_profile_proto_rawDesc), len(file_shared_pb_profile_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   16,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
