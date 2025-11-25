@@ -6,6 +6,8 @@ import (
 	"log"
 	"mime/multipart"
 	"project/domain"
+	"project/shared/mapper/generated"
+	"project/shared/pb"
 
 	"github.com/asaskevich/govalidator"
 	"go.uber.org/zap"
@@ -16,14 +18,16 @@ type CommunityService struct {
 	postStore             domain.PostStore
 	userStore             domain.UserStore
 	elasticCommunityStore domain.ElasticCommunityStore
+	profileClient         pb.ProfileServiceClient
 }
 
-func NewCommunityService(communityStore domain.CommunityStore, postStore domain.PostStore, userStore domain.UserStore, elasticCommunityStore domain.ElasticCommunityStore) domain.CommunityService {
+func NewCommunityService(communityStore domain.CommunityStore, postStore domain.PostStore, userStore domain.UserStore, elasticCommunityStore domain.ElasticCommunityStore, profileClient pb.ProfileServiceClient) domain.CommunityService {
 	return &CommunityService{
 		communityStore:        communityStore,
 		postStore:             postStore,
 		userStore:             userStore,
 		elasticCommunityStore: elasticCommunityStore,
+		profileClient:         profileClient,
 	}
 }
 
@@ -383,12 +387,43 @@ func (s *CommunityService) GetCommunitySubscribers(ctx context.Context, communit
 		return nil, domain.ErrDB
 	}
 
-	subscribers, err := s.communityStore.GetCommunitySubscribers(ctx, communityID, limit, offset)
+	// 1. Получаем только ID подписчиков из community store
+	subscriberIDs, err := s.communityStore.GetCommunitySubscribers(ctx, communityID, int32(limit), int32(offset))
 	if err != nil {
-		domain.Error(ctx, "Failed to get community subscribers", err)
+		domain.Error(ctx, "Failed to get community subscriber IDs", err)
 		return nil, domain.ErrDB
 	}
 
+	if len(subscriberIDs) == 0 {
+		return []domain.CommunitySubscriber{}, nil
+	}
+
+	// 2. Делаем gRPC запрос к профильному сервису
+	profileResp, err := s.profileClient.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
+		UserIDs: subscriberIDs,
+	})
+	if err != nil {
+		domain.Error(ctx, "Failed to get subscriber profiles via gRPC", err)
+		return nil, domain.ErrService
+	}
+
+	// 3. Конвертируем protobuf в доменные модели
+	profiles := generated.FromProtoShortProfileMap(profileResp)
+
+	// 4. Формируем результат
+	subscribers := make([]domain.CommunitySubscriber, 0, len(subscriberIDs))
+	for _, userID := range subscriberIDs {
+		if profile, exists := profiles[userID]; exists {
+			subscribers = append(subscribers, domain.CommunitySubscriber{
+				UserID:     userID,
+				FullName:   profile.FullName,
+				AvatarPath: profile.AvatarPath,
+			})
+		}
+	}
+
+	domain.Info(ctx, "Community subscribers retrieved successfully",
+		zap.Int("count", len(subscribers)))
 	return subscribers, nil
 }
 

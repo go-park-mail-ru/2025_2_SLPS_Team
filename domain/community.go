@@ -109,7 +109,7 @@ type CommunityStore interface {
 	GetUserCommunitiesByID(ctx context.Context, targetUserID int32, limit, offset int32) ([]ShortCommunity, error)
 	GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int32) ([]int32, error)
 	GetCreatedCommunities(ctx context.Context, userID int32, limit, offset int32) ([]CommunityForMyCommunity, error)
-	GetCommunitySubscribers(ctx context.Context, communityID int32, limit, offset int32) ([]CommunitySubscriber, error)
+	GetCommunitySubscribers(ctx context.Context, communityID int32, limit, offset int32) ([]int32, error)
 	Subscribe(ctx context.Context, communityID int32, userID int32) error
 	Unsubscribe(ctx context.Context, communityID int32, userID int32) error
 	IsSubscribed(ctx context.Context, communityID int32, userID int32) (bool, error)
