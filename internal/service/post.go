@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"project/domain"
+	"project/shared/pb"
 
 	"github.com/asaskevich/govalidator"
 	"go.uber.org/zap"
@@ -13,35 +14,44 @@ type PostService struct {
 	postStore      domain.PostStore
 	userStore      domain.UserStore
 	communityStore domain.CommunityStore
+	profileClient  pb.ProfileServiceClient
 }
 
-func NewPostService(postStore domain.PostStore, userStore domain.UserStore, communityStore domain.CommunityStore) domain.PostService {
+func NewPostService(postStore domain.PostStore, userStore domain.UserStore, communityStore domain.CommunityStore, profileClient pb.ProfileServiceClient) domain.PostService {
 	return &PostService{
 		postStore:      postStore,
 		userStore:      userStore,
 		communityStore: communityStore,
+		profileClient:  profileClient,
 	}
 }
 
-// PostsPaginate возвращает посты с пагинацией
+// PostsPaginate возвращает посты с пагинацией с обогащением данных профилей через gRPC
 func (s *PostService) PostsPaginate(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting paginated posts", zap.Int32("offset", offset), zap.Int32("limit", limit))
 
-	posts, err := s.postStore.PostsPaginatedList(ctx, userID, limit, offset)
+	// Получаем посты из БД без информации о профиле
+	postsDB, err := s.postStore.PostsPaginatedList(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get posts", err)
 		return nil, domain.ErrDB
 	}
 
-	return posts, nil
+	// Обогащаем данные профилями через gRPC
+	postsView, err := s.enrichPostsWithProfiles(ctx, postsDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return postsView, nil
 }
 
-// GetPost возвращает пост по ID
+// GetPost возвращает пост по ID с обогащением данных профиля через gRPC
 func (s *PostService) GetPost(ctx context.Context, userID int32, postID uint) (*domain.PostView, error) {
 	domain.Info(ctx, "Getting post by ID", zap.Uint("postID", postID))
 
-	post, err := s.postStore.GetPostByID(ctx, userID, postID)
+	postDB, err := s.postStore.GetPostByID(ctx, userID, postID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			domain.Warn(ctx, "Post not found", zap.Uint("postID", postID))
@@ -51,7 +61,13 @@ func (s *PostService) GetPost(ctx context.Context, userID int32, postID uint) (*
 		return nil, domain.ErrDB
 	}
 
-	return post, nil
+	// Обогащаем данные профилем через gRPC
+	postView, err := s.enrichPostWithProfile(ctx, postDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return postView, nil
 }
 
 // CreatePost создает новый пост
@@ -316,7 +332,7 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int32)
 	return nil
 }
 
-// GetUserPosts возвращает посты пользователя
+// GetUserPosts возвращает посты пользователя с обогащением данных профилей через gRPC
 func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int32, userID uint, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
@@ -333,17 +349,23 @@ func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int32, userID
 		return nil, domain.ErrDB
 	}
 
-	// Получаем посты
-	posts, err := s.postStore.GetPostsByUser(ctx, selfUserID, userID, limit, offset)
+	// Получаем посты из БД без информации о профиле
+	postsDB, err := s.postStore.GetPostsByUser(ctx, selfUserID, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user posts", err, zap.Uint("userID", userID))
 		return nil, domain.ErrDB
 	}
 
-	return posts, nil
+	// Обогащаем данные профилями через gRPC
+	postsView, err := s.enrichPostsWithProfiles(ctx, postsDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return postsView, nil
 }
 
-// Получение постов сообщества
+// GetCommunityPosts возвращает посты сообщества с обогащением данных профилей через gRPC
 func (s *PostService) GetCommunityPosts(ctx context.Context, userID int32, communityID int32, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	domain.Info(ctx, "Getting community posts", zap.Int32("communityID", communityID))
@@ -359,13 +381,20 @@ func (s *PostService) GetCommunityPosts(ctx context.Context, userID int32, commu
 		return nil, domain.ErrDB
 	}
 
-	posts, err := s.postStore.GetCommunityPosts(ctx, userID, communityID, limit, offset)
+	// Получаем посты из БД без информации о профиле
+	postsDB, err := s.postStore.GetCommunityPosts(ctx, userID, communityID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get community posts", err)
 		return nil, domain.ErrDB
 	}
 
-	return posts, nil
+	// Обогащаем данные профилями через gRPC
+	postsView, err := s.enrichPostsWithProfiles(ctx, postsDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return postsView, nil
 }
 
 func (s *PostService) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int32) error {
@@ -381,6 +410,8 @@ func (s *PostService) UpdateLikeOnPostByUserID(ctx context.Context, userID, post
 	return nil
 }
 
+//Вспомогательные методы
+
 // convertToPointerSlice вспомогательная функция для конвертации
 func convertToPointerSlice(slice []string) []*string {
 	result := make([]*string, len(slice))
@@ -388,4 +419,108 @@ func convertToPointerSlice(slice []string) []*string {
 		result[i] = &slice[i]
 	}
 	return result
+}
+
+// enrichPostsWithProfiles обогащает список постов данными профилей через gRPC
+func (s *PostService) enrichPostsWithProfiles(ctx context.Context, postsDB []domain.PostDB) ([]domain.PostView, error) {
+	if len(postsDB) == 0 {
+		return []domain.PostView{}, nil
+	}
+
+	// Собираем ID авторов для запроса профилей
+	authorIDs := make([]int32, 0, len(postsDB))
+	for _, post := range postsDB {
+		authorIDs = append(authorIDs, int32(post.AuthorID))
+	}
+
+	// Получаем профили через gRPC
+	profilesResp, err := s.profileClient.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
+		UserIDs: authorIDs,
+	})
+	if err != nil {
+		domain.Error(ctx, "Failed to get profiles via gRPC", err)
+		return nil, domain.ErrService
+	}
+
+	// Преобразуем в доменную структуру
+	profilesMap := make(map[int32]domain.ShortProfile)
+	for userID, pbProfile := range profilesResp.Profiles {
+		profilesMap[userID] = domain.ShortProfile{
+			UserID:     pbProfile.UserID,
+			FullName:   pbProfile.FullName,
+			AvatarPath: pbProfile.AvatarPath,
+			Dob:        pbProfile.Dob.AsTime(),
+		}
+	}
+
+	// Собираем результат
+	postsView := make([]domain.PostView, 0, len(postsDB))
+	for _, postDB := range postsDB {
+		postView := domain.PostView{
+			ID:              postDB.ID,
+			AuthorID:        postDB.AuthorID,
+			CommunityID:     postDB.CommunityID,
+			Text:            postDB.Text,
+			Attachments:     postDB.Attachments,
+			Photos:          postDB.Photos,
+			LikeCount:       postDB.LikeCount,
+			IsLiked:         postDB.IsLiked,
+			CreatedAt:       postDB.CreatedAt,
+			IsCommunityPost: postDB.CommunityID != nil,
+			CommunityName:   postDB.CommunityName,
+			CommunityAvatar: postDB.CommunityAvatar,
+		}
+
+		// Заполняем данные автора из профиля
+		if profile, exists := profilesMap[int32(postDB.AuthorID)]; exists {
+			postView.AuthorName = profile.FullName
+			postView.AuthorAvatar = profile.AvatarPath
+		} else {
+			domain.Warn(ctx, "Profile not found for user", zap.Uint("authorID", postDB.AuthorID))
+			// Устанавливаем значения по умолчанию
+			postView.AuthorName = "Пользователь"
+		}
+
+		postsView = append(postsView, postView)
+	}
+
+	return postsView, nil
+}
+
+// enrichPostWithProfile обогащает один пост данными профиля через gRPC
+func (s *PostService) enrichPostWithProfile(ctx context.Context, postDB *domain.PostDB) (*domain.PostView, error) {
+	// Получаем профиль автора через gRPC
+	profilesResp, err := s.profileClient.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
+		UserIDs: []int32{int32(postDB.AuthorID)},
+	})
+	if err != nil {
+		domain.Error(ctx, "Failed to get profile via gRPC", err)
+		return nil, domain.ErrService
+	}
+
+	postView := &domain.PostView{
+		ID:              postDB.ID,
+		AuthorID:        postDB.AuthorID,
+		CommunityID:     postDB.CommunityID,
+		Text:            postDB.Text,
+		Attachments:     postDB.Attachments,
+		Photos:          postDB.Photos,
+		LikeCount:       postDB.LikeCount,
+		IsLiked:         postDB.IsLiked,
+		CreatedAt:       postDB.CreatedAt,
+		IsCommunityPost: postDB.CommunityID != nil,
+		CommunityName:   postDB.CommunityName,
+		CommunityAvatar: postDB.CommunityAvatar,
+	}
+
+	// Заполняем данные автора из профиля
+	if profile, exists := profilesResp.Profiles[int32(postDB.AuthorID)]; exists {
+		postView.AuthorName = profile.FullName
+		postView.AuthorAvatar = profile.AvatarPath
+	} else {
+		domain.Warn(ctx, "Profile not found for user", zap.Uint("authorID", postDB.AuthorID))
+		postView.AuthorName = "Пользователь"
+	}
+
+	return postView, nil
 }
