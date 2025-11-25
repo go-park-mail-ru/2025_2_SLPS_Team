@@ -444,7 +444,7 @@ func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID
 	return communities, nil
 }
 
-func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, communityID int, limit, offset int) ([]domain.CommunitySubscriber, error) {
+func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, communityID int, limit, offset int) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
@@ -456,12 +456,8 @@ func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, comm
 	}()
 
 	query := `
-		SELECT 
-			p.user_id,
-			p.first_name || ' ' || p.last_name as full_name,
-			p.avatar_path
-		FROM profiles p
-		INNER JOIN community_subscriptions cs ON p.user_id = cs.user_id
+		SELECT user_id,
+		FROM community_subscriptions
 		WHERE cs.community_id = $1
 		ORDER BY cs.created_at DESC
 		LIMIT $2 OFFSET $3
@@ -475,23 +471,19 @@ func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, comm
 	}
 	defer rows.Close()
 
-	subscribers := []domain.CommunitySubscriber{}
+	subscriberIDs := []int32{}
 	for rows.Next() {
-		var subscriber domain.CommunitySubscriber
-		err := rows.Scan(
-			&subscriber.UserID,
-			&subscriber.FullName,
-			&subscriber.AvatarPath,
-		)
+		var userID int32
+		err := rows.Scan(&userID)
 		if err != nil {
-			dblogger.Error("Failed to scan subscriber", zap.Error(err))
-			return nil, fmt.Errorf("failed to scan subscriber: %w", err)
+			dblogger.Error("Failed to scan subscriber ID", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan subscriber ID: %w", err)
 		}
-		subscribers = append(subscribers, subscriber)
+		subscriberIDs = append(subscriberIDs, userID)
 	}
 
-	dblogger.Info("Community subscribers retrieved successfully", zap.Int("count", len(subscribers)))
-	return subscribers, nil
+	dblogger.Info("Community subscriber IDs retrieved successfully", zap.Int("count", len(subscriberIDs)))
+	return subscriberIDs, nil
 }
 
 func (store *DBCommunityStore) Subscribe(ctx context.Context, communityID int, userID int) error {

@@ -59,7 +59,7 @@ type CommunityForView struct {
 
 // Структура для подписчика сообщества
 type CommunitySubscriber struct {
-	UserID     int     `json:"userID"`
+	UserID     int32     `json:"userID"`
 	FullName   string  `json:"fullName"`
 	AvatarPath *string `json:"avatarPath"`
 }
@@ -109,7 +109,7 @@ type CommunityStore interface {
 	GetUserCommunitiesByID(ctx context.Context, targetUserID int, limit, offset int) ([]ShortCommunity, error)
 	GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int) ([]int, error)
 	GetCreatedCommunities(ctx context.Context, userID int, limit, offset int) ([]CommunityForMyCommunity, error)
-	GetCommunitySubscribers(ctx context.Context, communityID int, limit, offset int) ([]CommunitySubscriber, error)
+	GetCommunitySubscribers(ctx context.Context, communityID int, limit, offset int) ([]int32, error)
 	Subscribe(ctx context.Context, communityID int, userID int) error
 	Unsubscribe(ctx context.Context, communityID int, userID int) error
 	IsSubscribed(ctx context.Context, communityID int, userID int) (bool, error)
