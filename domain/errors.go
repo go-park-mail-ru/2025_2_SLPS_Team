@@ -3,6 +3,10 @@ package domain
 import (
 	"errors"
 	"net/http"
+	"strings"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // общие ошибки на уровне сервиса и бд
@@ -73,5 +77,68 @@ func MapErrorToHTTP(err error) (int32, string) {
 		return http.StatusInternalServerError, ServerErr
 	default:
 		return http.StatusInternalServerError, ServerErr
+	}
+}
+func ToGrpcError(err error) error {
+	switch {
+	case errors.Is(err, ErrNotFound), errors.Is(err, ErrNotExist):
+		return status.Error(codes.NotFound, err.Error())
+
+	case errors.Is(err, ErrAccessDenied):
+		return status.Error(codes.PermissionDenied, err.Error())
+
+	case errors.Is(err, ErrInvalidInput):
+		return status.Error(codes.InvalidArgument, err.Error())
+
+	case errors.Is(err, ErrAlreadyExists):
+		return status.Error(codes.AlreadyExists, err.Error())
+
+	case errors.Is(err, ErrDB):
+		return status.Error(codes.Internal, "database error")
+
+	case errors.Is(err, ErrService):
+		return status.Error(codes.Internal, "internal service error")
+
+	default:
+		return status.Error(codes.Unknown, err.Error())
+	}
+}
+func FromGrpcError(err error) error {
+	st, ok := status.FromError(err)
+	if !ok {
+		return ErrService
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return ErrNotFound
+
+	case codes.PermissionDenied:
+		return ErrAccessDenied
+
+	case codes.InvalidArgument:
+		return ErrInvalidInput
+
+	case codes.AlreadyExists:
+		return ErrAlreadyExists
+
+	case codes.Unauthenticated:
+		return ErrAccessDenied
+
+	case codes.FailedPrecondition:
+		return ErrInvalidInput
+
+	case codes.Internal:
+		// различать БД и сервис?
+		if strings.Contains(st.Message(), "db") {
+			return ErrDB
+		}
+		return ErrService
+
+	case codes.Unavailable:
+		return ErrService
+
+	default:
+		return ErrService
 	}
 }

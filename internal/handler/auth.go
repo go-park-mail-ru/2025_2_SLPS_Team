@@ -5,17 +5,19 @@ import (
 	"net/http"
 	"project/config"
 	"project/domain"
+	"project/shared/mapper/generated"
+	"project/shared/pb"
 	"time"
 
 	"go.uber.org/zap"
 )
 
 type AuthHandler struct {
-	authService domain.AuthService
+	authService pb.AuthServiceClient
 	config      *config.Config
 }
 
-func NewAuthHandler(authService domain.AuthService, config *config.Config) *AuthHandler {
+func NewAuthHandler(authService pb.AuthServiceClient, config *config.Config) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 		config:      config,
@@ -28,9 +30,9 @@ func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 		domain.FromContext(r.Context()).Info("Cookie session_id not found:", zap.Error(err))
 		return nil, domain.ErrNotFound
 	}
-	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie.Value)
+	resp, err := api.authService.IsLoggedIn(r.Context(), &pb.SessionCookieRequest{SessionCookie: sessionCookie.Value})
 
-	return session, err
+	return &domain.Session{UserID: resp.UserId, CSRFToken: resp.CsrfToken}, err
 }
 
 type IsLoggedInResponse struct {
@@ -54,15 +56,22 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 		sendJSONError(w, domain.ErrNotFound)
 		return
 	}
-	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie.Value)
+	resp, err := api.authService.IsLoggedIn(r.Context(), &pb.SessionCookieRequest{SessionCookie: sessionCookie.Value})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
-	role, err := api.authService.GetUserRole(r.Context(), session.UserID)
+	resp2, err := api.authService.GetUserRole(r.Context(), &pb.UserIDRequest{UserId: resp.UserId})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		sendJSONError(w, err)
+		return
+	}
+
 	res := IsLoggedInResponse{
-		UserID: session.UserID,
-		Role:   role,
+		UserID: resp.UserId,
+		Role:   resp2.Role,
 	}
 
 	if err := json.NewEncoder(w).Encode(res); err != nil {
@@ -72,7 +81,12 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 }
 
 func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userID int32) error {
-	tokens, err := api.authService.AddSession(r.Context(), userID)
+	resp, err := api.authService.AddSession(r.Context(), &pb.UserIDRequest{UserId: userID})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		return err
+	}
+	tokens := domain.SIDAndSCRFToken{SID: resp.Sid, CSRFToken: resp.CsrfToken}
 	if err != nil {
 		return err
 	}
@@ -114,12 +128,14 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
 		return
 	}
-	userID, err := api.authService.Login(r.Context(), req)
+	resp, err := api.authService.Login(r.Context(), &pb.LoginRequest{Email: req.Email, Password: req.Password})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
 
+	userID := resp.UserId
 	err = api.AddSession(w, r, userID)
 	if err != nil {
 		sendJSONError(w, err)
@@ -147,8 +163,9 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		domain.FromContext(r.Context()).Error("Failed to logout", zap.Error(err))
 		return
 	}
-	err = api.authService.Logout(r.Context(), session.Value)
+	_, err = api.authService.Logout(r.Context(), &pb.SessionCookieRequest{SessionCookie: session.Value})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -195,11 +212,13 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
 		return
 	}
-	userID, err := api.authService.Register(r.Context(), req)
+	resp, err := api.authService.Register(r.Context(), generated.RegisterRequestToProto(req))
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
+	userID := resp.UserId
 
 	err = api.AddSession(w, r, userID)
 	if err != nil {

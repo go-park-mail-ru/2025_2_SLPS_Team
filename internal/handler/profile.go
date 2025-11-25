@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"project/domain"
+	"project/shared/mapper/generated"
+	"project/shared/pb"
 	"strconv"
 	"strings"
 
@@ -12,10 +14,10 @@ import (
 )
 
 type ProfileHandler struct {
-	profileService domain.ProfileService
+	profileService pb.ProfileServiceClient
 }
 
-func NewProfileHandler(profileService domain.ProfileService) *ProfileHandler {
+func NewProfileHandler(profileService pb.ProfileServiceClient) *ProfileHandler {
 	return &ProfileHandler{
 		profileService: profileService,
 	}
@@ -66,8 +68,9 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 		return
 
 	}
-	err = api.profileService.UpdateProfile(r.Context(), req, userID, files)
+	_, err = api.profileService.UpdateProfile(r.Context(), &pb.UpdateProfileRequest{Profile: generated.ToProtoProfile(req), UserID: userID, Files: generated.FilesToProto(files)})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -109,8 +112,9 @@ func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) 
 
 	}
 
-	err = api.profileService.UpdateAvatar(r.Context(), userID, files)
+	_, err = api.profileService.UpdateAvatar(r.Context(), &pb.UpdateAvatarRequest{Avatar: generated.FilesToProto(files), UserID: userID})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -151,8 +155,9 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 
 	}
 
-	err = api.profileService.UpdateHeader(r.Context(), userID, files)
+	_, err = api.profileService.UpdateAvatar(r.Context(), &pb.UpdateAvatarRequest{Avatar: generated.FilesToProto(files), UserID: userID})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -183,9 +188,11 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 		return
 	}
 	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int32)
-	profile, err := api.profileService.GetProfileByUserID(r.Context(), selfUserID, int32(userID))
+	profile, err := api.profileService.GetProfileByUserID(r.Context(), &pb.GetProfileByUserIDRequest{UserID: int32(userID), SelfUserID: selfUserID})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
+		return
 	}
 
 	err = sendJSONData(r.Context(), w, profile)
@@ -206,9 +213,11 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 // @Router       /profile/avatar [delete]
 func (api *ProfileHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
-	err := api.profileService.DeleteAvatarByUserID(r.Context(), userID)
+	_, err := api.profileService.DeleteAvatarByUserID(r.Context(), &pb.DeleteAvatarRequest{UserID: userID})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
+		return
 	}
 
 	sendJSONResponse(w, "Avatar deleted", http.StatusOK)
