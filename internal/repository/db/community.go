@@ -444,7 +444,7 @@ func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID
 	return communities, nil
 }
 
-func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, communityID int32, limit, offset int32) ([]domain.CommunitySubscriber, error) {
+func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, communityID int32, limit, offset int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
