@@ -17,16 +17,16 @@ type CommunityService struct {
 	postStore             domain.PostStore
 	authService           pb.AuthServiceClient
 	elasticCommunityStore domain.ElasticCommunityStore
-	profileClient         pb.ProfileServiceClient
+	profileService        pb.ProfileServiceClient
 }
 
-func NewCommunityService(communityStore domain.CommunityStore, postStore domain.PostStore, authService pb.AuthServiceClient, elasticCommunityStore domain.ElasticCommunityStore, profileClient pb.ProfileServiceClient) domain.CommunityService {
+func NewCommunityService(communityStore domain.CommunityStore, postStore domain.PostStore, authService pb.AuthServiceClient, elasticCommunityStore domain.ElasticCommunityStore, profileService pb.ProfileServiceClient) domain.CommunityService {
 	return &CommunityService{
 		communityStore:        communityStore,
 		postStore:             postStore,
 		authService:           authService,
 		elasticCommunityStore: elasticCommunityStore,
-		profileClient:         profileClient,
+		profileService:        profileService,
 	}
 }
 
@@ -339,14 +339,15 @@ func (s *CommunityService) GetUserSubscribedCommunityIDs(ctx context.Context, ta
 	domain.Info(ctx, "Getting user subscribed community IDs", zap.Int32("targetUserID", targetUserID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, targetUserID)
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: targetUserID})
 	if err != nil {
-		if errors.Is(err, domain.ErrUserNotFound) {
-			domain.Warn(ctx, "User not found", zap.Int32("targetUserID", targetUserID))
-			return nil, domain.ErrUserNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err)
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return nil, domain.ErrDB
+	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return nil, domain.ErrNotExist
 	}
 
 	communityIDs, err := s.communityStore.GetUserSubscribedCommunityIDs(ctx, targetUserID)
@@ -399,7 +400,7 @@ func (s *CommunityService) GetCommunitySubscribers(ctx context.Context, communit
 	}
 
 	// 2. Делаем gRPC запрос к профильному сервису
-	profileResp, err := s.profileClient.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
+	profileResp, err := s.profileService.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
 		UserIDs: subscriberIDs,
 	})
 	if err != nil {
@@ -442,14 +443,15 @@ func (s *CommunityService) Subscribe(ctx context.Context, communityID int32, use
 	}
 
 	// Проверяем существование пользователя
-	_, err = s.userStore.GetUserByID(ctx, userID)
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: userID})
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "User not found", zap.Int32("userID", userID))
-			return domain.ErrNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err)
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return domain.ErrDB
+	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return domain.ErrNotExist
 	}
 
 	if err := s.communityStore.Subscribe(ctx, communityID, userID); err != nil {

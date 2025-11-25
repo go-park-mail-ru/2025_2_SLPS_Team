@@ -11,15 +11,13 @@ import (
 
 type ProfileService struct {
 	profileStore        domain.ProfileStore
-	userStore           domain.UserStore
 	friendStore         domain.FriendStore
 	elasticProfileStore domain.ElasticProfileStore
 }
 
-func NewProfileService(profileStore domain.ProfileStore, userStore domain.UserStore, friendStore domain.FriendStore, elasticProfileStore domain.ElasticProfileStore) domain.ProfileService {
+func NewProfileService(profileStore domain.ProfileStore, friendStore domain.FriendStore, elasticProfileStore domain.ElasticProfileStore) domain.ProfileService {
 	return &ProfileService{
 		profileStore:        profileStore,
-		userStore:           userStore,
 		friendStore:         friendStore,
 		elasticProfileStore: elasticProfileStore,
 	}

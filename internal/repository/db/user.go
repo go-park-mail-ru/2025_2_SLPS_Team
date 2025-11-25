@@ -19,7 +19,7 @@ func NewDBUserStore(db *sql.DB) domain.UserStore {
 	return &DBUserStore{db: db}
 }
 
-func (store *DBUserStore) CreateUser(ctx context.Context, user domain.User, profile domain.Profile) (int32, error) {
+func (store *DBUserStore) CreateUser(ctx context.Context, user domain.User) (int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "userStore")
 	dbloggerCopy := dblogger
@@ -51,15 +51,6 @@ func (store *DBUserStore) CreateUser(ctx context.Context, user domain.User, prof
 	if err != nil {
 		dblogger.Error("Failed to insert user", zap.String("query", queryUser))
 		return 0, fmt.Errorf("insert user: %w", err)
-	}
-
-	queryProfile := `INSERT INTO profiles 
-        (user_id, first_name, last_name, gender, dob) 
-        VALUES ($1, $2, $3, $4, $5)`
-	_, err = tx.Exec(queryProfile, userID, profile.FirstName, profile.LastName, profile.Gender, profile.Dob)
-	if err != nil {
-		dblogger.Error("Failed to insert profile", zap.String("query", queryProfile))
-		return 0, fmt.Errorf("insert profile: %w", err)
 	}
 
 	return userID, nil

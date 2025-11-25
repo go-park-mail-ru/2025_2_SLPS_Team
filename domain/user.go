@@ -13,7 +13,7 @@ type User struct {
 
 type UserStore interface {
 	GetUserByEmail(ctx context.Context, email string) (*User, error)
-	CreateUser(ctx context.Context, user User, profile Profile) (int32, error)
+	CreateUser(ctx context.Context, user User) (int32, error)
 	GetUserByID(ctx context.Context, userID int32) (User, error)
 	IsUserExists(ctx context.Context, userID int32) (bool, error)
 	IsUserAdmin(ctx context.Context) (bool, error)

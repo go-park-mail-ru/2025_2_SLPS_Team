@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"project/domain"
+	"project/shared/mapper/generated"
+	"project/shared/pb"
 
 	"github.com/asaskevich/govalidator"
 	"go.uber.org/zap"
@@ -13,14 +15,16 @@ import (
 type AuthService struct {
 	sessionStore        domain.SessionStore
 	userStore           domain.UserStore
+	profileService      pb.ProfileServiceClient
 	elasticProfileStore domain.ElasticProfileStore
 }
 
-func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore, elasticProfileStore domain.ElasticProfileStore) domain.AuthService {
+func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore, elasticProfileStore domain.ElasticProfileStore, profileService pb.ProfileServiceClient) domain.AuthService {
 	return &AuthService{
 		sessionStore:        sessionStore,
 		userStore:           userStore,
 		elasticProfileStore: elasticProfileStore,
+		profileService:      profileService,
 	}
 }
 
@@ -124,12 +128,18 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 		Dob:       req.Dob,
 		Gender:    req.Gender,
 	}
-	userID, err := api.userStore.CreateUser(ctx, user, profile)
+
+	userID, err := api.userStore.CreateUser(ctx, user)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to create user", zap.Error(err))
 		return 0, domain.ErrDB
 	}
 
+	_, err = api.profileService.CreateProfile(ctx, &pb.CreateProfileRequest{Profile: generated.ToProtoProfile(profile)})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
+		return 0, domain.ErrDB
+	}
 	fullName := profile.FirstName + " " + profile.LastName
 	err = api.elasticProfileStore.CreateProfile(ctx, fullName, userID)
 	if err != nil {
