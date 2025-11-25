@@ -130,7 +130,7 @@ func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, ela
 	auth := handler.NewAuthHandler(authService, config)
 	profile := handler.NewProfileHandler(profileService)
 	chat := handler.NewChatHandler(chatService)
-	postService := service.NewPostService(postStore, userStore, communityStore)
+	postService := service.NewPostService(postStore, userStore, communityStore, profileClient)
 	middleware := handler.NewMiddlewareHandler(config)
 	posts := handler.NewPostsHandler(postService)
 	community := handler.NewCommunityHandler(communityService)
