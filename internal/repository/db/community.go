@@ -24,7 +24,7 @@ func (store *DBCommunityStore) CreateCommunity(ctx context.Context, community *d
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start CreateCommunity", zap.Int("creatorID", community.CreatorID))
+	dbloggerCopy.Info("DB start CreateCommunity", zap.Int32("creatorID", community.CreatorID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -55,7 +55,7 @@ func (store *DBCommunityStore) CreateCommunity(ctx context.Context, community *d
 		return fmt.Errorf("failed to create community: %w", err)
 	}
 
-	dblogger.Info("Community created successfully", zap.Int("communityID", community.ID))
+	dblogger.Info("Community created successfully", zap.Int32("communityID", community.ID))
 	return nil
 }
 
@@ -63,7 +63,7 @@ func (store *DBCommunityStore) UpdateCommunity(ctx context.Context, community *d
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start UpdateCommunity", zap.Int("communityID", community.ID))
+	dbloggerCopy.Info("DB start UpdateCommunity", zap.Int32("communityID", community.ID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -100,11 +100,11 @@ func (store *DBCommunityStore) UpdateCommunity(ctx context.Context, community *d
 	return nil
 }
 
-func (store *DBCommunityStore) DeleteCommunity(ctx context.Context, id int, creatorID int) error {
+func (store *DBCommunityStore) DeleteCommunity(ctx context.Context, id int32, creatorID int32) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start DeleteCommunity", zap.Int("communityID", id), zap.Int("creatorID", creatorID))
+	dbloggerCopy.Info("DB start DeleteCommunity", zap.Int32("communityID", id), zap.Int32("creatorID", creatorID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -134,11 +134,11 @@ func (store *DBCommunityStore) DeleteCommunity(ctx context.Context, id int, crea
 	return nil
 }
 
-func (store *DBCommunityStore) GetCommunityByID(ctx context.Context, id int) (*domain.Community, error) {
+func (store *DBCommunityStore) GetCommunityByID(ctx context.Context, id int32) (*domain.Community, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetCommunityByID", zap.Int("communityID", id))
+	dbloggerCopy.Info("DB start GetCommunityByID", zap.Int32("communityID", id))
 
 	defer func() {
 		duration := time.Since(start)
@@ -183,15 +183,15 @@ func (store *DBCommunityStore) GetCommunityByID(ctx context.Context, id int) (*d
 		return nil, fmt.Errorf("failed to get community: %w", err)
 	}
 
-	dblogger.Info("Community retrieved successfully", zap.Int("subscribersCount", community.SubscribersCount))
+	dblogger.Info("Community retrieved successfully", zap.Int32("subscribersCount", community.SubscribersCount))
 	return &community, nil
 }
 
-func (store *DBCommunityStore) GetUserCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.ShortCommunity, error) {
+func (store *DBCommunityStore) GetUserCommunities(ctx context.Context, userID int32, limit, offset int32) ([]domain.ShortCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetUserCommunities", zap.Int("userID", userID))
+	dbloggerCopy.Info("DB start GetUserCommunities", zap.Int32("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -241,11 +241,11 @@ func (store *DBCommunityStore) GetUserCommunities(ctx context.Context, userID in
 	return communities, nil
 }
 
-func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.ShortCommunity, error) {
+func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID int32, limit, offset int32) ([]domain.ShortCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetOtherCommunities", zap.Int("userID", userID))
+	dbloggerCopy.Info("DB start GetOtherCommunities", zap.Int32("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -300,11 +300,11 @@ func (store *DBCommunityStore) GetOtherCommunities(ctx context.Context, userID i
 	return communities, nil
 }
 
-func (store *DBCommunityStore) GetUserCommunitiesByID(ctx context.Context, targetUserID int, limit, offset int) ([]domain.ShortCommunity, error) {
+func (store *DBCommunityStore) GetUserCommunitiesByID(ctx context.Context, targetUserID int32, limit, offset int32) ([]domain.ShortCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetUserCommunitiesByID", zap.Int("targetUserID", targetUserID))
+	dbloggerCopy.Info("DB start GetUserCommunitiesByID", zap.Int32("targetUserID", targetUserID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -354,11 +354,11 @@ func (store *DBCommunityStore) GetUserCommunitiesByID(ctx context.Context, targe
 	return communities, nil
 }
 
-func (store *DBCommunityStore) GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int) ([]int, error) {
+func (store *DBCommunityStore) GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetUserSubscribedCommunityIDs", zap.Int("targetUserID", targetUserID))
+	dbloggerCopy.Info("DB start GetUserSubscribedCommunityIDs", zap.Int32("targetUserID", targetUserID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -380,9 +380,9 @@ func (store *DBCommunityStore) GetUserSubscribedCommunityIDs(ctx context.Context
 	}
 	defer rows.Close()
 
-	communityIDs := []int{}
+	communityIDs := []int32{}
 	for rows.Next() {
-		var id int
+		var id int32
 		err := rows.Scan(&id)
 		if err != nil {
 			dblogger.Error("Failed to scan community ID", zap.Error(err))
@@ -395,11 +395,11 @@ func (store *DBCommunityStore) GetUserSubscribedCommunityIDs(ctx context.Context
 	return communityIDs, nil
 }
 
-func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID int, limit, offset int) ([]domain.CommunityForMyCommunity, error) {
+func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID int32, limit, offset int32) ([]domain.CommunityForMyCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetCreatedCommunities", zap.Int("userID", userID))
+	dbloggerCopy.Info("DB start GetCreatedCommunities", zap.Int32("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -444,11 +444,11 @@ func (store *DBCommunityStore) GetCreatedCommunities(ctx context.Context, userID
 	return communities, nil
 }
 
-func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, communityID int, limit, offset int) ([]domain.CommunitySubscriber, error) {
+func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, communityID int32, limit, offset int32) ([]domain.CommunitySubscriber, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetCommunitySubscribers", zap.Int("communityID", communityID))
+	dbloggerCopy.Info("DB start GetCommunitySubscribers", zap.Int32("communityID", communityID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -494,11 +494,11 @@ func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, comm
 	return subscribers, nil
 }
 
-func (store *DBCommunityStore) Subscribe(ctx context.Context, communityID int, userID int) error {
+func (store *DBCommunityStore) Subscribe(ctx context.Context, communityID int32, userID int32) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start Subscribe", zap.Int("communityID", communityID), zap.Int("userID", userID))
+	dbloggerCopy.Info("DB start Subscribe", zap.Int32("communityID", communityID), zap.Int32("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -522,11 +522,11 @@ func (store *DBCommunityStore) Subscribe(ctx context.Context, communityID int, u
 	return nil
 }
 
-func (store *DBCommunityStore) Unsubscribe(ctx context.Context, communityID int, userID int) error {
+func (store *DBCommunityStore) Unsubscribe(ctx context.Context, communityID int32, userID int32) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start Unsubscribe", zap.Int("communityID", communityID), zap.Int("userID", userID))
+	dbloggerCopy.Info("DB start Unsubscribe", zap.Int32("communityID", communityID), zap.Int32("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -556,11 +556,11 @@ func (store *DBCommunityStore) Unsubscribe(ctx context.Context, communityID int,
 	return nil
 }
 
-func (store *DBCommunityStore) IsSubscribed(ctx context.Context, communityID int, userID int) (bool, error) {
+func (store *DBCommunityStore) IsSubscribed(ctx context.Context, communityID int32, userID int32) (bool, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start IsSubscribed", zap.Int("communityID", communityID), zap.Int("userID", userID))
+	dbloggerCopy.Info("DB start IsSubscribed", zap.Int32("communityID", communityID), zap.Int32("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -580,11 +580,11 @@ func (store *DBCommunityStore) IsSubscribed(ctx context.Context, communityID int
 	return exists, nil
 }
 
-func (store *DBCommunityStore) GetCommunitiesByIDs(ctx context.Context, communityIDs []int) ([]domain.ShortCommunity, error) {
+func (store *DBCommunityStore) GetCommunitiesByIDs(ctx context.Context, communityIDs []int32) ([]domain.ShortCommunity, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "communityStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetCommunitiesByIDs", zap.Ints("communityIDs", communityIDs))
+	dbloggerCopy.Info("DB start GetCommunitiesByIDs", zap.Int32s("communityIDs", communityIDs))
 
 	defer func() {
 		duration := time.Since(start)

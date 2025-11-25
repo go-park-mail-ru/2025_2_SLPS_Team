@@ -19,7 +19,7 @@ type TestRequestConfig struct {
 	Method      string
 	URL         string
 	Vars        map[string]string
-	UserID      int
+	UserID      int32
 	Body        interface{}
 	ContentType string
 	AddAuth     bool // Добавлять ли авторизацию в контекст

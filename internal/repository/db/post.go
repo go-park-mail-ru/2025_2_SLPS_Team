@@ -21,11 +21,11 @@ func NewDBPostStore(db *sql.DB) domain.PostStore {
 }
 
 // Возвращает пагинированный слайс постов
-func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit, offset int) ([]domain.PostView, error) {
+func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit, offset int32) ([]domain.PostView, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start PostsPaginatedList", zap.Int("offset", offset), zap.Int("limit", limit))
+	dbloggerCopy.Info("DB start PostsPaginatedList", zap.Int32("offset", offset), zap.Int32("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
@@ -96,7 +96,7 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit,
 
 		// Обрабатываем community_id
 		if commID.Valid {
-			communityID := int(commID.Int64)
+			communityID := int32(commID.Int64)
 			postView.CommunityID = &communityID
 			postView.IsCommunityPost = true
 
@@ -130,7 +130,7 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit,
 }
 
 // Возвращает пост по ID поста
-func (store *DBPostStore) GetPostByID(ctx context.Context, userID int, id uint) (*domain.PostView, error) {
+func (store *DBPostStore) GetPostByID(ctx context.Context, userID int32, id uint) (*domain.PostView, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
@@ -197,7 +197,7 @@ func (store *DBPostStore) GetPostByID(ctx context.Context, userID int, id uint) 
 
 	// Обрабатываем community_id
 	if commID.Valid {
-		communityID := int(commID.Int64)
+		communityID := int32(commID.Int64)
 		postView.CommunityID = &communityID
 		postView.IsCommunityPost = true
 
@@ -348,11 +348,11 @@ func (store *DBPostStore) UpdatePost(ctx context.Context, post *domain.Post) err
 }
 
 // Получает посты сообщества
-func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int, communityID int, limit, offset int) ([]domain.PostView, error) {
+func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int32, communityID int32, limit, offset int32) ([]domain.PostView, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetCommunityPosts", zap.Int("communityID", communityID))
+	dbloggerCopy.Info("DB start GetCommunityPosts", zap.Int32("communityID", communityID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -504,7 +504,7 @@ func (store *DBPostStore) DeletePost(ctx context.Context, id uint, authorID uint
 }
 
 // Получение постов пользователя с пагинацией
-func (store *DBPostStore) GetPostsByUser(ctx context.Context, selfUserID int, userID uint, limit, offset int) ([]domain.PostView, error) {
+func (store *DBPostStore) GetPostsByUser(ctx context.Context, selfUserID int32, userID uint, limit, offset int32) ([]domain.PostView, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
@@ -745,7 +745,7 @@ func (store *DBPostStore) updatePostPhotosTx(ctx context.Context, tx *sql.Tx, po
 	return store.savePostPhotosTx(ctx, tx, postID, photos)
 }
 
-func (store *DBPostStore) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error {
+func (store *DBPostStore) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int32) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "postStore")
 	dbloggerCopy := dblogger
@@ -767,7 +767,7 @@ SELECT $1, $2
 WHERE NOT EXISTS (SELECT 1 FROM toggled)
 	`
 	_, err := store.db.ExecContext(ctx, query, postID, userID)
-	dblogger = dblogger.With(zap.String("query", query), zap.Int("userID", userID), zap.Int("postID", postID))
+	dblogger = dblogger.With(zap.String("query", query), zap.Int32("userID", userID), zap.Int32("postID", postID))
 	if err != nil {
 		dblogger.Error("Failed update like on post")
 		return fmt.Errorf("exec failed: %w", err)

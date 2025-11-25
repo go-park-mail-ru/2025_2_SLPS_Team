@@ -57,7 +57,7 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	files := r.MultipartForm.File["avatar"]
 
 	err = api.profileService.UpdateProfile(r.Context(), req, userID, files)
@@ -92,7 +92,7 @@ func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	files := r.MultipartForm.File["avatar"]
 
@@ -127,7 +127,7 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	files := r.MultipartForm.File["header"]
 
 	err = api.profileService.UpdateHeader(r.Context(), userID, files)
@@ -146,7 +146,7 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 // @Description Возвращает профиль пользователя по его ID.
 // @Tags profile
 // @Produce json
-// @Param id path int true "ID пользователя"
+// @Param id path int32 true "ID пользователя"
 // @Success 200 {object} domain.Profile "Профиль пользователя"
 // @Failure 400 {string} string "Invalid user ID / User does not exist"
 // @Failure 500 {string} string "Server error"
@@ -161,8 +161,8 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 		domain.FromContext(r.Context()).Error("Failed to parse user ID", zap.Error(err))
 		return
 	}
-	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int)
-	profile, err := api.profileService.GetProfileByUserID(r.Context(), selfUserID, userID)
+	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int32)
+	profile, err := api.profileService.GetProfileByUserID(r.Context(), selfUserID, int32(userID))
 	if err != nil {
 		sendJSONError(w, err)
 	}
@@ -184,7 +184,7 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 // @Security     BearerAuth
 // @Router       /profile/avatar [delete]
 func (api *ProfileHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	err := api.profileService.DeleteAvatarByUserID(r.Context(), userID)
 	if err != nil {
 		sendJSONError(w, err)

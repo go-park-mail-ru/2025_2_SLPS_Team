@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newMultipartRequestWithProfile(t *testing.T, method, url string, profile domain.Profile, userID int) *http.Request {
+func newMultipartRequestWithProfile(t *testing.T, method, url string, profile domain.Profile, userID int32) *http.Request {
 
 	profileJSON, err := json.Marshal(profile)
 	if err != nil {
@@ -37,7 +37,7 @@ func newMultipartRequestWithProfile(t *testing.T, method, url string, profile do
 	return req.WithContext(ctx)
 }
 
-func newMultipartRequestWithoutFile(t *testing.T, method, url string, userID int) *http.Request {
+func newMultipartRequestWithoutFile(t *testing.T, method, url string, userID int32) *http.Request {
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)

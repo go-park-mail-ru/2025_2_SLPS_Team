@@ -2,8 +2,9 @@ package service
 
 import (
 	"context"
-	"go.uber.org/zap"
 	"project/domain"
+
+	"go.uber.org/zap"
 )
 
 type ApplicationService struct {
@@ -33,11 +34,11 @@ func (s *ApplicationService) GetApplications(ctx context.Context, params domain.
 	return s.applicationStore.GetApplicationsByUser(ctx, limit, offset)
 }
 
-func (s *ApplicationService) UpdateApplicationText(ctx context.Context, id int, newText string) error {
+func (s *ApplicationService) UpdateApplicationText(ctx context.Context, id int32, newText string) error {
 	return s.applicationStore.UpdateApplicationText(ctx, id, newText)
 }
 
-func (s *ApplicationService) UpdateApplicationStatus(ctx context.Context, id int, newStatus string) error {
+func (s *ApplicationService) UpdateApplicationStatus(ctx context.Context, id int32, newStatus string) error {
 	isAdmin, err := s.userStore.IsUserAdmin(ctx)
 	if err != nil {
 		return err
@@ -48,7 +49,7 @@ func (s *ApplicationService) UpdateApplicationStatus(ctx context.Context, id int
 	return s.applicationStore.UpdateApplicationStatus(ctx, id, newStatus)
 }
 
-func (s *ApplicationService) CreateApplication(ctx context.Context, application domain.Application) (int, error) {
+func (s *ApplicationService) CreateApplication(ctx context.Context, application domain.Application) (int32, error) {
 	return s.applicationStore.CreateApplication(ctx, application)
 }
 func (s *ApplicationService) MergeTempSession(ctx context.Context) error {

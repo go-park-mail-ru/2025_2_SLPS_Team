@@ -38,7 +38,7 @@ func generateRandomToken() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func (store *RedisSessionStore) AddSession(ctx context.Context, userID int) (*domain.SIDAndSCRFToken, error) {
+func (store *RedisSessionStore) AddSession(ctx context.Context, userID int32) (*domain.SIDAndSCRFToken, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "sessionStore")
 	dbloggerCopy := dblogger

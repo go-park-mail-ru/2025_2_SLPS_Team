@@ -15,11 +15,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func contextWithUserID(ctx context.Context, userID int) context.Context {
+func contextWithUserID(ctx context.Context, userID int32) context.Context {
 	return context.WithValue(ctx, domain.UserIDKey, userID)
 }
 
-func newRequestWithVarsAndCtx(method, url string, vars map[string]string, userID int, body interface{}, t *testing.T) *http.Request {
+func newRequestWithVarsAndCtx(method, url string, vars map[string]string, userID int32, body interface{}, t *testing.T) *http.Request {
 	var req *http.Request
 	if body != nil {
 		req = httptest.NewRequest(method, url, JSONReader(t, body))
@@ -80,7 +80,7 @@ func TestChatHandler_GetMessagesByChatId(t *testing.T) {
 		userID := 2
 		messagesResp := domain.MessagesWithAuthors{
 			Messages: []domain.Message{{ID: 1, Text: "hello"}},
-			Authors:  map[int]domain.ShortProfile{2: {UserID: 2, FullName: "user2"}},
+			Authors:  map[int32]domain.ShortProfile{2: {UserID: 2, FullName: "user2"}},
 		}
 		mockChatService.EXPECT().GetMessagesByChatId(gomock.Any(), gomock.Any(), userID, chatID).Return(&messagesResp, nil)
 

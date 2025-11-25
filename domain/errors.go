@@ -55,7 +55,7 @@ const (
 	FriendRemoved         = "Friend removed successfully"
 )
 
-func MapErrorToHTTP(err error) (int, string) {
+func MapErrorToHTTP(err error) (int32, string) {
 	switch {
 	case errors.Is(err, ErrNotFound) || errors.Is(err, ErrPostNotFound):
 		return http.StatusNotFound, NotFound

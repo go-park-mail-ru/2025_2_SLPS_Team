@@ -15,8 +15,8 @@ import (
 
 // FriendsCountResponse - ответ с количеством отношений
 type FriendsCountResponse struct {
-	UserID    int                        `json:"userID"`
-	Count     int                        `json:"count"`
+	UserID    int32                      `json:"userID"`
+	Count     int32                      `json:"count"`
 	CountType domain.FriendshipCountType `json:"countType,omitempty"`
 }
 

@@ -12,12 +12,12 @@ import (
 
 type JSONResponse struct {
 	Message string `json:"message"`
-	Code    int    `json:"code"`
+	Code    int32  `json:"code"`
 }
 
-func sendJSONResponse(w http.ResponseWriter, message string, statusCode int) {
+func sendJSONResponse(w http.ResponseWriter, message string, statusCode int32) {
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(statusCode)
+	w.WriteHeader(int(statusCode))
 
 	if err := json.NewEncoder(w).Encode(JSONResponse{
 		Message: message,

@@ -37,7 +37,7 @@ func (m *MockAuthService) EXPECT() *MockAuthServiceMockRecorder {
 }
 
 // AddSession mocks base method.
-func (m *MockAuthService) AddSession(ctx context.Context, userID int) (*domain.SIDAndSCRFToken, error) {
+func (m *MockAuthService) AddSession(ctx context.Context, userID int32) (*domain.SIDAndSCRFToken, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddSession", ctx, userID)
 	ret0, _ := ret[0].(*domain.SIDAndSCRFToken)
@@ -67,10 +67,10 @@ func (mr *MockAuthServiceMockRecorder) IsLoggedIn(ctx, sessionCookie interface{}
 }
 
 // Login mocks base method.
-func (m *MockAuthService) Login(ctx context.Context, req domain.User) (int, error) {
+func (m *MockAuthService) Login(ctx context.Context, req domain.User) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Login", ctx, req)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -96,10 +96,10 @@ func (mr *MockAuthServiceMockRecorder) Logout(ctx, session interface{}) *gomock.
 }
 
 // Register mocks base method.
-func (m *MockAuthService) Register(ctx context.Context, req domain.RegisterRequest) (int, error) {
+func (m *MockAuthService) Register(ctx context.Context, req domain.RegisterRequest) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Register", ctx, req)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

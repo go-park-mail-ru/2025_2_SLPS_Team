@@ -26,7 +26,7 @@ func NewProfileService(profileStore domain.ProfileStore, userStore domain.UserSt
 	}
 }
 
-func (api *ProfileService) UpdateProfile(ctx context.Context, profile domain.Profile, userID int, files []*multipart.FileHeader) error {
+func (api *ProfileService) UpdateProfile(ctx context.Context, profile domain.Profile, userID int32, files []*multipart.FileHeader) error {
 
 	ok, err := govalidator.ValidateStruct(profile)
 	if !ok || err != nil {
@@ -74,7 +74,7 @@ func (api *ProfileService) UpdateProfile(ctx context.Context, profile domain.Pro
 	return nil
 }
 
-func (api *ProfileService) UpdateAvatar(ctx context.Context, userID int, files []*multipart.FileHeader) error {
+func (api *ProfileService) UpdateAvatar(ctx context.Context, userID int32, files []*multipart.FileHeader) error {
 
 	if len(files) == 1 {
 		avatarOldPath, err := api.profileStore.GetAvatarByUserID(ctx, userID)
@@ -104,7 +104,7 @@ func (api *ProfileService) UpdateAvatar(ctx context.Context, userID int, files [
 	return nil
 }
 
-func (api *ProfileService) UpdateHeader(ctx context.Context, userID int, files []*multipart.FileHeader) error {
+func (api *ProfileService) UpdateHeader(ctx context.Context, userID int32, files []*multipart.FileHeader) error {
 	if len(files) == 1 {
 		headerOldPath, err := api.profileStore.GetHeaderByUserID(ctx, userID)
 		if err != nil {
@@ -133,27 +133,27 @@ func (api *ProfileService) UpdateHeader(ctx context.Context, userID int, files [
 	return nil
 }
 
-func (api *ProfileService) GetProfileByUserID(ctx context.Context, selfUserID, userID int) (*domain.Profile, error) {
+func (api *ProfileService) GetProfileByUserID(ctx context.Context, selfUserID, userID int32) (*domain.Profile, error) {
 
 	profile, err := api.profileStore.GetProfileByUserID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.FromContext(ctx).Warn("User not found", zap.Int("userID", userID))
+			domain.FromContext(ctx).Warn("User not found", zap.Int32("userID", userID))
 			return nil, domain.ErrNotFound
 		}
-		domain.FromContext(ctx).Error("Failed to get profile", zap.Error(err), zap.Int("userID", userID))
+		domain.FromContext(ctx).Error("Failed to get profile", zap.Error(err), zap.Int32("userID", userID))
 		return nil, domain.ErrDB
 	}
 
 	relationsCount, err := api.friendStore.CountUserRelations(ctx, userID)
 	if err != nil {
-		domain.FromContext(ctx).Error("Failed to relations count", zap.Error(err), zap.Int("userID", userID))
+		domain.FromContext(ctx).Error("Failed to relations count", zap.Error(err), zap.Int32("userID", userID))
 		return nil, domain.ErrDB
 	}
 
 	status, err := api.friendStore.GetFriendshipStatus(ctx, selfUserID, userID)
 	if err != nil {
-		domain.FromContext(ctx).Error("Failed to relations count", zap.Error(err), zap.Int("userID", userID))
+		domain.FromContext(ctx).Error("Failed to relations count", zap.Error(err), zap.Int32("userID", userID))
 		return nil, domain.ErrDB
 	}
 	profile.RelationsCount = *relationsCount
@@ -162,7 +162,7 @@ func (api *ProfileService) GetProfileByUserID(ctx context.Context, selfUserID, u
 	return &profile, nil
 }
 
-func (api *ProfileService) DeleteAvatarByUserID(ctx context.Context, userID int) error {
+func (api *ProfileService) DeleteAvatarByUserID(ctx context.Context, userID int32) error {
 	avatar_path, err := api.profileStore.DeleteAvatarByUserID(ctx, userID)
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail to delete avatar path", zap.Error(err))

@@ -36,10 +36,10 @@ func (m *MockMessageStore) EXPECT() *MockMessageStoreMockRecorder {
 }
 
 // CreateMessage mocks base method.
-func (m *MockMessageStore) CreateMessage(ctx context.Context, message domain.Message) (int, error) {
+func (m *MockMessageStore) CreateMessage(ctx context.Context, message domain.Message) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateMessage", ctx, message)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -51,7 +51,7 @@ func (mr *MockMessageStoreMockRecorder) CreateMessage(ctx, message interface{}) 
 }
 
 // GetMessagesByChatId mocks base method.
-func (m *MockMessageStore) GetMessagesByChatId(ctx context.Context, chatID, limit, offset int) ([]domain.Message, error) {
+func (m *MockMessageStore) GetMessagesByChatId(ctx context.Context, chatID, limit, offset int32) ([]domain.Message, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessagesByChatId", ctx, chatID, limit, offset)
 	ret0, _ := ret[0].([]domain.Message)

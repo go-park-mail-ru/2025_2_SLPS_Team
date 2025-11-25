@@ -13,7 +13,7 @@ import (
 type PostService struct {
 	postStore      domain.PostStore
 	userStore      domain.UserStore
-	communityStore domain.CommunityStore 
+	communityStore domain.CommunityStore
 }
 
 func NewPostService(postStore domain.PostStore, userStore domain.UserStore, communityStore domain.CommunityStore) domain.PostService {
@@ -25,9 +25,9 @@ func NewPostService(postStore domain.PostStore, userStore domain.UserStore, comm
 }
 
 // PostsPaginate возвращает посты с пагинацией
-func (s *PostService) PostsPaginate(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.PostView, error) {
+func (s *PostService) PostsPaginate(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
-	domain.Info(ctx, "Getting paginated posts", zap.Int("offset", offset), zap.Int("limit", limit))
+	domain.Info(ctx, "Getting paginated posts", zap.Int32("offset", offset), zap.Int32("limit", limit))
 
 	posts, err := s.postStore.PostsPaginatedList(ctx, userID, limit, offset)
 	if err != nil {
@@ -39,7 +39,7 @@ func (s *PostService) PostsPaginate(ctx context.Context, userID int, params doma
 }
 
 // GetPost возвращает пост по ID
-func (s *PostService) GetPost(ctx context.Context, userID int, postID uint) (*domain.PostView, error) {
+func (s *PostService) GetPost(ctx context.Context, userID int32, postID uint) (*domain.PostView, error) {
 	domain.Info(ctx, "Getting post by ID", zap.Uint("postID", postID))
 
 	post, err := s.postStore.GetPostByID(ctx, userID, postID)
@@ -56,7 +56,7 @@ func (s *PostService) GetPost(ctx context.Context, userID int, postID uint) (*do
 }
 
 // CreatePost создает новый пост
-func (s *PostService) CreatePost(ctx context.Context, userID int, text string, communityID *int, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
+func (s *PostService) CreatePost(ctx context.Context, userID int32, text string, communityID *int32, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
 
 	// Создаем структуру для валидации
 	createRequest := domain.PostCreateRequest{
@@ -70,7 +70,7 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, c
 		return nil, domain.ErrInvalidInput
 	}
 
-	domain.Info(ctx, "Creating new post", zap.Int("userID", userID))
+	domain.Info(ctx, "Creating new post", zap.Int32("userID", userID))
 
 	// Обработка вложений
 	var attachmentPaths []string
@@ -101,15 +101,15 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, c
 	if communityID != nil {
 		community, err := s.communityStore.GetCommunityByID(ctx, *communityID)
 		if err != nil {
-			domain.Warn(ctx, "Community not found", zap.Int("communityID", *communityID))
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", *communityID))
 			return nil, domain.ErrNotFound
 		}
 
 		// Проверяем, является ли пользователь создателем сообщества
 		if community.CreatorID != userID {
 			domain.Warn(ctx, "User is not community creator",
-				zap.Int("userID", userID),
-				zap.Int("creatorID", community.CreatorID))
+				zap.Int32("userID", userID),
+				zap.Int32("creatorID", community.CreatorID))
 			return nil, domain.ErrAccessDenied
 		}
 	}
@@ -120,7 +120,7 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, c
 		CommunityID: communityID,
 		Text:        createRequest.Text,
 		Attachments: createRequest.Attachments,
-		Photos:  createRequest.Photos,
+		Photos:      createRequest.Photos,
 	}
 
 	// Сохраняем в БД
@@ -131,13 +131,13 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, c
 		if len(photoPaths) > 0 {
 			DeleteFiles(convertToPointerSlice(photoPaths))
 		}
-		domain.Error(ctx, "Failed to create post", err, zap.Int("userID", userID))
+		domain.Error(ctx, "Failed to create post", err, zap.Int32("userID", userID))
 		return nil, domain.ErrDB
 	}
 
 	domain.Info(ctx, "Post created successfully",
 		zap.Uint("postID", post.ID),
-		zap.Int("userID", userID),
+		zap.Int32("userID", userID),
 		zap.Int("attachmentsCount", len(attachmentPaths)),
 		zap.Int("photosCount", len(photoPaths)))
 
@@ -145,7 +145,7 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, c
 }
 
 // UpdatePost обновляет пост
-func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error {
+func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int32, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error {
 	// Создаем структуру для валидации
 	updateRequest := domain.PostUpdateRequest{
 		Text: text,
@@ -158,7 +158,7 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 		return domain.ErrInvalidInput
 	}
 
-	domain.Info(ctx, "Updating post", zap.Uint("postID", postID), zap.Int("userID", userID))
+	domain.Info(ctx, "Updating post", zap.Uint("postID", postID), zap.Int32("userID", userID))
 
 	// Получаем текущий пост
 	existingPost, err := s.postStore.GetPostByID(ctx, userID, postID)
@@ -175,7 +175,7 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 	if existingPost.AuthorID != uint(userID) {
 		domain.Warn(ctx, "Access denied: user is not post author",
 			zap.Uint("postID", postID),
-			zap.Int("userID", userID),
+			zap.Int32("userID", userID),
 			zap.Uint("authorID", existingPost.AuthorID))
 		return domain.ErrAccessDenied
 	}
@@ -232,7 +232,7 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 		Text:        updateRequest.Text,
 		CreatedAt:   existingPost.CreatedAt,
 		Attachments: updateRequest.Attachments,
-		Photos:  updateRequest.Photos,
+		Photos:      updateRequest.Photos,
 	}
 
 	if err := s.postStore.UpdatePost(ctx, updatedPost); err != nil {
@@ -265,8 +265,8 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 }
 
 // DeletePost удаляет пост
-func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) error {
-	domain.Info(ctx, "Deleting post", zap.Uint("postID", postID), zap.Int("userID", userID))
+func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int32) error {
+	domain.Info(ctx, "Deleting post", zap.Uint("postID", postID), zap.Int32("userID", userID))
 
 	// Получаем пост для проверки прав и получения путей файлов
 	existingPost, err := s.postStore.GetPostByID(ctx, userID, postID)
@@ -283,7 +283,7 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 	if existingPost.AuthorID != uint(userID) {
 		domain.Warn(ctx, "Access denied: user is not post author",
 			zap.Uint("postID", postID),
-			zap.Int("userID", userID),
+			zap.Int32("userID", userID),
 			zap.Uint("authorID", existingPost.AuthorID))
 		return domain.ErrAccessDenied
 	}
@@ -318,13 +318,13 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 }
 
 // GetUserPosts возвращает посты пользователя
-func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int, userID uint, params domain.PaginateQueryParams) ([]domain.PostView, error) {
+func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int32, userID uint, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting user posts", zap.Uint("userID", userID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, int(userID))
+	_, err := s.userStore.GetUserByID(ctx, int32(userID))
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			domain.Warn(ctx, "User not found", zap.Uint("userID", userID))
@@ -344,17 +344,16 @@ func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int, userID u
 	return posts, nil
 }
 
-
 // Получение постов сообщества
-func (s *PostService) GetCommunityPosts(ctx context.Context, userID int, communityID int, params domain.PaginateQueryParams) ([]domain.PostView, error) {
+func (s *PostService) GetCommunityPosts(ctx context.Context, userID int32, communityID int32, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
-	domain.Info(ctx, "Getting community posts", zap.Int("communityID", communityID))
+	domain.Info(ctx, "Getting community posts", zap.Int32("communityID", communityID))
 
 	// Проверяем существование сообщества
 	_, err := s.communityStore.GetCommunityByID(ctx, communityID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", communityID))
 			return nil, domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get community", err)
@@ -370,7 +369,7 @@ func (s *PostService) GetCommunityPosts(ctx context.Context, userID int, communi
 	return posts, nil
 }
 
-func (s *PostService) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int) error {
+func (s *PostService) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int32) error {
 	err := s.postStore.UpdateLikeOnPostByUserID(ctx, userID, postID)
 	if err != nil {
 

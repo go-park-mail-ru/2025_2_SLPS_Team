@@ -83,7 +83,7 @@ func TestGetShortProfileByUserIDs_Success(t *testing.T) {
 	store := NewDBProfileStore(dbConn)
 	ctx := context.Background()
 
-	userIDs := []int{1, 2}
+	userIDs := []int32{1, 2}
 	rows := sqlmock.NewRows([]string{"user_id", "full_name", "avatar_path"}).
 		AddRow(1, "John Doe", "avatar1.png").
 		AddRow(2, "Jane Doe", "avatar2.png")
@@ -104,7 +104,7 @@ func TestGetShortProfileByUserIDs_QueryError(t *testing.T) {
 	store := NewDBProfileStore(dbConn)
 	ctx := context.Background()
 
-	userIDs := []int{1, 2}
+	userIDs := []int32{1, 2}
 	mock.ExpectQuery(regexp.QuoteMeta(`SELECT user_id, first_name || ' ' || last_name as full_name , avatar_path FROM profiles WHERE user_id = ANY($1)`)).
 		WillReturnError(errors.New("query failed"))
 

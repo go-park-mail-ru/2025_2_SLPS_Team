@@ -61,8 +61,8 @@ func (x *UserRelationsCounts) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use UserRelationsCounts.ProtoReflect.Descriptor instead.
-func (*UserRelationsCounts) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{0}
+func (*UserRelationsCounts) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{0}
 }
 
 func (x *UserRelationsCounts) GetAccepted() int32 {
@@ -136,8 +136,8 @@ func (x *Profile) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use Profile.ProtoReflect.Descriptor instead.
-func (*Profile) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{1}
+func (*Profile) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{1}
 }
 
 func (x *Profile) GetUserID() int32 {
@@ -246,8 +246,8 @@ func (x *ShortProfile) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use ShortProfile.ProtoReflect.Descriptor instead.
-func (*ShortProfile) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{2}
+func (*ShortProfile) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{2}
 }
 
 func (x *ShortProfile) GetUserID() int32 {
@@ -313,8 +313,8 @@ func (x *FileData) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use FileData.ProtoReflect.Descriptor instead.
-func (*FileData) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{3}
+func (*FileData) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{3}
 }
 
 func (x *FileData) GetFilename() string {
@@ -372,8 +372,8 @@ func (x *CreateProfileRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use CreateProfileRequest.ProtoReflect.Descriptor instead.
-func (*CreateProfileRequest) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{4}
+func (*CreateProfileRequest) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{4}
 }
 
 func (x *CreateProfileRequest) GetProfile() *Profile {
@@ -419,8 +419,8 @@ func (x *UpdateProfileRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use UpdateProfileRequest.ProtoReflect.Descriptor instead.
-func (*UpdateProfileRequest) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{5}
+func (*UpdateProfileRequest) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{5}
 }
 
 func (x *UpdateProfileRequest) GetProfile() *Profile {
@@ -480,8 +480,8 @@ func (x *UpdateAvatarRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use UpdateAvatarRequest.ProtoReflect.Descriptor instead.
-func (*UpdateAvatarRequest) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{6}
+func (*UpdateAvatarRequest) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{6}
 }
 
 func (x *UpdateAvatarRequest) GetUserID() int32 {
@@ -533,8 +533,8 @@ func (x *UpdateHeaderRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use UpdateHeaderRequest.ProtoReflect.Descriptor instead.
-func (*UpdateHeaderRequest) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{7}
+func (*UpdateHeaderRequest) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{7}
 }
 
 func (x *UpdateHeaderRequest) GetUserID() int32 {
@@ -586,8 +586,8 @@ func (x *GetProfileByUserIDRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use GetProfileByUserIDRequest.ProtoReflect.Descriptor instead.
-func (*GetProfileByUserIDRequest) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{8}
+func (*GetProfileByUserIDRequest) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{8}
 }
 
 func (x *GetProfileByUserIDRequest) GetSelfUserID() int32 {
@@ -637,8 +637,8 @@ func (x *GetProfileByUserIDResponse) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use GetProfileByUserIDResponse.ProtoReflect.Descriptor instead.
-func (*GetProfileByUserIDResponse) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{9}
+func (*GetProfileByUserIDResponse) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{9}
 }
 
 func (x *GetProfileByUserIDResponse) GetProfile() *Profile {
@@ -682,8 +682,8 @@ func (x *DeleteAvatarRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use DeleteAvatarRequest.ProtoReflect.Descriptor instead.
-func (*DeleteAvatarRequest) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{10}
+func (*DeleteAvatarRequest) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{10}
 }
 
 func (x *DeleteAvatarRequest) GetUserID() int32 {
@@ -727,8 +727,8 @@ func (x *GetShortProfileMapByUserIDsRequest) ProtoReflect() protoreflect.Message
 }
 
 // Deprecated: Use GetShortProfileMapByUserIDsRequest.ProtoReflect.Descriptor instead.
-func (*GetShortProfileMapByUserIDsRequest) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{11}
+func (*GetShortProfileMapByUserIDsRequest) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{11}
 }
 
 func (x *GetShortProfileMapByUserIDsRequest) GetUserIDs() []int32 {
@@ -771,8 +771,8 @@ func (x *GetShortProfileMapByUserIDsResponse) ProtoReflect() protoreflect.Messag
 }
 
 // Deprecated: Use GetShortProfileMapByUserIDsResponse.ProtoReflect.Descriptor instead.
-func (*GetShortProfileMapByUserIDsResponse) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{12}
+func (*GetShortProfileMapByUserIDsResponse) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{12}
 }
 
 func (x *GetShortProfileMapByUserIDsResponse) GetProfiles() map[int32]*ShortProfile {
@@ -816,8 +816,8 @@ func (x *GetShortProfileByUserIDsRequest) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use GetShortProfileByUserIDsRequest.ProtoReflect.Descriptor instead.
-func (*GetShortProfileByUserIDsRequest) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{13}
+func (*GetShortProfileByUserIDsRequest) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{13}
 }
 
 func (x *GetShortProfileByUserIDsRequest) GetUserIDs() []int32 {
@@ -860,8 +860,8 @@ func (x *GetShortProfileByUserIDsResponse) ProtoReflect() protoreflect.Message {
 }
 
 // Deprecated: Use GetShortProfileByUserIDsResponse.ProtoReflect.Descriptor instead.
-func (*GetShortProfileByUserIDsResponse) Descriptor() ([]byte, []int) {
-	return file_shared_pb_profile_proto_rawDescGZIP(), []int{14}
+func (*GetShortProfileByUserIDsResponse) Descriptor() ([]byte, []int32) {
+	return file_shared_pb_profile_proto_rawDescGZIP(), []int32{14}
 }
 
 func (x *GetShortProfileByUserIDsResponse) GetProfiles() []*ShortProfile {

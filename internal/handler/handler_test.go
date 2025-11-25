@@ -344,7 +344,7 @@ package handler
 //    cases := []struct {
 //        name           string
 //        url            string
-//        expectedStatus int
+//        expectedStatus int32
 //    }{
 //        {"Test register with auth", "/api/auth/register", http.StatusForbidden},
 //        {"Test login with auth", "/api/auth/login", http.StatusForbidden},
@@ -394,7 +394,7 @@ package handler
 //        name           string
 //        method         string
 //        url            string
-//        expectedStatus int
+//        expectedStatus int32
 //    }{
 //        {"Test register without auth", "POST", "/api/auth/register", http.StatusOK},
 //        {"Test login without auth", "POST", "/api/auth/login", http.StatusOK},
@@ -440,8 +440,8 @@ package handler
 //    api := NewPostsHandler(forkPostsForTests)
 //    cases := []struct {
 //        name          string
-//        limit         int
-//        page          int
+//        limit         int32
+//        page          int32
 //        expectedPosts []repository.Post
 //    }{
 //        {"Test last page", 5, 2, forkPostsForTests[5:]},
@@ -472,9 +472,9 @@ package handler
 //    api := NewPostsHandler(forkPostsForTests)
 //    cases := []struct {
 //        name               string
-//        limit              int
-//        page               int
-//        expectedStatusCode int
+//        limit              int32
+//        page               int32
+//        expectedStatusCode int32
 //    }{
 //        {"Negative or zero params", -14, 0, http.StatusBadRequest},
 //        {"Negative or zero params", 21, -3, http.StatusBadRequest},

@@ -37,7 +37,7 @@ func (m *MockProfileService) EXPECT() *MockProfileServiceMockRecorder {
 }
 
 // GetProfileByUserID mocks base method.
-func (m *MockProfileService) GetProfileByUserID(ctx context.Context, userID int) (*domain.Profile, error) {
+func (m *MockProfileService) GetProfileByUserID(ctx context.Context, userID int32) (*domain.Profile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, userID)
 	ret0, _ := ret[0].(*domain.Profile)
@@ -52,7 +52,7 @@ func (mr *MockProfileServiceMockRecorder) GetProfileByUserID(ctx, userID interfa
 }
 
 // UpdateAvatar mocks base method.
-func (m *MockProfileService) UpdateAvatar(ctx context.Context, userID int, files []*multipart.FileHeader) error {
+func (m *MockProfileService) UpdateAvatar(ctx context.Context, userID int32, files []*multipart.FileHeader) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAvatar", ctx, userID, files)
 	ret0, _ := ret[0].(error)
@@ -66,7 +66,7 @@ func (mr *MockProfileServiceMockRecorder) UpdateAvatar(ctx, userID, files interf
 }
 
 // UpdateHeader mocks base method.
-func (m *MockProfileService) UpdateHeader(ctx context.Context, userID int, files []*multipart.FileHeader) error {
+func (m *MockProfileService) UpdateHeader(ctx context.Context, userID int32, files []*multipart.FileHeader) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateHeader", ctx, userID, files)
 	ret0, _ := ret[0].(error)
@@ -80,7 +80,7 @@ func (mr *MockProfileServiceMockRecorder) UpdateHeader(ctx, userID, files interf
 }
 
 // UpdateProfile mocks base method.
-func (m *MockProfileService) UpdateProfile(ctx context.Context, profile domain.Profile, userID int, files []*multipart.FileHeader) error {
+func (m *MockProfileService) UpdateProfile(ctx context.Context, profile domain.Profile, userID int32, files []*multipart.FileHeader) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateProfile", ctx, profile, userID, files)
 	ret0, _ := ret[0].(error)
@@ -117,7 +117,7 @@ func (m *MockProfileStore) EXPECT() *MockProfileStoreMockRecorder {
 }
 
 // GetAvatarByUserID mocks base method.
-func (m *MockProfileStore) GetAvatarByUserID(ctx context.Context, userID int) (*string, error) {
+func (m *MockProfileStore) GetAvatarByUserID(ctx context.Context, userID int32) (*string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAvatarByUserID", ctx, userID)
 	ret0, _ := ret[0].(*string)
@@ -132,7 +132,7 @@ func (mr *MockProfileStoreMockRecorder) GetAvatarByUserID(ctx, userID interface{
 }
 
 // GetHeaderByUserID mocks base method.
-func (m *MockProfileStore) GetHeaderByUserID(ctx context.Context, userID int) (*string, error) {
+func (m *MockProfileStore) GetHeaderByUserID(ctx context.Context, userID int32) (*string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHeaderByUserID", ctx, userID)
 	ret0, _ := ret[0].(*string)
@@ -147,7 +147,7 @@ func (mr *MockProfileStoreMockRecorder) GetHeaderByUserID(ctx, userID interface{
 }
 
 // GetProfileByUserID mocks base method.
-func (m *MockProfileStore) GetProfileByUserID(ctx context.Context, userID int) (domain.Profile, error) {
+func (m *MockProfileStore) GetProfileByUserID(ctx context.Context, userID int32) (domain.Profile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, userID)
 	ret0, _ := ret[0].(domain.Profile)
@@ -162,10 +162,10 @@ func (mr *MockProfileStoreMockRecorder) GetProfileByUserID(ctx, userID interface
 }
 
 // GetShortProfileByUserIDs mocks base method.
-func (m *MockProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int) (map[int]domain.ShortProfile, error) {
+func (m *MockProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int32) (map[int32]domain.ShortProfile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetShortProfileByUserIDs", ctx, userIDs)
-	ret0, _ := ret[0].(map[int]domain.ShortProfile)
+	ret0, _ := ret[0].(map[int32]domain.ShortProfile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -177,7 +177,7 @@ func (mr *MockProfileStoreMockRecorder) GetShortProfileByUserIDs(ctx, userIDs in
 }
 
 // UpdateAvatar mocks base method.
-func (m *MockProfileStore) UpdateAvatar(ctx context.Context, avatarPath string, userID int) error {
+func (m *MockProfileStore) UpdateAvatar(ctx context.Context, avatarPath string, userID int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAvatar", ctx, avatarPath, userID)
 	ret0, _ := ret[0].(error)
@@ -191,7 +191,7 @@ func (mr *MockProfileStoreMockRecorder) UpdateAvatar(ctx, avatarPath, userID int
 }
 
 // UpdateHeader mocks base method.
-func (m *MockProfileStore) UpdateHeader(ctx context.Context, avatarPath string, UserID int) error {
+func (m *MockProfileStore) UpdateHeader(ctx context.Context, avatarPath string, UserID int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateHeader", ctx, avatarPath, UserID)
 	ret0, _ := ret[0].(error)
@@ -205,7 +205,7 @@ func (mr *MockProfileStoreMockRecorder) UpdateHeader(ctx, avatarPath, UserID int
 }
 
 // UpdateProfile mocks base method.
-func (m *MockProfileStore) UpdateProfile(ctx context.Context, profile domain.Profile, userID int) error {
+func (m *MockProfileStore) UpdateProfile(ctx context.Context, profile domain.Profile, userID int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateProfile", ctx, profile, userID)
 	ret0, _ := ret[0].(error)

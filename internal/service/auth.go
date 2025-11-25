@@ -41,7 +41,7 @@ func (api *AuthService) IsLoggedIn(ctx context.Context, sessionCookie *http.Cook
 	return session, nil
 }
 
-func (api *AuthService) AddSession(ctx context.Context, userID int) (*domain.SIDAndSCRFToken, error) {
+func (api *AuthService) AddSession(ctx context.Context, userID int32) (*domain.SIDAndSCRFToken, error) {
 	tokens, err := api.sessionStore.AddSession(ctx, userID)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to add session", zap.Error(err))
@@ -51,7 +51,7 @@ func (api *AuthService) AddSession(ctx context.Context, userID int) (*domain.SID
 	return tokens, nil
 }
 
-func (api *AuthService) Login(ctx context.Context, req domain.User) (int, error) {
+func (api *AuthService) Login(ctx context.Context, req domain.User) (int32, error) {
 
 	user, err := api.userStore.GetUserByEmail(ctx, req.Email)
 	if err != nil {
@@ -70,7 +70,7 @@ func (api *AuthService) Login(ctx context.Context, req domain.User) (int, error)
 		return 0, domain.ErrInvalidInput
 	}
 
-	domain.FromContext(ctx).Info("User logged in", zap.Int("userID", user.ID))
+	domain.FromContext(ctx).Info("User logged in", zap.Int32("userID", user.ID))
 	return user.ID, nil
 }
 
@@ -86,7 +86,7 @@ func (api *AuthService) Logout(ctx context.Context, session *http.Cookie) error 
 	return nil
 }
 
-func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest) (int, error) {
+func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest) (int32, error) {
 
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
@@ -138,11 +138,11 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 		return 0, domain.ErrDB
 	}
 
-	domain.FromContext(ctx).Info("User created, registration complete", zap.Int("userID", userID))
+	domain.FromContext(ctx).Info("User created, registration complete", zap.Int32("userID", userID))
 	return userID, nil
 }
 
-func (api *AuthService) GetUserRole(ctx context.Context, userID int) (string, error) {
+func (api *AuthService) GetUserRole(ctx context.Context, userID int32) (string, error) {
 	user, err := api.userStore.GetUserByID(ctx, userID)
 	return user.Role, err
 }

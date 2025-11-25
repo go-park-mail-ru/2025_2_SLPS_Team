@@ -77,12 +77,12 @@ func TestChatService_GetMessagesByChatId(t *testing.T) {
 	chatID := 10
 	userID := 1
 	messages := []domain.Message{{ID: 1, AuthorID: 2, ChatID: chatID, Text: "Hi"}}
-	authors := map[int]domain.ShortProfile{2: {UserID: 2, FullName: "user2"}}
+	authors := map[int32]domain.ShortProfile{2: {UserID: 2, FullName: "user2"}}
 
 	t.Run("Success", func(t *testing.T) {
 		chatStore.EXPECT().IsMemberOfChat(ctx, userID, chatID).Return(true, nil)
 		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, 10, 0).Return(messages, nil)
-		profileStore.EXPECT().GetShortProfileByUserIDs(ctx, []int{2}).Return(authors, nil)
+		profileStore.EXPECT().GetShortProfileByUserIDs(ctx, []int32{2}).Return(authors, nil)
 		res, err := svc.GetMessagesByChatId(ctx, domain.PaginateQueryParams{Limit: 10, Page: 1}, userID, chatID)
 		assert.NoError(t, err)
 		assert.Len(t, res.Messages, 1)
@@ -107,7 +107,7 @@ func TestChatService_GetMessagesByChatId(t *testing.T) {
 	t.Run("Get authors error", func(t *testing.T) {
 		chatStore.EXPECT().IsMemberOfChat(ctx, userID, chatID).Return(true, nil)
 		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, 10, 0).Return(messages, nil)
-		profileStore.EXPECT().GetShortProfileByUserIDs(ctx, []int{2}).Return(nil, errors.New("db"))
+		profileStore.EXPECT().GetShortProfileByUserIDs(ctx, []int32{2}).Return(nil, errors.New("db"))
 		res, err := svc.GetMessagesByChatId(ctx, domain.PaginateQueryParams{Limit: 10, Page: 1}, userID, chatID)
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, res)
@@ -127,9 +127,9 @@ func TestChatService_CreateMessage(t *testing.T) {
 		chatStore.EXPECT().IsChatExist(ctx, chatID).Return(true, nil)
 		messageStore.EXPECT().CreateMessage(ctx, gomock.Any()).Return(42, nil)
 		chatStore.EXPECT().GetFullChatByIDAndSenderID(ctx, userID, chatID).Return(&domain.FullChat{ID: chatID}, nil)
-		chatStore.EXPECT().GetOtherChatMembersIdByAuthorId(ctx, userID, chatID).DoAndReturn(func(_ context.Context, _ int, _ int) ([]int, error) {
+		chatStore.EXPECT().GetOtherChatMembersIdByAuthorId(ctx, userID, chatID).DoAndReturn(func(_ context.Context, _ int32, _ int32) ([]int32, error) {
 			close(done)
-			return []int{2}, nil
+			return []int32{2}, nil
 		})
 		msgID, err := svc.CreateMessage(ctx, userID, chatID, msg)
 		assert.NoError(t, err)

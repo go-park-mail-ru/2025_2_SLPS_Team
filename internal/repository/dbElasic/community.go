@@ -27,12 +27,12 @@ func NewElasticCommunityStore(client *elasticsearch.Client, index string) domain
 }
 
 type CommunityDocument struct {
-	CommunityID           int    `json:"community_id"`
+	CommunityID           int32  `json:"community_id"`
 	CommunityName         string `json:"community_name"`
 	CommunityNameTranslit string `json:"community_name_translit"`
 }
 
-func (e *ElasticCommunityStore) CreateCommunity(ctx context.Context, name string, communityID int) error {
+func (e *ElasticCommunityStore) CreateCommunity(ctx context.Context, name string, communityID int32) error {
 	translit := unidecode.Unidecode(name)
 	doc := CommunityDocument{
 		CommunityID:           communityID,
@@ -47,7 +47,7 @@ func (e *ElasticCommunityStore) CreateCommunity(ctx context.Context, name string
 
 	req := esapi.IndexRequest{
 		Index:      e.index,
-		DocumentID: strconv.Itoa(communityID),
+		DocumentID: strconv.Itoa(int(communityID)),
 		Body:       bytes.NewReader(body),
 		Refresh:    "true",
 	}
@@ -64,7 +64,7 @@ func (e *ElasticCommunityStore) CreateCommunity(ctx context.Context, name string
 	return nil
 }
 
-func (e *ElasticCommunityStore) UpdateCommunity(ctx context.Context, name string, communityID int) error {
+func (e *ElasticCommunityStore) UpdateCommunity(ctx context.Context, name string, communityID int32) error {
 	translit := unidecode.Unidecode(name)
 	updateDoc := map[string]interface{}{
 		"doc": map[string]interface{}{
@@ -76,7 +76,7 @@ func (e *ElasticCommunityStore) UpdateCommunity(ctx context.Context, name string
 
 	req := esapi.UpdateRequest{
 		Index:      e.index,
-		DocumentID: strconv.Itoa(communityID),
+		DocumentID: strconv.Itoa(int(communityID)),
 		Body:       bytes.NewReader(body),
 		Refresh:    "true",
 	}
@@ -93,10 +93,10 @@ func (e *ElasticCommunityStore) UpdateCommunity(ctx context.Context, name string
 	return nil
 }
 
-func (e *ElasticCommunityStore) DeleteCommunity(ctx context.Context, communityID int) error {
+func (e *ElasticCommunityStore) DeleteCommunity(ctx context.Context, communityID int32) error {
 	req := esapi.DeleteRequest{
 		Index:      e.index,
-		DocumentID: strconv.Itoa(communityID),
+		DocumentID: strconv.Itoa(int(communityID)),
 		Refresh:    "true",
 	}
 
@@ -115,9 +115,9 @@ func (e *ElasticCommunityStore) DeleteCommunity(ctx context.Context, communityID
 	return nil
 }
 
-func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, name string, filterIDs []int, isTerms bool, limit, offset int) ([]int, error) {
+func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, name string, filterIDs []int32, isTerms bool, limit, offset int32) ([]int32, error) {
 	if isTerms && len(filterIDs) == 0 {
-		return []int{}, nil
+		return []int32{}, nil
 	}
 
 	multiMatch := map[string]interface{}{
@@ -160,8 +160,8 @@ func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, na
 		e.client.Search.WithIndex(e.index),
 		e.client.Search.WithBody(bytes.NewReader(body)),
 		e.client.Search.WithTrackTotalHits(true),
-		e.client.Search.WithSize(limit),
-		e.client.Search.WithFrom(offset),
+		e.client.Search.WithSize(int(limit)),
+		e.client.Search.WithFrom(int(offset)),
 	)
 	if err != nil {
 		return nil, err
@@ -172,7 +172,7 @@ func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, na
 		Hits struct {
 			Hits []struct {
 				Source struct {
-					CommunityID int `json:"community_id"`
+					CommunityID int32 `json:"community_id"`
 				} `json:"_source"`
 			} `json:"hits"`
 		} `json:"hits"`
@@ -182,7 +182,7 @@ func (e *ElasticCommunityStore) SearchCommunityIDsByName(ctx context.Context, na
 		return nil, err
 	}
 
-	ids := make([]int, 0, len(r.Hits.Hits))
+	ids := make([]int32, 0, len(r.Hits.Hits))
 	for _, hit := range r.Hits.Hits {
 		ids = append(ids, hit.Source.CommunityID)
 	}

@@ -6,12 +6,12 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// ----- int ↔ int32 -----
-func Conv_Int32ToInt(in int32) int {
-	return int(in)
+// ----- int32 ↔ int32 -----
+func Conv_Int32ToInt(in int32) int32 {
+	return int32(in)
 }
 
-func Conv_IntToInt32(in int) int32 {
+func Conv_IntToInt32(in int32) int32 {
 	return int32(in)
 }
 
@@ -31,8 +31,8 @@ func Conv_TimeToProto(t time.Time) *timestamppb.Timestamp {
 	return timestamppb.New(t)
 }
 
-// MapIntToInt32 конвертирует map[int]interface{} в map[int32]interface{}
-func Conv_MapIntToInt32(in map[int]interface{}) map[int32]interface{} {
+// MapIntToInt32 конвертирует map[int32]interface{} в map[int32]interface{}
+func Conv_MapIntToInt32(in map[int32]interface{}) map[int32]interface{} {
 	out := make(map[int32]interface{}, len(in))
 	for k, v := range in {
 		out[int32(k)] = v
@@ -40,11 +40,11 @@ func Conv_MapIntToInt32(in map[int]interface{}) map[int32]interface{} {
 	return out
 }
 
-// MapInt32ToInt конвертирует map[int32]interface{} в map[int]interface{}
-func Conv_MapInt32ToInt(in map[int32]interface{}) map[int]interface{} {
-	out := make(map[int]interface{}, len(in))
+// MapInt32ToInt конвертирует map[int32]interface{} в map[int32]interface{}
+func Conv_MapInt32ToInt(in map[int32]interface{}) map[int32]interface{} {
+	out := make(map[int32]interface{}, len(in))
 	for k, v := range in {
-		out[int(k)] = v
+		out[int32(k)] = v
 	}
 	return out
 }

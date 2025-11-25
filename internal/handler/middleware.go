@@ -109,7 +109,7 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 				return
 			} else {
 				ctx := context.WithValue(r.Context(), domain.UserIDKey, session.UserID)
-				newLogger := domain.FromContext(ctx).With(zap.Int("selfUserID", session.UserID))
+				newLogger := domain.FromContext(ctx).With(zap.Int32("selfUserID", session.UserID))
 				ctx = context.WithValue(ctx, domain.LoggerKey, newLogger)
 				domain.FromContext(ctx).Info("User logged in, add userID to context")
 
@@ -140,8 +140,8 @@ func (api *AuthHandler) AuthMiddleware(next http.Handler) http.Handler {
 
 func (api *ApplicationHandler) TempSessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var userID *int
-		if v, ok := r.Context().Value(domain.UserIDKey).(int); ok {
+		var userID *int32
+		if v, ok := r.Context().Value(domain.UserIDKey).(int32); ok {
 			userID = &v
 		}
 
@@ -164,7 +164,7 @@ func (api *ApplicationHandler) TempSessionMiddleware(next http.Handler) http.Han
 			}
 			http.SetCookie(w, expired)
 			next.ServeHTTP(w, r)
-			go func(userID int, ts uuid.UUID) {
+			go func(userID int32, ts uuid.UUID) {
 				// вызываем метод в store
 				err := api.applicationService.MergeTempSession(ctx)
 				if err != nil {
@@ -200,8 +200,8 @@ func (api *MiddlewareHandler) LoggingMiddleware(logger *zap.Logger) mux.Middlewa
 			reqID := uuid.New().String()
 
 			reqLogger := logger.With(zap.String("requestID", reqID))
-			//if userID, ok := r.Context().Value(domain.UserIDKey).(int); ok {
-			//    reqLogger = reqLogger.With(zap.Int("selfUserID", userID))
+			//if userID, ok := r.Context().Value(domain.UserIDKey).(int32); ok {
+			//    reqLogger = reqLogger.With(zap.Int32("selfUserID", userID))
 			//}
 			ctx := context.WithValue(r.Context(), domain.LoggerKey, reqLogger)
 

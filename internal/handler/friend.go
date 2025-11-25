@@ -33,7 +33,7 @@ type FriendshipStatusResponse struct {
 // @Tags friends
 // @Accept json
 // @Produce json
-// @Param id path int true "ID пользователя, которому отправляется запрос" minimum(1)
+// @Param id path int32 true "ID пользователя, которому отправляется запрос" minimum(1)
 // @Success 200 {object} JSONResponse "Запрос успешно отправлен"
 // @Failure 400 {object} JSONResponse "Неверный ID пользователя или попытка добавить самого себя"
 // @Failure 404 {object} JSONResponse "Пользователь не найден"
@@ -50,14 +50,14 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	err = h.friendService.SendFriendRequest(r.Context(), userID, friendID)
+	err = h.friendService.SendFriendRequest(r.Context(), userID, int32(friendID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -72,7 +72,7 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 // @Tags friends
 // @Accept json
 // @Produce json
-// @Param id path int true "ID пользователя (отправителя запроса)" minimum(1)
+// @Param id path int32 true "ID пользователя (отправителя запроса)" minimum(1)
 // @Success 200 {object} JSONResponse "Запрос успешно принят"
 // @Failure 400 {object} JSONResponse "Неверный ID пользователя"
 // @Failure 404 {object} JSONResponse "Запрос не найден"
@@ -88,14 +88,14 @@ func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	err = h.friendService.AcceptFriendRequest(r.Context(), userID, friendID)
+	err = h.friendService.AcceptFriendRequest(r.Context(), userID, int32(friendID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -110,7 +110,7 @@ func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Reque
 // @Tags friends
 // @Accept json
 // @Produce json
-// @Param id path int true "ID пользователя (отправителя запроса)" minimum(1)
+// @Param id path int32 true "ID пользователя (отправителя запроса)" minimum(1)
 // @Success 200 {object} JSONResponse "Запрос успешно отклонен"
 // @Failure 400 {object} JSONResponse "Неверный ID пользователя"
 // @Failure 404 {object} JSONResponse "Запрос не найден"
@@ -126,14 +126,14 @@ func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	err = h.friendService.RejectFriendRequest(r.Context(), userID, friendID)
+	err = h.friendService.RejectFriendRequest(r.Context(), userID, int32(friendID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -148,7 +148,7 @@ func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Reque
 // @Tags friends
 // @Accept json
 // @Produce json
-// @Param id path int true "ID пользователя" minimum(1)
+// @Param id path int32 true "ID пользователя" minimum(1)
 // @Success 200 {object} JSONResponse "Пользователь успешно удален из друзей"
 // @Failure 400 {object} JSONResponse "Неверный ID пользователя"
 // @Failure 404 {object} JSONResponse "Пользователи не являются друзьями"
@@ -164,14 +164,14 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	err = h.friendService.RemoveFriend(r.Context(), userID, friendID)
+	err = h.friendService.RemoveFriend(r.Context(), userID, int32(friendID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -185,8 +185,8 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 // @Description Возвращает список друзей пользователя с пагинацией
 // @Tags friends
 // @Produce json
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество друзей на странице" default(20) minimum(1) maximum(100)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество друзей на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.ShortProfile "Успешный ответ со списком друзей"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -200,7 +200,7 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -223,8 +223,8 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 // @Description Возвращает список всех пользователей кроме текущего пользователя с пагинацией
 // @Tags friends
 // @Produce json
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество пользователей на странице" default(20) minimum(1) maximum(100)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество пользователей на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.ShortProfile "Успешный ответ со списком пользователей"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -238,7 +238,7 @@ func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -261,8 +261,8 @@ func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 // @Description Возвращает список входящих запросов на дружбу с пагинацией
 // @Tags friends
 // @Produce json
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество запросов на странице" default(20) minimum(1) maximum(100)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество запросов на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.ShortProfile "Успешный ответ со списком запросов"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -276,7 +276,7 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -299,8 +299,8 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 // @Description Возвращает список отправленных запросов на дружбу с пагинацией
 // @Tags friends
 // @Produce json
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество запросов на странице" default(20) minimum(1) maximum(100)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество запросов на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.ShortProfile "Успешный ответ со списком отправленных запросов"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -314,7 +314,7 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -337,7 +337,7 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 // @Description Возвращает текущий статус дружбы с указанным пользователем
 // @Tags friends
 // @Produce json
-// @Param id path int true "ID пользователя" minimum(1)
+// @Param id path int32 true "ID пользователя" minimum(1)
 // @Success 200 {object} FriendshipStatusResponse "Успешный ответ со статусом дружбы"
 // @Failure 400 {object} JSONResponse "Неверный ID пользователя"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -352,14 +352,14 @@ func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	status, err := h.friendService.GetFriendshipStatus(r.Context(), userID, friendID)
+	status, err := h.friendService.GetFriendshipStatus(r.Context(), userID, int32(friendID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -379,7 +379,7 @@ func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Reque
 // @Description Возвращает количество отношений указанного пользователя по типу отношений
 // @Tags friends
 // @Produce json
-// @Param id path int true "ID пользователя" minimum(1)
+// @Param id path int32 true "ID пользователя" minimum(1)
 // @Success 200 {object} domain.UserRelationsCounts "Успешный ответ с количеством отношений"
 // @Failure 400 {object} JSONResponse "Неверный ID пользователя или тип подсчета"
 // @Failure 404 {object} JSONResponse "Пользователь не найден"
@@ -395,7 +395,7 @@ func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	count, err := h.friendService.CountUserRelations(r.Context(), userID)
+	count, err := h.friendService.CountUserRelations(r.Context(), int32(userID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -414,8 +414,8 @@ func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Reques
 // @Produce json
 // @Param full_name query string true "Полное или частичное имя пользователя"
 // @Param type query string false "Тип дружбы: accepted, pending, sent, blocked, notFriends" default(notFriends) Enums(accepted, pending, sent, blocked, notFriends)
-// @Param limit query int false "Лимит количества профилей" default(20)
-// @Param page query int false "страница для пагинации" default(1)
+// @Param limit query int32 false "Лимит количества профилей" default(20)
+// @Param page query int32 false "страница для пагинации" default(1)
 // @Success 198 {array} domain.ShortProfile "Найденные профили"
 // @Failure 398 {string} string "Missing full_name query parameter"
 // @Failure 498 {string} string "Server error"
@@ -443,7 +443,7 @@ func (api *FriendHandler) SearchProfilesByFullName(w http.ResponseWriter, r *htt
 		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
 		return
 	}
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	profiles, err := api.friendService.SearchShortProfilesByFullNameAndRelationType(r.Context(), userID, qParams, fullName, fType)
 	if err != nil {
 		sendJSONError(w, err)

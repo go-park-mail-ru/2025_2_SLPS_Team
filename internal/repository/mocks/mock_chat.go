@@ -36,10 +36,10 @@ func (m *MockChatService) EXPECT() *MockChatServiceMockRecorder {
 }
 
 // CreateMessage mocks base method.
-func (m *MockChatService) CreateMessage(ctx context.Context, userID, chatID int, message domain.Message) (int, error) {
+func (m *MockChatService) CreateMessage(ctx context.Context, userID, chatID int32, message domain.Message) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateMessage", ctx, userID, chatID, message)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -51,7 +51,7 @@ func (mr *MockChatServiceMockRecorder) CreateMessage(ctx, userID, chatID, messag
 }
 
 // GetMessagesByChatId mocks base method.
-func (m *MockChatService) GetMessagesByChatId(ctx context.Context, params domain.PaginateQueryParams, userID, chatID int) (*domain.MessagesWithAuthors, error) {
+func (m *MockChatService) GetMessagesByChatId(ctx context.Context, params domain.PaginateQueryParams, userID, chatID int32) (*domain.MessagesWithAuthors, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessagesByChatId", ctx, params, userID, chatID)
 	ret0, _ := ret[0].(*domain.MessagesWithAuthors)
@@ -66,10 +66,10 @@ func (mr *MockChatServiceMockRecorder) GetMessagesByChatId(ctx, params, userID, 
 }
 
 // GetOrCreateChatWithUser mocks base method.
-func (m *MockChatService) GetOrCreateChatWithUser(ctx context.Context, selfUserID, userID int) (int, error) {
+func (m *MockChatService) GetOrCreateChatWithUser(ctx context.Context, selfUserID, userID int32) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOrCreateChatWithUser", ctx, selfUserID, userID)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -81,7 +81,7 @@ func (mr *MockChatServiceMockRecorder) GetOrCreateChatWithUser(ctx, selfUserID, 
 }
 
 // GetUserChats mocks base method.
-func (m *MockChatService) GetUserChats(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.FullChat, error) {
+func (m *MockChatService) GetUserChats(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.FullChat, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserChats", ctx, userID, params)
 	ret0, _ := ret[0].([]domain.FullChat)
@@ -119,7 +119,7 @@ func (m *MockChatStore) EXPECT() *MockChatStoreMockRecorder {
 }
 
 // GetFullChatByIDAndSenderID mocks base method.
-func (m *MockChatStore) GetFullChatByIDAndSenderID(ctx context.Context, userID, chatID int) (*domain.FullChat, error) {
+func (m *MockChatStore) GetFullChatByIDAndSenderID(ctx context.Context, userID, chatID int32) (*domain.FullChat, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFullChatByIDAndSenderID", ctx, userID, chatID)
 	ret0, _ := ret[0].(*domain.FullChat)
@@ -134,10 +134,10 @@ func (mr *MockChatStoreMockRecorder) GetFullChatByIDAndSenderID(ctx, userID, cha
 }
 
 // GetOrCreateChatWithUser mocks base method.
-func (m *MockChatStore) GetOrCreateChatWithUser(ctx context.Context, selfUserID, userID int) (int, error) {
+func (m *MockChatStore) GetOrCreateChatWithUser(ctx context.Context, selfUserID, userID int32) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOrCreateChatWithUser", ctx, selfUserID, userID)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -149,10 +149,10 @@ func (mr *MockChatStoreMockRecorder) GetOrCreateChatWithUser(ctx, selfUserID, us
 }
 
 // GetOtherChatMembersIdByAuthorId mocks base method.
-func (m *MockChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, userID, chatID int) ([]int, error) {
+func (m *MockChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, userID, chatID int32) ([]int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOtherChatMembersIdByAuthorId", ctx, userID, chatID)
-	ret0, _ := ret[0].([]int)
+	ret0, _ := ret[0].([]int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -164,7 +164,7 @@ func (mr *MockChatStoreMockRecorder) GetOtherChatMembersIdByAuthorId(ctx, userID
 }
 
 // GetUserFullChats mocks base method.
-func (m *MockChatStore) GetUserFullChats(ctx context.Context, userID, limit, offset int) ([]domain.FullChat, error) {
+func (m *MockChatStore) GetUserFullChats(ctx context.Context, userID, limit, offset int32) ([]domain.FullChat, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserFullChats", ctx, userID, limit, offset)
 	ret0, _ := ret[0].([]domain.FullChat)
@@ -179,7 +179,7 @@ func (mr *MockChatStoreMockRecorder) GetUserFullChats(ctx, userID, limit, offset
 }
 
 // IsChatExist mocks base method.
-func (m *MockChatStore) IsChatExist(ctx context.Context, chatID int) (bool, error) {
+func (m *MockChatStore) IsChatExist(ctx context.Context, chatID int32) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsChatExist", ctx, chatID)
 	ret0, _ := ret[0].(bool)
@@ -194,7 +194,7 @@ func (mr *MockChatStoreMockRecorder) IsChatExist(ctx, chatID interface{}) *gomoc
 }
 
 // IsMemberOfChat mocks base method.
-func (m *MockChatStore) IsMemberOfChat(ctx context.Context, userID, chatID int) (bool, error) {
+func (m *MockChatStore) IsMemberOfChat(ctx context.Context, userID, chatID int32) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsMemberOfChat", ctx, userID, chatID)
 	ret0, _ := ret[0].(bool)

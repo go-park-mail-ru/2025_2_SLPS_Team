@@ -18,9 +18,9 @@ type RegisterRequest struct {
 
 type AuthService interface {
 	IsLoggedIn(ctx context.Context, sessionCookie *http.Cookie) (*Session, error)
-	AddSession(ctx context.Context, userID int) (*SIDAndSCRFToken, error)
-	Login(ctx context.Context, req User) (int, error)
+	AddSession(ctx context.Context, userID int32) (*SIDAndSCRFToken, error)
+	Login(ctx context.Context, req User) (int32, error)
 	Logout(ctx context.Context, session *http.Cookie) error
-	Register(ctx context.Context, req RegisterRequest) (int, error)
-	GetUserRole(ctx context.Context, userID int) (string, error)
+	Register(ctx context.Context, req RegisterRequest) (int32, error)
+	GetUserRole(ctx context.Context, userID int32) (string, error)
 }

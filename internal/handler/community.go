@@ -48,7 +48,7 @@ func (h *CommunityHandler) CreateCommunity(w http.ResponseWriter, r *http.Reques
 	name := r.FormValue("name")
 	description := r.FormValue("description")
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -91,7 +91,7 @@ func (h *CommunityHandler) CreateCommunity(w http.ResponseWriter, r *http.Reques
 // @Tags communities
 // @Accept multipart/form-data
 // @Produce json
-// @Param id path int true "ID сообщества"
+// @Param id path int32 true "ID сообщества"
 // @Param name formData string false "Название сообщества (3-48 символов)"
 // @Param description formData string false "Описание сообщества (до 512 символов)"
 // @Param avatar formData file false "Новый аватар сообщества"
@@ -123,7 +123,7 @@ func (h *CommunityHandler) UpdateCommunity(w http.ResponseWriter, r *http.Reques
 	name := r.FormValue("name")
 	description := r.FormValue("description")
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -143,7 +143,7 @@ func (h *CommunityHandler) UpdateCommunity(w http.ResponseWriter, r *http.Reques
 		Description: description,
 	}
 
-	err = h.communityService.UpdateCommunity(r.Context(), communityID, userID, req, avatarFile, coverFile)
+	err = h.communityService.UpdateCommunity(r.Context(), int32(communityID), userID, req, avatarFile, coverFile)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -157,7 +157,7 @@ func (h *CommunityHandler) UpdateCommunity(w http.ResponseWriter, r *http.Reques
 // @Description Удаляет сообщество (только создатель)
 // @Tags communities
 // @Produce json
-// @Param id path int true "ID сообщества"
+// @Param id path int32 true "ID сообщества"
 // @Success 200 {object} JSONResponse "Сообщество успешно удалено"
 // @Failure 400 {object} JSONResponse "Неверный ID сообщества"
 // @Failure 401 {object} JSONResponse "Пользователь не авторизован"
@@ -175,14 +175,14 @@ func (h *CommunityHandler) DeleteCommunity(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	err = h.communityService.DeleteCommunity(r.Context(), communityID, userID)
+	err = h.communityService.DeleteCommunity(r.Context(), int32(communityID), userID)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -196,7 +196,7 @@ func (h *CommunityHandler) DeleteCommunity(w http.ResponseWriter, r *http.Reques
 // @Description Возвращает информацию о сообществе включая количество подписчиков, статус подписки текущего пользователя, создателя
 // @Tags communities
 // @Produce json
-// @Param id path int true "ID сообщества"
+// @Param id path int32 true "ID сообщества"
 // @Success 200 {object} domain.CommunityForView "Информация о сообществе"
 // @Failure 400 {object} JSONResponse "Неверный ID сообщества"
 // @Failure 404 {object} JSONResponse "Сообщество не найдено"
@@ -212,9 +212,9 @@ func (h *CommunityHandler) GetCommunity(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	community, err := h.communityService.GetCommunity(r.Context(), userID, communityID)
+	community, err := h.communityService.GetCommunity(r.Context(), userID, int32(communityID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -230,8 +230,8 @@ func (h *CommunityHandler) GetCommunity(w http.ResponseWriter, r *http.Request) 
 // @Description Возвращает список сообществ, на которые подписан пользователь
 // @Tags communities
 // @Produce json
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.ShortCommunity "Список сообществ пользователя"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -245,7 +245,7 @@ func (h *CommunityHandler) GetUserCommunities(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -268,8 +268,8 @@ func (h *CommunityHandler) GetUserCommunities(w http.ResponseWriter, r *http.Req
 // @Description Возвращает список сообществ, на которые пользователь не подписан (рекомендации)
 // @Tags communities
 // @Produce json
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.ShortCommunity "Список рекомендуемых сообществ"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -283,7 +283,7 @@ func (h *CommunityHandler) GetOtherCommunities(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -306,9 +306,9 @@ func (h *CommunityHandler) GetOtherCommunities(w http.ResponseWriter, r *http.Re
 // @Description Возвращает список сообществ, на которые подписан указанный пользователь
 // @Tags communities
 // @Produce json
-// @Param id path int true "ID пользователя"
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
+// @Param id path int32 true "ID пользователя"
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.ShortCommunity "Список сообществ пользователя"
 // @Failure 400 {object} JSONResponse "Неверные параметры запроса"
 // @Failure 404 {object} JSONResponse "Пользователь не найден"
@@ -331,7 +331,7 @@ func (h *CommunityHandler) GetUserCommunitiesByID(w http.ResponseWriter, r *http
 		return
 	}
 
-	communities, err := h.communityService.GetUserCommunitiesByID(r.Context(), targetUserID, qParams)
+	communities, err := h.communityService.GetUserCommunitiesByID(r.Context(), int32(targetUserID), qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -347,8 +347,8 @@ func (h *CommunityHandler) GetUserCommunitiesByID(w http.ResponseWriter, r *http
 // @Description Возвращает список ID сообществ, на которые подписан указанный пользователь
 // @Tags communities
 // @Produce json
-// @Param userID path int true "ID пользователя"
-// @Success 200 {array} int "Список ID подписанных сообществ"
+// @Param userID path int32 true "ID пользователя"
+// @Success 200 {array} int32 "Список ID подписанных сообществ"
 // @Failure 400 {object} JSONResponse "Неверный ID пользователя"
 // @Failure 404 {object} JSONResponse "Пользователь не найден"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -363,7 +363,7 @@ func (h *CommunityHandler) GetUserSubscribedCommunityIDs(w http.ResponseWriter, 
 		return
 	}
 
-	communityIDs, err := h.communityService.GetUserSubscribedCommunityIDs(r.Context(), targetUserID)
+	communityIDs, err := h.communityService.GetUserSubscribedCommunityIDs(r.Context(), int32(targetUserID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -379,8 +379,8 @@ func (h *CommunityHandler) GetUserSubscribedCommunityIDs(w http.ResponseWriter, 
 // @Description Возвращает список сообществ, созданных текущим пользователем (только ID, название и аватар)
 // @Tags communities
 // @Produce json
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество сообществ на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.CommunityForMyCommunity "Список созданных сообществ"
 // @Failure 400 {object} JSONResponse "Неверные параметры пагинации"
 // @Failure 401 {object} JSONResponse "Пользователь не авторизован"
@@ -395,7 +395,7 @@ func (h *CommunityHandler) GetCreatedCommunities(w http.ResponseWriter, r *http.
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -418,9 +418,9 @@ func (h *CommunityHandler) GetCreatedCommunities(w http.ResponseWriter, r *http.
 // @Description Возвращает список подписчиков указанного сообщества
 // @Tags communities
 // @Produce json
-// @Param id path int true "ID сообщества"
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество подписчиков на странице" default(20) minimum(1) maximum(100)
+// @Param id path int32 true "ID сообщества"
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество подписчиков на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.CommunitySubscriber "Список подписчиков"
 // @Failure 400 {object} JSONResponse "Неверные параметры запроса"
 // @Failure 404 {object} JSONResponse "Сообщество не найдено"
@@ -443,7 +443,7 @@ func (h *CommunityHandler) GetCommunitySubscribers(w http.ResponseWriter, r *htt
 		return
 	}
 
-	subscribers, err := h.communityService.GetCommunitySubscribers(r.Context(), communityID, qParams)
+	subscribers, err := h.communityService.GetCommunitySubscribers(r.Context(), int32(communityID), qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -459,7 +459,7 @@ func (h *CommunityHandler) GetCommunitySubscribers(w http.ResponseWriter, r *htt
 // @Description Подписывает текущего пользователя на указанное сообщество
 // @Tags communities
 // @Produce json
-// @Param id path int true "ID сообщества"
+// @Param id path int32 true "ID сообщества"
 // @Success 200 {object} JSONResponse "Успешная подписка"
 // @Failure 400 {object} JSONResponse "Неверный ID сообщества"
 // @Failure 404 {object} JSONResponse "Сообщество не найдено"
@@ -475,14 +475,14 @@ func (h *CommunityHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	err = h.communityService.Subscribe(r.Context(), communityID, userID)
+	err = h.communityService.Subscribe(r.Context(), int32(communityID), userID)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -496,7 +496,7 @@ func (h *CommunityHandler) Subscribe(w http.ResponseWriter, r *http.Request) {
 // @Description Отписывает текущего пользователя от указанного сообщества
 // @Tags communities
 // @Produce json
-// @Param id path int true "ID сообщества"
+// @Param id path int32 true "ID сообщества"
 // @Success 200 {object} JSONResponse "Успешная отписка"
 // @Failure 400 {object} JSONResponse "Неверный ID сообщества"
 // @Failure 404 {object} JSONResponse "Подписка не найдена"
@@ -512,14 +512,14 @@ func (h *CommunityHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
 		return
 	}
 
-	err = h.communityService.Unsubscribe(r.Context(), communityID, userID)
+	err = h.communityService.Unsubscribe(r.Context(), int32(communityID), userID)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -539,8 +539,8 @@ func (h *CommunityHandler) Unsubscribe(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param name query string true "Полное или частичное имя сообщества"
 // @Param type query string false "Тип подписки: subscriber, notSubscriber" default(recommended) Enums(subscriber, recommended)
-// @Param limit query int false "Лимит количества сообществ" default(20)
-// @Param page query int false "Номер страницы для пагинации" default(1)
+// @Param limit query int32 false "Лимит количества сообществ" default(20)
+// @Param page query int32 false "Номер страницы для пагинации" default(1)
 // @Success 200 {array} domain.ShortCommunity "Найденные сообщества"
 // @Failure 400 {string} string "Missing name query parameter"
 // @Failure 500 {string} string "Server error"
@@ -568,7 +568,7 @@ func (api *CommunityHandler) SearchCommunityByName(w http.ResponseWriter, r *htt
 		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
 		return
 	}
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	com, err := api.communityService.SearchShortCommunityByNameAndType(r.Context(), userID, qParams, name, cType)
 	if err != nil {
 		sendJSONError(w, err)

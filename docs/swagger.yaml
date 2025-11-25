@@ -323,10 +323,12 @@ paths:
         users see only theirs.
       parameters:
       - description: Page number
+        format: int32
         in: query
         name: page
         type: integer
       - description: Items per page
+        format: int32
         in: query
         name: limit
         type: integer
@@ -387,6 +389,7 @@ paths:
       description: Updates the status of an existing support application by ID.
       parameters:
       - description: Application ID
+        format: int32
         in: path
         name: id
         required: true
@@ -420,6 +423,7 @@ paths:
       description: Updates the text of an existing support application by ID.
       parameters:
       - description: Application ID
+        format: int32
         in: path
         name: id
         required: true
@@ -561,11 +565,13 @@ paths:
       parameters:
       - default: 20
         description: Количество чатов для возврата
+        format: int32
         in: query
         name: limit
         type: integer
       - default: 0
         description: Номер страницы для пагинации
+        format: int32
         in: query
         name: page
         type: integer
@@ -596,6 +602,7 @@ paths:
       description: Создает новое сообщение в указанном чате
       parameters:
       - description: ID чата
+        format: int32
         in: path
         name: chatID
         required: true
@@ -632,6 +639,7 @@ paths:
         пользователя в указанном чате.
       parameters:
       - description: ID чата
+        format: int32
         in: path
         name: id
         required: true
@@ -666,17 +674,20 @@ paths:
         об авторах
       parameters:
       - description: ID чата
+        format: int32
         in: path
         name: id
         required: true
         type: integer
       - default: 20
         description: Лимит количества сообщений
+        format: int32
         in: query
         name: limit
         type: integer
       - default: 0
         description: страница для пагинации
+        format: int32
         in: query
         name: page
         type: integer
@@ -710,6 +721,7 @@ paths:
         создавая чат при отсутствии
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         name: id
         required: true
@@ -785,6 +797,7 @@ paths:
       description: Удаляет сообщество (только создатель)
       parameters:
       - description: ID сообщества
+        format: int32
         in: path
         name: id
         required: true
@@ -826,6 +839,7 @@ paths:
         статус подписки текущего пользователя, создателя
       parameters:
       - description: ID сообщества
+        format: int32
         in: path
         name: id
         required: true
@@ -860,6 +874,7 @@ paths:
       description: Обновляет информацию о сообществе (только создатель)
       parameters:
       - description: ID сообщества
+        format: int32
         in: path
         name: id
         required: true
@@ -917,6 +932,7 @@ paths:
       description: Подписывает текущего пользователя на указанное сообщество
       parameters:
       - description: ID сообщества
+        format: int32
         in: path
         name: id
         required: true
@@ -950,18 +966,21 @@ paths:
       description: Возвращает список подписчиков указанного сообщества
       parameters:
       - description: ID сообщества
+        format: int32
         in: path
         name: id
         required: true
         type: integer
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество подписчиков на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -998,6 +1017,7 @@ paths:
       description: Отписывает текущего пользователя от указанного сообщества
       parameters:
       - description: ID сообщества
+        format: int32
         in: path
         name: id
         required: true
@@ -1033,12 +1053,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество сообществ на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1076,12 +1098,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество сообществ на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1116,12 +1140,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество сообществ на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1169,11 +1195,13 @@ paths:
         type: string
       - default: 20
         description: Лимит количества сообществ
+        format: int32
         in: query
         name: limit
         type: integer
       - default: 1
         description: Номер страницы для пагинации
+        format: int32
         in: query
         name: page
         type: integer
@@ -1196,24 +1224,27 @@ paths:
             type: string
       summary: Поиск сообществ по имени
       tags:
-      - community
+      - communities
   /communities/users/{id}:
     get:
       description: Возвращает список сообществ, на которые подписан указанный пользователь
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         name: id
         required: true
         type: integer
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество сообществ на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1250,6 +1281,7 @@ paths:
       description: Возвращает список ID сообществ, на которые подписан указанный пользователь
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         name: userID
         required: true
@@ -1261,6 +1293,7 @@ paths:
           description: Список ID подписанных сообществ
           schema:
             items:
+              format: int32
               type: integer
             type: array
         "400":
@@ -1286,12 +1319,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество друзей на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1326,6 +1361,7 @@ paths:
       description: Удаляет пользователя из списка друзей
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1361,6 +1397,7 @@ paths:
       description: Отправляет запрос на дружбу другому пользователю
       parameters:
       - description: ID пользователя, которому отправляется запрос
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1401,6 +1438,7 @@ paths:
       description: Принимает входящий запрос на дружбу
       parameters:
       - description: ID пользователя (отправителя запроса)
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1436,6 +1474,7 @@ paths:
         отношений
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1472,6 +1511,7 @@ paths:
       description: Отклоняет входящий запрос на дружбу
       parameters:
       - description: ID пользователя (отправителя запроса)
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1506,6 +1546,7 @@ paths:
       description: Возвращает текущий статус дружбы с указанным пользователем
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1537,12 +1578,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество запросов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1593,11 +1636,13 @@ paths:
         type: string
       - default: 20
         description: Лимит количества профилей
+        format: int32
         in: query
         name: limit
         type: integer
       - default: 1
         description: страница для пагинации
+        format: int32
         in: query
         name: page
         type: integer
@@ -1627,12 +1672,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество запросов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1667,12 +1714,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество пользователей на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1709,12 +1758,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество постов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1751,6 +1802,7 @@ paths:
         name: text
         type: string
       - description: ID сообщества (если пост в сообществе)
+        format: int32
         in: formData
         name: communityID
         type: integer
@@ -1799,6 +1851,7 @@ paths:
       description: Удаляет пост (только автор)
       parameters:
       - description: ID поста
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1842,6 +1895,7 @@ paths:
       description: Возвращает пост по его идентификатору
       parameters:
       - description: ID поста
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1876,6 +1930,7 @@ paths:
         файлов
       parameters:
       - description: ID поста
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1939,6 +1994,7 @@ paths:
         указанном посте.
       parameters:
       - description: ID поста
+        format: int32
         in: path
         name: id
         required: true
@@ -1968,6 +2024,7 @@ paths:
       description: Возвращает посты конкретного сообщества с пагинацией
       parameters:
       - description: ID сообщества
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1975,12 +2032,14 @@ paths:
         type: integer
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество постов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -2051,6 +2110,7 @@ paths:
       description: Возвращает профиль пользователя по его ID.
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         name: id
         required: true
@@ -2165,6 +2225,7 @@ paths:
       description: Возвращает посты конкретного пользователя с пагинацией
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         minimum: 1
         name: userID
@@ -2172,12 +2233,14 @@ paths:
         type: integer
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество постов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1

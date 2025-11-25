@@ -16,7 +16,7 @@ type DBMessageStore struct {
 func NewDBMessageStore(db *sql.DB) domain.MessageStore {
 	return &DBMessageStore{db: db}
 }
-func (store *DBMessageStore) GetMessagesByChatId(ctx context.Context, chatID int, limit int, offset int) ([]domain.Message, error) {
+func (store *DBMessageStore) GetMessagesByChatId(ctx context.Context, chatID int32, limit int32, offset int32) ([]domain.Message, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "messageStore")
 	dbloggerCopy := dblogger
@@ -33,7 +33,7 @@ func (store *DBMessageStore) GetMessagesByChatId(ctx context.Context, chatID int
               WHERE chat_id = $1
               ORDER BY created_at DESC
               LIMIT $2 OFFSET $3`
-	dblogger = dblogger.With(zap.Int("chatID", chatID), zap.String("query", query))
+	dblogger = dblogger.With(zap.Int32("chatID", chatID), zap.String("query", query))
 	rows, err := store.db.Query(query, chatID, limit, offset)
 	if err != nil {
 		dblogger.Error("Failed to find messages by chat", zap.Error(err))
@@ -66,7 +66,7 @@ func (store *DBMessageStore) GetMessagesByChatId(ctx context.Context, chatID int
 	return messages, nil
 }
 
-func (store *DBMessageStore) CreateMessage(ctx context.Context, message domain.Message) (int, error) {
+func (store *DBMessageStore) CreateMessage(ctx context.Context, message domain.Message) (int32, error) {
 
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "messageStore")
@@ -76,15 +76,15 @@ func (store *DBMessageStore) CreateMessage(ctx context.Context, message domain.M
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
-	var messageID int
+	var messageID int32
 	query := `INSERT INTO messages (author_id, chat_id, text) VALUES ($1, $2, $3) RETURNING id`
-	dblogger = dblogger.With(zap.Int("chatID", message.ChatID), zap.String("query", query))
+	dblogger = dblogger.With(zap.Int32("chatID", message.ChatID), zap.String("query", query))
 	err := store.db.QueryRow(query, message.AuthorID, message.ChatID, message.Text).Scan(&messageID)
 	if err != nil {
 		dblogger.Error("Failed to create message", zap.Error(err))
 		return 0, err
 	}
 
-	dblogger.Info("Message Created", zap.Int("messageID", messageID))
+	dblogger.Info("Message Created", zap.Int32("messageID", messageID))
 	return messageID, nil
 }

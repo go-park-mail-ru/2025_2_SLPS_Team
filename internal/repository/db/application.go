@@ -16,7 +16,7 @@ func NewDBApplicationStore(db *sql.DB) domain.ApplicationStore {
 }
 
 // Получение обращений с пагинацией для админа
-func (r *DBApplicationStore) GetApplications(ctx context.Context, limit, offset int) ([]domain.Application, error) {
+func (r *DBApplicationStore) GetApplications(ctx context.Context, limit, offset int32) ([]domain.Application, error) {
 	query := `
         SELECT id, author_id, text, category, status, created_at, updated_at, email_req, email_feedback
         FROM applications
@@ -43,7 +43,7 @@ func (r *DBApplicationStore) GetApplications(ctx context.Context, limit, offset 
 	return apps, nil
 }
 
-func (r *DBApplicationStore) GetApplicationsByUser(ctx context.Context, limit, offset int) ([]domain.Application, error) {
+func (r *DBApplicationStore) GetApplicationsByUser(ctx context.Context, limit, offset int32) ([]domain.Application, error) {
 	query := `
         SELECT id, author_id, text, category, status, created_at, updated_at, email_req, email_feedback
         FROM applications
@@ -75,7 +75,7 @@ func (r *DBApplicationStore) GetApplicationsByUser(ctx context.Context, limit, o
 	return apps, nil
 }
 
-func (r *DBApplicationStore) UpdateApplicationText(ctx context.Context, id int, newText string) error {
+func (r *DBApplicationStore) UpdateApplicationText(ctx context.Context, id int32, newText string) error {
 	query := `
         UPDATE applications 
         SET text = $1 
@@ -84,7 +84,7 @@ func (r *DBApplicationStore) UpdateApplicationText(ctx context.Context, id int, 
 	return err
 }
 
-func (r *DBApplicationStore) UpdateApplicationStatus(ctx context.Context, id int, newStatus string) error {
+func (r *DBApplicationStore) UpdateApplicationStatus(ctx context.Context, id int32, newStatus string) error {
 	query := `
         UPDATE applications 
         SET status = $1
@@ -93,7 +93,7 @@ func (r *DBApplicationStore) UpdateApplicationStatus(ctx context.Context, id int
 	return err
 }
 
-func (r *DBApplicationStore) CreateApplication(ctx context.Context, app domain.Application) (int, error) {
+func (r *DBApplicationStore) CreateApplication(ctx context.Context, app domain.Application) (int32, error) {
 	query := `
         INSERT INTO applications (author_id, temp_session_id, text, category, email_req, email_feedback)
         VALUES ($1, $2, $3, $4, $5, $6)
@@ -103,7 +103,7 @@ func (r *DBApplicationStore) CreateApplication(ctx context.Context, app domain.A
 	if TempSessionInfo == nil {
 		TempSessionInfo = &domain.TempSessionInfo{}
 	}
-	var id int
+	var id int32
 	err := r.db.QueryRowContext(ctx, query,
 		TempSessionInfo.UserID,
 		TempSessionInfo.TempSessionID,

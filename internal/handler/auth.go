@@ -34,7 +34,7 @@ func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 }
 
 type IsLoggedInResponse struct {
-	UserID int    `json:"userID"`
+	UserID int32  `json:"userID"`
 	Role   string `json:"role"`
 }
 
@@ -71,7 +71,7 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 	domain.FromContext(r.Context()).Info("registration success")
 }
 
-func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userID int) error {
+func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userID int32) error {
 	tokens, err := api.authService.AddSession(r.Context(), userID)
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSONResponse(w, "User logged in", http.StatusOK)
-	domain.FromContext(r.Context()).Info("User logged in", zap.Int("userID", userID))
+	domain.FromContext(r.Context()).Info("User logged in", zap.Int32("userID", userID))
 }
 
 // Logout удаляет текущую сессию пользователя.
@@ -208,5 +208,5 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	sendJSONResponse(w, "User created", http.StatusOK)
-	domain.FromContext(r.Context()).Info("User created, registration complete", zap.Int("userID", userID))
+	domain.FromContext(r.Context()).Info("User created, registration complete", zap.Int32("userID", userID))
 }

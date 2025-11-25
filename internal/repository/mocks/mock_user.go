@@ -36,10 +36,10 @@ func (m *MockUserStore) EXPECT() *MockUserStoreMockRecorder {
 }
 
 // CreateUser mocks base method.
-func (m *MockUserStore) CreateUser(ctx context.Context, user domain.User, profile domain.Profile) (int, error) {
+func (m *MockUserStore) CreateUser(ctx context.Context, user domain.User, profile domain.Profile) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateUser", ctx, user, profile)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -66,7 +66,7 @@ func (mr *MockUserStoreMockRecorder) GetUserByEmail(ctx, email interface{}) *gom
 }
 
 // GetUserByID mocks base method.
-func (m *MockUserStore) GetUserByID(ctx context.Context, userID int) (domain.User, error) {
+func (m *MockUserStore) GetUserByID(ctx context.Context, userID int32) (domain.User, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserByID", ctx, userID)
 	ret0, _ := ret[0].(domain.User)
@@ -81,7 +81,7 @@ func (mr *MockUserStoreMockRecorder) GetUserByID(ctx, userID interface{}) *gomoc
 }
 
 // IsUserExists mocks base method.
-func (m *MockUserStore) IsUserExists(ctx context.Context, userID int) (bool, error) {
+func (m *MockUserStore) IsUserExists(ctx context.Context, userID int32) (bool, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsUserExists", ctx, userID)
 	ret0, _ := ret[0].(bool)

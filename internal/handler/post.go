@@ -24,8 +24,8 @@ func NewPostsHandler(postService domain.PostService) *PostsHandler {
 // PostsRequest - запрос для пагинации постов
 // @Description Параметры пагинации для постов
 type PostsRequest struct {
-	Page  int `schema:"page" example:"1"`   // Номер страницы
-	Limit int `schema:"limit" example:"20"` // Количество постов на странице
+	Page  int32 `schema:"page" example:"1"`   // Номер страницы
+	Limit int32 `schema:"limit" example:"20"` // Количество постов на странице
 }
 
 // PostsResponse - ответ с постами и пагинацией
@@ -40,8 +40,8 @@ type PostsResponse struct {
 // @Tags posts
 // @Accept json
 // @Produce json
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество постов на странице" default(20) minimum(1) maximum(100)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество постов на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.PostView "Успешный ответ с постами"
 // @Failure 400 {object} JSONResponse "Неверные параметры запроса"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -54,7 +54,7 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	posts, err := h.postService.PostsPaginate(r.Context(), userID, qParams)
 	if err != nil {
@@ -73,7 +73,7 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 // @Tags posts
 // @Accept json
 // @Produce json
-// @Param id path int true "ID поста" minimum(1)
+// @Param id path int32 true "ID поста" minimum(1)
 // @Success 200 {object} domain.PostView "Пост найден"
 // @Failure 400 {object} JSONResponse "Неверный ID поста"
 // @Failure 404 {object} JSONResponse "Пост не найден"
@@ -87,7 +87,7 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
 		return
 	}
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	post, err := h.postService.GetPost(r.Context(), userID, uint(postID))
 	if err != nil {
 		sendJSONError(w, err)
@@ -106,7 +106,7 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 // @Accept multipart/form-data
 // @Produce json
 // @Param text formData string false "Текст поста"
-// @Param communityID formData int false "ID сообщества (если пост в сообществе)"
+// @Param communityID formData int32 false "ID сообщества (если пост в сообществе)"
 // @Param attachments formData []file false "Вложения" collectionFormat(multi)
 // @Param photos formData []file false "Фотографии" collectionFormat(multi)
 // @Success 201 {object} JSONResponse
@@ -126,7 +126,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 	text := r.FormValue("text")
 	communityIDStr := r.FormValue("communityID")
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -141,7 +141,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		photoFiles = photos
 	}
 
-	var communityID *int
+	var communityID *int32
 	if communityIDStr != "" {
 		id, err := strconv.Atoi(communityIDStr)
 		if err != nil {
@@ -149,7 +149,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 			domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", communityIDStr))
 			return
 		}
-		communityID = &id
+		*communityID = int32(id)
 	}
 
 	post, err := h.postService.CreatePost(r.Context(), userID, text, communityID, attachmentFiles, photoFiles)
@@ -162,7 +162,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		"message": "Post created successfully",
 		"post":    post,
 	}
-	
+
 	if err := sendJSONData(r.Context(), w, response); err != nil {
 		return
 	}
@@ -174,7 +174,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 // @Tags posts
 // @Accept multipart/form-data
 // @Produce json
-// @Param id path int true "ID поста" minimum(1)
+// @Param id path int32 true "ID поста" minimum(1)
 // @Param text formData string false "Текст поста"
 // @Param attachments formData []file false "Новые вложения" collectionFormat(multi)
 // @Param photos formData []file false "Новые фотографии" collectionFormat(multi)
@@ -204,7 +204,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 	text := r.FormValue("text")
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, "Unauthorized", http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -234,7 +234,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 // @Tags posts
 // @Accept json
 // @Produce json
-// @Param id path int true "ID поста" minimum(1)
+// @Param id path int32 true "ID поста" minimum(1)
 // @Success 200 {object} JSONResponse "Пост успешно удален"
 // @Failure 400 {object} JSONResponse "Неверный ID поста"
 // @Failure 401 {object} JSONResponse "Пользователь не авторизован"
@@ -252,7 +252,7 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int)
+	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
 	if !ok {
 		sendJSONResponse(w, "Unauthorized", http.StatusUnauthorized)
 		domain.Warn(r.Context(), "User ID not found in context")
@@ -274,9 +274,9 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 // @Tags posts
 // @Accept json
 // @Produce json
-// @Param userID path int true "ID пользователя" minimum(1)
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество постов на странице" default(20) minimum(1) maximum(100)
+// @Param userID path int32 true "ID пользователя" minimum(1)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество постов на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.PostView "Успешный ответ с постами пользователя"
 // @Failure 400 {object} JSONResponse "Неверные параметры запроса"
 // @Failure 404 {object} JSONResponse "Пользователь не найден"
@@ -297,7 +297,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
 		return
 	}
-	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int)
+	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	posts, err := h.postService.GetUserPosts(r.Context(), selfUserID, uint(userID), qParams)
 	if err != nil {
 		sendJSONError(w, err)
@@ -317,7 +317,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 // @Tags posts
 // @Accept json
 // @Produce json
-// @Param id path int true "ID поста"
+// @Param id path int32 true "ID поста"
 // @Success 200 {object} JSONResponse "Информация о результате операции: лайк поставлен или снят"
 // @Failure 400 {object} JSONResponse "Некорректный ID поста"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
@@ -332,9 +332,9 @@ func (h *PostsHandler) UpdateLikeOnPost(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	err = h.postService.UpdateLikeOnPostByUserID(r.Context(), userID, postID)
+	err = h.postService.UpdateLikeOnPostByUserID(r.Context(), userID, int32(postID))
 	if err != nil {
 		domain.FromContext(r.Context()).Error("Failed update like on post", zap.Error(err))
 		return
@@ -343,15 +343,16 @@ func (h *PostsHandler) UpdateLikeOnPost(w http.ResponseWriter, r *http.Request) 
 	domain.FromContext(r.Context()).Info("like updated")
 	sendJSONResponse(w, "like updated", http.StatusOK)
 }
+
 // GetCommunityPosts возвращает посты сообщества
 // @Summary Получить посты сообщества
 // @Description Возвращает посты конкретного сообщества с пагинацией
 // @Tags posts
 // @Accept json
 // @Produce json
-// @Param id path int true "ID сообщества" minimum(1)
-// @Param page query int false "Номер страницы" default(1) minimum(1)
-// @Param limit query int false "Количество постов на странице" default(20) minimum(1) maximum(100)
+// @Param id path int32 true "ID сообщества" minimum(1)
+// @Param page query int32 false "Номер страницы" default(1) minimum(1)
+// @Param limit query int32 false "Количество постов на странице" default(20) minimum(1) maximum(100)
 // @Success 200 {array} domain.PostView "Успешный ответ с постами сообщества"
 // @Failure 400 {object} JSONResponse "Неверные параметры запроса"
 // @Failure 404 {object} JSONResponse "Сообщество не найдено"
@@ -373,8 +374,8 @@ func (h *PostsHandler) GetCommunityPosts(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-	posts, err := h.postService.GetCommunityPosts(r.Context(), userID, communityID, qParams)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+	posts, err := h.postService.GetCommunityPosts(r.Context(), userID, int32(communityID), qParams)
 	if err != nil {
 		sendJSONError(w, err)
 		return

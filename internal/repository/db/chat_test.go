@@ -39,7 +39,7 @@ func TestGetOrCreateChatWithUser_ExistingChat(t *testing.T) {
         HAVING COUNT(*) = 2 AND bool_and(member_id = ANY($1))
         LIMIT 1
     `)).
-		WithArgs(pq.Array([]int{1, 2})).
+		WithArgs(pq.Array([]int32{1, 2})).
 		WillReturnRows(sqlmock.NewRows([]string{"chat_id"}).AddRow(chatID))
 	mock.ExpectCommit()
 
@@ -67,7 +67,7 @@ func TestGetOrCreateChatWithUser_NewChat(t *testing.T) {
         HAVING COUNT(*) = 2 AND bool_and(member_id = ANY($1))
         LIMIT 1
     `)).
-		WithArgs(pq.Array([]int{1, 2})).
+		WithArgs(pq.Array([]int32{1, 2})).
 		WillReturnError(sql.ErrNoRows)
 	mock.ExpectQuery(regexp.QuoteMeta(`INSERT INTO chats DEFAULT VALUES RETURNING id`)).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(newChatID))
@@ -118,7 +118,7 @@ func TestGetOtherChatMembersIdByAuthorId(t *testing.T) {
 
 	members, err := store.GetOtherChatMembersIdByAuthorId(ctx, userID, chatID)
 	assert.NoError(t, err)
-	assert.Equal(t, []int{2, 3}, members)
+	assert.Equal(t, []int32{2, 3}, members)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
 

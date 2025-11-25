@@ -24,7 +24,7 @@ func NewApplicationHandler(ApplicationService domain.ApplicationService) *Applic
 }
 
 type ApplicationIDResponse struct {
-	ApplicationID int `json:"applicationID"`
+	ApplicationID int32 `json:"applicationID"`
 }
 
 // CreateApplication
@@ -78,8 +78,8 @@ func (api *ApplicationHandler) CreateApplication(w http.ResponseWriter, r *http.
 // @Tags Applications
 // @Accept json
 // @Produce json
-// @Param page query int false "Page number"
-// @Param limit query int false "Items per page"
+// @Param page query int32 false "Page number"
+// @Param limit query int32 false "Items per page"
 // @Success 200 {array} domain.Application
 // @Failure 400 {object} JSONResponse "Invalid query parameters"
 // @Failure 500 {object} JSONResponse "Internal server error"
@@ -112,7 +112,7 @@ type updateTextRequest struct {
 // @Tags Applications
 // @Accept json
 // @Produce json
-// @Param id path int true "Application ID"
+// @Param id path int32 true "Application ID"
 // @Param text body handler.updateTextRequest true "New text"
 // @Success 204 "No Content"
 // @Failure 400 {object} JSONResponse "Invalid ID or request body"
@@ -133,7 +133,7 @@ func (h *ApplicationHandler) UpdateApplicationText(w http.ResponseWriter, r *htt
 		return
 	}
 
-	if err := h.applicationService.UpdateApplicationText(r.Context(), id, req.Text); err != nil {
+	if err := h.applicationService.UpdateApplicationText(r.Context(), int32(id), req.Text); err != nil {
 		sendJSONError(w, err)
 		return
 	}
@@ -151,7 +151,7 @@ type updateStatusRequest struct {
 // @Tags Applications
 // @Accept json
 // @Produce json
-// @Param id path int true "Application ID"
+// @Param id path int32 true "Application ID"
 // @Param status body handler.updateStatusRequest true "New status"
 // @Success 204 "No Content"
 // @Failure 400 {object} JSONResponse "Invalid ID or request body"
@@ -172,7 +172,7 @@ func (h *ApplicationHandler) UpdateApplicationStatus(w http.ResponseWriter, r *h
 		return
 	}
 
-	if err := h.applicationService.UpdateApplicationStatus(r.Context(), id, req.Status); err != nil {
+	if err := h.applicationService.UpdateApplicationStatus(r.Context(), int32(id), req.Status); err != nil {
 		sendJSONError(w, err)
 		return
 	}

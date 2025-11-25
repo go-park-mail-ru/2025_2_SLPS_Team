@@ -27,7 +27,7 @@ func NewCommunityService(communityStore domain.CommunityStore, postStore domain.
 	}
 }
 
-func (s *CommunityService) CreateCommunity(ctx context.Context, userID int, req domain.CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) (*domain.Community, error) {
+func (s *CommunityService) CreateCommunity(ctx context.Context, userID int32, req domain.CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) (*domain.Community, error) {
 	// Валидация
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
@@ -35,7 +35,7 @@ func (s *CommunityService) CreateCommunity(ctx context.Context, userID int, req 
 		return nil, domain.ErrInvalidInput
 	}
 
-	domain.Info(ctx, "Creating community", zap.Int("userID", userID))
+	domain.Info(ctx, "Creating community", zap.Int32("userID", userID))
 
 	// Обработка аватара
 	var avatarPath *string
@@ -92,11 +92,11 @@ func (s *CommunityService) CreateCommunity(ctx context.Context, userID int, req 
 		// Не прерываем выполнение, так как сообщество уже создано
 	}
 
-	domain.Info(ctx, "Community created successfully", zap.Int("communityID", community.ID))
+	domain.Info(ctx, "Community created successfully", zap.Int32("communityID", community.ID))
 	return community, nil
 }
 
-func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int, userID int, req domain.CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) error {
+func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int32, userID int32, req domain.CommunityRequest, avatarFile *multipart.FileHeader, coverFile *multipart.FileHeader) error {
 	// Валидация
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
@@ -104,13 +104,13 @@ func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int,
 		return domain.ErrInvalidInput
 	}
 
-	domain.Info(ctx, "Updating community", zap.Int("communityID", communityID), zap.Int("userID", userID))
+	domain.Info(ctx, "Updating community", zap.Int32("communityID", communityID), zap.Int32("userID", userID))
 
 	// Получаем текущее сообщество
 	existingCommunity, err := s.communityStore.GetCommunityByID(ctx, communityID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", communityID))
 			return domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get community", err)
@@ -120,9 +120,9 @@ func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int,
 	// Проверяем права доступа
 	if existingCommunity.CreatorID != userID {
 		domain.Warn(ctx, "Access denied: user is not community creator",
-			zap.Int("communityID", communityID),
-			zap.Int("userID", userID),
-			zap.Int("creatorID", existingCommunity.CreatorID))
+			zap.Int32("communityID", communityID),
+			zap.Int32("userID", userID),
+			zap.Int32("creatorID", existingCommunity.CreatorID))
 		return domain.ErrAccessDenied
 	}
 
@@ -198,14 +198,14 @@ func (s *CommunityService) UpdateCommunity(ctx context.Context, communityID int,
 	return nil
 }
 
-func (s *CommunityService) DeleteCommunity(ctx context.Context, communityID int, userID int) error {
-	domain.Info(ctx, "Deleting community", zap.Int("communityID", communityID), zap.Int("userID", userID))
+func (s *CommunityService) DeleteCommunity(ctx context.Context, communityID int32, userID int32) error {
+	domain.Info(ctx, "Deleting community", zap.Int32("communityID", communityID), zap.Int32("userID", userID))
 
 	// Получаем сообщество для проверки прав и получения путей файлов
 	existingCommunity, err := s.communityStore.GetCommunityByID(ctx, communityID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", communityID))
 			return domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get community", err)
@@ -215,9 +215,9 @@ func (s *CommunityService) DeleteCommunity(ctx context.Context, communityID int,
 	// Проверяем права доступа
 	if existingCommunity.CreatorID != userID {
 		domain.Warn(ctx, "Access denied: user is not community creator",
-			zap.Int("communityID", communityID),
-			zap.Int("userID", userID),
-			zap.Int("creatorID", existingCommunity.CreatorID))
+			zap.Int32("communityID", communityID),
+			zap.Int32("userID", userID),
+			zap.Int32("creatorID", existingCommunity.CreatorID))
 		return domain.ErrAccessDenied
 	}
 
@@ -244,13 +244,13 @@ func (s *CommunityService) DeleteCommunity(ctx context.Context, communityID int,
 	return nil
 }
 
-func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communityID int) (*domain.CommunityForView, error) {
-	domain.Info(ctx, "Getting community", zap.Int("communityID", communityID))
+func (s *CommunityService) GetCommunity(ctx context.Context, userID int32, communityID int32) (*domain.CommunityForView, error) {
+	domain.Info(ctx, "Getting community", zap.Int32("communityID", communityID))
 
 	community, err := s.communityStore.GetCommunityByID(ctx, communityID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", communityID))
 			return nil, domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get community", err)
@@ -280,10 +280,10 @@ func (s *CommunityService) GetCommunity(ctx context.Context, userID int, communi
 	return result, nil
 }
 
-func (s *CommunityService) GetUserCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
+func (s *CommunityService) GetUserCommunities(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
-	domain.Info(ctx, "Getting user communities", zap.Int("userID", userID))
+	domain.Info(ctx, "Getting user communities", zap.Int32("userID", userID))
 	communities, err := s.communityStore.GetUserCommunities(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user communities", err)
@@ -293,9 +293,9 @@ func (s *CommunityService) GetUserCommunities(ctx context.Context, userID int, p
 	return communities, nil
 }
 
-func (s *CommunityService) GetOtherCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
+func (s *CommunityService) GetOtherCommunities(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
-	domain.Info(ctx, "Getting other communities", zap.Int("userID", userID))
+	domain.Info(ctx, "Getting other communities", zap.Int32("userID", userID))
 
 	communities, err := s.communityStore.GetOtherCommunities(ctx, userID, limit, offset)
 	if err != nil {
@@ -306,16 +306,16 @@ func (s *CommunityService) GetOtherCommunities(ctx context.Context, userID int, 
 	return communities, nil
 }
 
-func (s *CommunityService) GetUserCommunitiesByID(ctx context.Context, targetUserID int, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
+func (s *CommunityService) GetUserCommunitiesByID(ctx context.Context, targetUserID int32, params domain.PaginateQueryParams) ([]domain.ShortCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
-	domain.Info(ctx, "Getting user communities by ID", zap.Int("targetUserID", targetUserID))
+	domain.Info(ctx, "Getting user communities by ID", zap.Int32("targetUserID", targetUserID))
 
 	// Проверяем существование пользователя
 	_, err := s.userStore.GetUserByID(ctx, targetUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "User not found", zap.Int("targetUserID", targetUserID))
+			domain.Warn(ctx, "User not found", zap.Int32("targetUserID", targetUserID))
 			return nil, domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get user", err)
@@ -331,14 +331,14 @@ func (s *CommunityService) GetUserCommunitiesByID(ctx context.Context, targetUse
 	return communities, nil
 }
 
-func (s *CommunityService) GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int) ([]int, error) {
-	domain.Info(ctx, "Getting user subscribed community IDs", zap.Int("targetUserID", targetUserID))
+func (s *CommunityService) GetUserSubscribedCommunityIDs(ctx context.Context, targetUserID int32) ([]int32, error) {
+	domain.Info(ctx, "Getting user subscribed community IDs", zap.Int32("targetUserID", targetUserID))
 
 	// Проверяем существование пользователя
 	_, err := s.userStore.GetUserByID(ctx, targetUserID)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			domain.Warn(ctx, "User not found", zap.Int("targetUserID", targetUserID))
+			domain.Warn(ctx, "User not found", zap.Int32("targetUserID", targetUserID))
 			return nil, domain.ErrUserNotFound
 		}
 		domain.Error(ctx, "Failed to get user", err)
@@ -354,10 +354,10 @@ func (s *CommunityService) GetUserSubscribedCommunityIDs(ctx context.Context, ta
 	return communityIDs, nil
 }
 
-func (s *CommunityService) GetCreatedCommunities(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.CommunityForMyCommunity, error) {
+func (s *CommunityService) GetCreatedCommunities(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.CommunityForMyCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
-	domain.Info(ctx, "Getting created communities", zap.Int("userID", userID))
+	domain.Info(ctx, "Getting created communities", zap.Int32("userID", userID))
 	communities, err := s.communityStore.GetCreatedCommunities(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get created communities", err)
@@ -367,16 +367,16 @@ func (s *CommunityService) GetCreatedCommunities(ctx context.Context, userID int
 	return communities, nil
 }
 
-func (s *CommunityService) GetCommunitySubscribers(ctx context.Context, communityID int, params domain.PaginateQueryParams) ([]domain.CommunitySubscriber, error) {
+func (s *CommunityService) GetCommunitySubscribers(ctx context.Context, communityID int32, params domain.PaginateQueryParams) ([]domain.CommunitySubscriber, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
-	domain.Info(ctx, "Getting community subscribers", zap.Int("communityID", communityID))
+	domain.Info(ctx, "Getting community subscribers", zap.Int32("communityID", communityID))
 
 	// Проверяем существование сообщества
 	_, err := s.communityStore.GetCommunityByID(ctx, communityID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", communityID))
 			return nil, domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get community", err)
@@ -392,14 +392,14 @@ func (s *CommunityService) GetCommunitySubscribers(ctx context.Context, communit
 	return subscribers, nil
 }
 
-func (s *CommunityService) Subscribe(ctx context.Context, communityID int, userID int) error {
-	domain.Info(ctx, "Subscribing to community", zap.Int("communityID", communityID), zap.Int("userID", userID))
+func (s *CommunityService) Subscribe(ctx context.Context, communityID int32, userID int32) error {
+	domain.Info(ctx, "Subscribing to community", zap.Int32("communityID", communityID), zap.Int32("userID", userID))
 
 	// Проверяем существование сообщества
 	_, err := s.communityStore.GetCommunityByID(ctx, communityID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Community not found", zap.Int("communityID", communityID))
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", communityID))
 			return domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get community", err)
@@ -410,7 +410,7 @@ func (s *CommunityService) Subscribe(ctx context.Context, communityID int, userI
 	_, err = s.userStore.GetUserByID(ctx, userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "User not found", zap.Int("userID", userID))
+			domain.Warn(ctx, "User not found", zap.Int32("userID", userID))
 			return domain.ErrNotFound
 		}
 		domain.Error(ctx, "Failed to get user", err)
@@ -426,8 +426,8 @@ func (s *CommunityService) Subscribe(ctx context.Context, communityID int, userI
 	return nil
 }
 
-func (s *CommunityService) Unsubscribe(ctx context.Context, communityID int, userID int) error {
-	domain.Info(ctx, "Unsubscribing from community", zap.Int("communityID", communityID), zap.Int("userID", userID))
+func (s *CommunityService) Unsubscribe(ctx context.Context, communityID int32, userID int32) error {
+	domain.Info(ctx, "Unsubscribing from community", zap.Int32("communityID", communityID), zap.Int32("userID", userID))
 
 	if err := s.communityStore.Unsubscribe(ctx, communityID, userID); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
@@ -442,7 +442,7 @@ func (s *CommunityService) Unsubscribe(ctx context.Context, communityID int, use
 	return nil
 }
 
-func (s *CommunityService) SearchShortCommunityByNameAndType(ctx context.Context, userID int, params domain.PaginateQueryParams, name string, cType domain.CommunityType) ([]domain.ShortCommunity, error) {
+func (s *CommunityService) SearchShortCommunityByNameAndType(ctx context.Context, userID int32, params domain.PaginateQueryParams, name string, cType domain.CommunityType) ([]domain.ShortCommunity, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 	isTerms := true
 	if cType == domain.Recommended {

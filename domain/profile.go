@@ -7,7 +7,7 @@ import (
 )
 
 type Profile struct {
-	UserID         int                 `json:"userID"`
+	UserID         int32               `json:"userID"`
 	FirstName      string              `json:"firstName"`
 	LastName       string              `json:"lastName"`
 	AvatarPath     *string             `json:"avatarPath"`
@@ -27,30 +27,30 @@ type ShortProfile struct {
 }
 
 type ProfileService interface {
-	UpdateProfile(ctx context.Context, profile Profile, userID int, files []*multipart.FileHeader) error
-	UpdateAvatar(ctx context.Context, userID int, files []*multipart.FileHeader) error
-	UpdateHeader(ctx context.Context, userID int, files []*multipart.FileHeader) error
-	GetProfileByUserID(ctx context.Context, selfUserID, userID int) (*Profile, error)
-	DeleteAvatarByUserID(ctx context.Context, userID int) error
+	UpdateProfile(ctx context.Context, profile Profile, userID int32, files []*multipart.FileHeader) error
+	UpdateAvatar(ctx context.Context, userID int32, files []*multipart.FileHeader) error
+	UpdateHeader(ctx context.Context, userID int32, files []*multipart.FileHeader) error
+	GetProfileByUserID(ctx context.Context, selfUserID, userID int32) (*Profile, error)
+	DeleteAvatarByUserID(ctx context.Context, userID int32) error
 }
 
 type ElasticProfileStore interface {
-	CreateProfile(ctx context.Context, fullName string, userID int) error
-	UpdateProfile(ctx context.Context, fullName string, userID int) error
-	DeleteProfile(ctx context.Context, userID int) error
-	SearchUserIDsByFullNameWithFilter(ctx context.Context, fullName string, filterIDs []int, isTerms bool, limit, offset int) ([]int, error)
+	CreateProfile(ctx context.Context, fullName string, userID int32) error
+	UpdateProfile(ctx context.Context, fullName string, userID int32) error
+	DeleteProfile(ctx context.Context, userID int32) error
+	SearchUserIDsByFullNameWithFilter(ctx context.Context, fullName string, filterIDs []int32, isTerms bool, limit, offset int32) ([]int32, error)
 }
 
 type ProfileStore interface {
-	UpdateProfile(ctx context.Context, profile Profile, userID int) error
-	UpdateAvatar(ctx context.Context, avatarPath string, userID int) error
-	UpdateHeader(ctx context.Context, avatarPath string, UserID int) error
-	GetProfileByUserID(ctx context.Context, userID int) (Profile, error)
-	GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int) (map[int]ShortProfile, error)
-	GetShortProfileByUserIDs(ctx context.Context, userIDs []int) ([]ShortProfile, error)
-	GetAvatarByUserID(ctx context.Context, userID int) (*string, error)
-	GetHeaderByUserID(ctx context.Context, userID int) (*string, error)
-	DeleteAvatarByUserID(ctx context.Context, userID int) (*string, error)
+	UpdateProfile(ctx context.Context, profile Profile, userID int32) error
+	UpdateAvatar(ctx context.Context, avatarPath string, userID int32) error
+	UpdateHeader(ctx context.Context, avatarPath string, UserID int32) error
+	GetProfileByUserID(ctx context.Context, userID int32) (Profile, error)
+	GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int32) (map[int32]ShortProfile, error)
+	GetShortProfileByUserIDs(ctx context.Context, userIDs []int32) ([]ShortProfile, error)
+	GetAvatarByUserID(ctx context.Context, userID int32) (*string, error)
+	GetHeaderByUserID(ctx context.Context, userID int32) (*string, error)
+	DeleteAvatarByUserID(ctx context.Context, userID int32) (*string, error)
 	//DeleteAvatar
 	//DeleteHeader
 }

@@ -27,12 +27,12 @@ func NewElasticProfileStore(client *elasticsearch.Client, index string) domain.E
 }
 
 type ProfileDocument struct {
-	UserID           int    `json:"user_id"`
+	UserID           int32  `json:"user_id"`
 	FullName         string `json:"full_name"`
 	FullNameTranslit string `json:"full_name_translit"`
 }
 
-func (e *ElasticProfileStore) CreateProfile(ctx context.Context, fullName string, userID int) error {
+func (e *ElasticProfileStore) CreateProfile(ctx context.Context, fullName string, userID int32) error {
 	translit := unidecode.Unidecode(fullName)
 	doc := ProfileDocument{
 		UserID:           userID,
@@ -47,7 +47,7 @@ func (e *ElasticProfileStore) CreateProfile(ctx context.Context, fullName string
 
 	req := esapi.IndexRequest{
 		Index:      e.index,
-		DocumentID: strconv.Itoa(userID),
+		DocumentID: strconv.Itoa(int(userID)),
 		Body:       bytes.NewReader(body),
 		Refresh:    "true",
 	}
@@ -64,7 +64,7 @@ func (e *ElasticProfileStore) CreateProfile(ctx context.Context, fullName string
 	return nil
 }
 
-func (e *ElasticProfileStore) UpdateProfile(ctx context.Context, fullName string, userID int) error {
+func (e *ElasticProfileStore) UpdateProfile(ctx context.Context, fullName string, userID int32) error {
 	translit := unidecode.Unidecode(fullName)
 	updateDoc := map[string]interface{}{
 		"doc": map[string]interface{}{
@@ -76,7 +76,7 @@ func (e *ElasticProfileStore) UpdateProfile(ctx context.Context, fullName string
 
 	req := esapi.UpdateRequest{
 		Index:      e.index,
-		DocumentID: strconv.Itoa(userID),
+		DocumentID: strconv.Itoa(int(userID)),
 		Body:       bytes.NewReader(body),
 		Refresh:    "true",
 	}
@@ -93,10 +93,10 @@ func (e *ElasticProfileStore) UpdateProfile(ctx context.Context, fullName string
 	return nil
 }
 
-func (e *ElasticProfileStore) DeleteProfile(ctx context.Context, userID int) error {
+func (e *ElasticProfileStore) DeleteProfile(ctx context.Context, userID int32) error {
 	req := esapi.DeleteRequest{
 		Index:      e.index,
-		DocumentID: strconv.Itoa(userID),
+		DocumentID: strconv.Itoa(int(userID)),
 		Refresh:    "true",
 	}
 
@@ -118,16 +118,16 @@ func (e *ElasticProfileStore) DeleteProfile(ctx context.Context, userID int) err
 func (e *ElasticProfileStore) SearchUserIDsByFullNameWithFilter(
 	ctx context.Context,
 	fullName string,
-	filterIDs []int,
+	filterIDs []int32,
 	isTerms bool,
-	limit, offset int,
-) ([]int, error) {
+	limit, offset int32,
+) ([]int32, error) {
 
 	qEn := unidecode.Unidecode(fullName)
 	queries := []string{fullName, qEn}
 
 	if isTerms && len(filterIDs) == 0 {
-		return []int{}, nil
+		return []int32{}, nil
 	}
 
 	shouldClauses := make([]map[string]interface{}, 0, len(queries))
@@ -172,8 +172,8 @@ func (e *ElasticProfileStore) SearchUserIDsByFullNameWithFilter(
 		e.client.Search.WithIndex(e.index),
 		e.client.Search.WithBody(bytes.NewReader(body)),
 		e.client.Search.WithTrackTotalHits(true),
-		e.client.Search.WithSize(limit),
-		e.client.Search.WithFrom(offset),
+		e.client.Search.WithSize(int(limit)),
+		e.client.Search.WithFrom(int(offset)),
 	)
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ func (e *ElasticProfileStore) SearchUserIDsByFullNameWithFilter(
 		return nil, err
 	}
 
-	ids := make([]int, 0, len(r.Hits.Hits))
+	ids := make([]int32, 0, len(r.Hits.Hits))
 	for _, hit := range r.Hits.Hits {
 		ids = append(ids, hit.Source.UserID)
 	}

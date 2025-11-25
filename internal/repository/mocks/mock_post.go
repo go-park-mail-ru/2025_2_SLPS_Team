@@ -37,7 +37,7 @@ func (m *MockPostService) EXPECT() *MockPostServiceMockRecorder {
 }
 
 // CreatePost mocks base method.
-func (m *MockPostService) CreatePost(ctx context.Context, userID int, text string, attachmentFiles, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
+func (m *MockPostService) CreatePost(ctx context.Context, userID int32, text string, attachmentFiles, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreatePost", ctx, userID, text, attachmentFiles, photoFiles)
 	ret0, _ := ret[0].(*domain.Post)
@@ -52,7 +52,7 @@ func (mr *MockPostServiceMockRecorder) CreatePost(ctx, userID, text, attachmentF
 }
 
 // DeletePost mocks base method.
-func (m *MockPostService) DeletePost(ctx context.Context, postID uint, userID int) error {
+func (m *MockPostService) DeletePost(ctx context.Context, postID uint, userID int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeletePost", ctx, postID, userID)
 	ret0, _ := ret[0].(error)
@@ -111,7 +111,7 @@ func (mr *MockPostServiceMockRecorder) PostsPaginate(ctx, params interface{}) *g
 }
 
 // UpdatePost mocks base method.
-func (m *MockPostService) UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles, photoFiles []*multipart.FileHeader) error {
+func (m *MockPostService) UpdatePost(ctx context.Context, postID uint, userID int32, text string, attachmentFiles, photoFiles []*multipart.FileHeader) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePost", ctx, postID, userID, text, attachmentFiles, photoFiles)
 	ret0, _ := ret[0].(error)
@@ -191,7 +191,7 @@ func (mr *MockPostStoreMockRecorder) GetPostByID(ctx, id interface{}) *gomock.Ca
 }
 
 // GetPostsByUser mocks base method.
-func (m *MockPostStore) GetPostsByUser(ctx context.Context, userID uint, limit, offset int) ([]domain.Post, error) {
+func (m *MockPostStore) GetPostsByUser(ctx context.Context, userID uint, limit, offset int32) ([]domain.Post, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetPostsByUser", ctx, userID, limit, offset)
 	ret0, _ := ret[0].([]domain.Post)
@@ -206,7 +206,7 @@ func (mr *MockPostStoreMockRecorder) GetPostsByUser(ctx, userID, limit, offset i
 }
 
 // PostsPaginatedList mocks base method.
-func (m *MockPostStore) PostsPaginatedList(ctx context.Context, limit, offset int) ([]domain.PostWithShortUser, error) {
+func (m *MockPostStore) PostsPaginatedList(ctx context.Context, limit, offset int32) ([]domain.PostWithShortUser, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "PostsPaginatedList", ctx, limit, offset)
 	ret0, _ := ret[0].([]domain.PostWithShortUser)

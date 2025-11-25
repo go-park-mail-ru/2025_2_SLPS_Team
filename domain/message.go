@@ -6,19 +6,19 @@ import (
 )
 
 type Message struct {
-	ID        int       `json:"id"`
-	AuthorID  int       `json:"authorID"`
-	ChatID    int       `json:"chatID"`
+	ID        int32     `json:"id"`
+	AuthorID  int32     `json:"authorID"`
+	ChatID    int32     `json:"chatID"`
 	Text      string    `json:"text"`
 	CreatedAt time.Time `json:"createdAt"`
 	//IsEdited bool `json:"isEdited"`
 }
 type MessagesWithAuthors struct {
 	Messages []Message
-	Authors  map[int]ShortProfile
+	Authors  map[int32]ShortProfile
 }
 type MessageStore interface {
-	CreateMessage(ctx context.Context, message Message) (int, error)
-	//UpdateMessage(text string, messageID int) (int, error)
-	GetMessagesByChatId(ctx context.Context, chatID int, limit int, offset int) ([]Message, error)
+	CreateMessage(ctx context.Context, message Message) (int32, error)
+	//UpdateMessage(text string, messageID int32) (int32, error)
+	GetMessagesByChatId(ctx context.Context, chatID int32, limit int32, offset int32) ([]Message, error)
 }

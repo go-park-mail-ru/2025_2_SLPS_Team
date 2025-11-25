@@ -32,12 +32,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "Page number",
                         "name": "page",
                         "in": "query"
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "Items per page",
                         "name": "limit",
                         "in": "query"
@@ -128,6 +130,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "Application ID",
                         "name": "id",
                         "in": "path",
@@ -178,6 +181,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "Application ID",
                         "name": "id",
                         "in": "path",
@@ -390,6 +394,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество чатов для возврата",
                         "name": "limit",
@@ -397,6 +402,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 0,
                         "description": "Номер страницы для пагинации",
                         "name": "page",
@@ -444,6 +450,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -488,6 +495,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID чата",
                         "name": "chatID",
                         "in": "path",
@@ -541,6 +549,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID чата",
                         "name": "id",
                         "in": "path",
@@ -591,6 +600,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID чата",
                         "name": "id",
                         "in": "path",
@@ -598,6 +608,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Лимит количества сообщений",
                         "name": "limit",
@@ -605,6 +616,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 0,
                         "description": "страница для пагинации",
                         "name": "page",
@@ -732,6 +744,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -741,6 +754,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество сообществ на странице",
                         "name": "limit",
@@ -797,6 +811,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -806,6 +821,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество сообществ на странице",
                         "name": "limit",
@@ -856,6 +872,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -865,6 +882,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество сообществ на странице",
                         "name": "limit",
@@ -903,7 +921,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "community"
+                    "communities"
                 ],
                 "summary": "Поиск сообществ по имени",
                 "parameters": [
@@ -927,6 +945,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Лимит количества сообществ",
                         "name": "limit",
@@ -934,6 +953,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы для пагинации",
                         "name": "page",
@@ -983,6 +1003,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -991,6 +1012,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -1000,6 +1022,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество сообществ на странице",
                         "name": "limit",
@@ -1055,6 +1078,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "userID",
                         "in": "path",
@@ -1067,7 +1091,8 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "type": "integer"
+                                "type": "integer",
+                                "format": "int32"
                             }
                         }
                     },
@@ -1110,6 +1135,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID сообщества",
                         "name": "id",
                         "in": "path",
@@ -1163,6 +1189,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID сообщества",
                         "name": "id",
                         "in": "path",
@@ -1249,6 +1276,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID сообщества",
                         "name": "id",
                         "in": "path",
@@ -1313,6 +1341,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID сообщества",
                         "name": "id",
                         "in": "path",
@@ -1365,6 +1394,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID сообщества",
                         "name": "id",
                         "in": "path",
@@ -1373,6 +1403,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -1382,6 +1413,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество подписчиков на странице",
                         "name": "limit",
@@ -1437,6 +1469,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID сообщества",
                         "name": "id",
                         "in": "path",
@@ -1490,6 +1523,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -1499,6 +1533,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество друзей на странице",
                         "name": "limit",
@@ -1549,6 +1584,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -1558,6 +1594,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество запросов на странице",
                         "name": "limit",
@@ -1623,6 +1660,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Лимит количества профилей",
                         "name": "limit",
@@ -1630,6 +1668,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "страница для пагинации",
                         "name": "page",
@@ -1680,6 +1719,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -1689,6 +1729,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество запросов на странице",
                         "name": "limit",
@@ -1739,6 +1780,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -1748,6 +1790,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество пользователей на странице",
                         "name": "limit",
@@ -1801,6 +1844,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя, которому отправляется запрос",
                         "name": "id",
                         "in": "path",
@@ -1861,6 +1905,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -1917,6 +1962,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя (отправителя запроса)",
                         "name": "id",
                         "in": "path",
@@ -1970,6 +2016,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -2026,6 +2073,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя (отправителя запроса)",
                         "name": "id",
                         "in": "path",
@@ -2079,6 +2127,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -2124,6 +2173,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -2133,6 +2183,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество постов на странице",
                         "name": "limit",
@@ -2189,6 +2240,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID сообщества (если пост в сообществе)",
                         "name": "communityID",
                         "in": "formData"
@@ -2259,6 +2311,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID сообщества",
                         "name": "id",
                         "in": "path",
@@ -2267,6 +2320,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -2276,6 +2330,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество постов на странице",
                         "name": "limit",
@@ -2330,6 +2385,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID поста",
                         "name": "id",
                         "in": "path",
@@ -2384,6 +2440,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID поста",
                         "name": "id",
                         "in": "path",
@@ -2476,6 +2533,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID поста",
                         "name": "id",
                         "in": "path",
@@ -2538,6 +2596,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID поста",
                         "name": "id",
                         "in": "path",
@@ -2769,6 +2828,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -2814,6 +2874,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "userID",
                         "in": "path",
@@ -2822,6 +2883,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -2831,6 +2893,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество постов на странице",
                         "name": "limit",

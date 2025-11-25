@@ -1,8 +1,8 @@
 package mapper
 
 import (
-	"testpoto/shared/domain"
-	"testpoto/shared/pb"
+	"project/domain"
+	"project/shared/pb"
 )
 
 //go:generate goverter gen .
@@ -26,6 +26,6 @@ type Converter interface {
 	ToProtoShortProfileSlice(profiles []domain.ShortProfile) *pb.GetShortProfileByUserIDsResponse
 	FromProtoShortProfileSlice(pbResp *pb.GetShortProfileByUserIDsResponse) []domain.ShortProfile
 
-	ToProtoShortProfileMap(profiles map[int]domain.ShortProfile) *pb.GetShortProfileMapByUserIDsResponse
-	FromProtoShortProfileMap(pbResp *pb.GetShortProfileMapByUserIDsResponse) map[int]domain.ShortProfile
+	ToProtoShortProfileMap(profiles map[int32]domain.ShortProfile) *pb.GetShortProfileMapByUserIDsResponse
+	FromProtoShortProfileMap(pbResp *pb.GetShortProfileMapByUserIDsResponse) map[int32]domain.ShortProfile
 }
