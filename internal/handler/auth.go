@@ -28,7 +28,7 @@ func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 		domain.FromContext(r.Context()).Info("Cookie session_id not found:", zap.Error(err))
 		return nil, domain.ErrNotFound
 	}
-	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)
+	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie.Value)
 
 	return session, err
 }
@@ -54,7 +54,7 @@ func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request
 		sendJSONError(w, domain.ErrNotFound)
 		return
 	}
-	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)
+	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie.Value)
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -147,7 +147,7 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		domain.FromContext(r.Context()).Error("Failed to logout", zap.Error(err))
 		return
 	}
-	err = api.authService.Logout(r.Context(), session)
+	err = api.authService.Logout(r.Context(), session.Value)
 	if err != nil {
 		sendJSONError(w, err)
 		return

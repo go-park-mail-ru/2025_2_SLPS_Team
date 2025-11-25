@@ -3,7 +3,6 @@ package service
 import (
 	"context"
 	"errors"
-	"net/http"
 	"project/domain"
 
 	"github.com/asaskevich/govalidator"
@@ -25,9 +24,9 @@ func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore
 	}
 }
 
-func (api *AuthService) IsLoggedIn(ctx context.Context, sessionCookie *http.Cookie) (*domain.Session, error) {
+func (api *AuthService) IsLoggedIn(ctx context.Context, sessionCookie string) (*domain.Session, error) {
 
-	session, err := api.sessionStore.GetSessionBySessionID(ctx, sessionCookie.Value)
+	session, err := api.sessionStore.GetSessionBySessionID(ctx, sessionCookie)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			domain.FromContext(ctx).Warn("Session not found")
@@ -74,9 +73,9 @@ func (api *AuthService) Login(ctx context.Context, req domain.User) (int32, erro
 	return user.ID, nil
 }
 
-func (api *AuthService) Logout(ctx context.Context, session *http.Cookie) error {
+func (api *AuthService) Logout(ctx context.Context, session string) error {
 
-	err := api.sessionStore.DeleteSession(ctx, session.Value)
+	err := api.sessionStore.DeleteSession(ctx, session)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to logout", zap.Error(err))
 		return domain.ErrDB
@@ -144,5 +143,18 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 
 func (api *AuthService) GetUserRole(ctx context.Context, userID int32) (string, error) {
 	user, err := api.userStore.GetUserByID(ctx, userID)
-	return user.Role, err
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
+		return "", domain.ErrDB
+	}
+	return user.Role, nil
+}
+
+func (api *AuthService) IsUserExists(ctx context.Context, userID int) (bool, error) {
+	isExists, err := api.userStore.IsUserExists(ctx, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
+		return false, domain.ErrDB
+	}
+	return isExists, nil
 }
