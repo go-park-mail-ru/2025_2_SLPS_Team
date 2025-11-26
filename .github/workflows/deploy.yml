@@ -35,7 +35,7 @@ jobs:
       - name: Build Docker image
         run: |
           IMAGE_NAME=${{ secrets.DOCKER_USERNAME }}/${{ matrix.image }}
-          docker build -f $DOCKERFILE -t $IMAGE_NAME:latest --cache-from $IMAGE_NAME:latest $BUILD_CONTEXT
+          docker build -f $DOCKERFILE -t $IMAGE_NAME:latest --cache-from $IMAGE_NAME:latest $BUILD_CONTEXT --build-arg SERVICE=${{ matrix.image }}
 
       - name: Push Docker image
         run: |
