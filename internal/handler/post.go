@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"mime/multipart"
 	"net/http"
 	"project/domain"
 	"strconv"
@@ -133,12 +132,22 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var attachmentFiles, photoFiles []*multipart.FileHeader
+	var attachmentFiles, photoFiles []*domain.File
 	if attachments, ok := r.MultipartForm.File["attachments"]; ok {
-		attachmentFiles = attachments
+		attachmentFiles, err = domain.MultipartListToFiles(attachments)
+		if err != nil {
+			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
+			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
+			return
+		}
 	}
 	if photos, ok := r.MultipartForm.File["photos"]; ok {
-		photoFiles = photos
+		photoFiles, err = domain.MultipartListToFiles(photos)
+		if err != nil {
+			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
+			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
+			return
+		}
 	}
 
 	var communityID *int32
@@ -211,12 +220,22 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var attachmentFiles, photoFiles []*multipart.FileHeader
+	var attachmentFiles, photoFiles []*domain.File
 	if attachments, ok := r.MultipartForm.File["attachments"]; ok {
-		attachmentFiles = attachments
+		attachmentFiles, err = domain.MultipartListToFiles(attachments)
+		if err != nil {
+			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
+			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
+			return
+		}
 	}
 	if photos, ok := r.MultipartForm.File["photos"]; ok {
-		photoFiles = photos
+		photoFiles, err = domain.MultipartListToFiles(photos)
+		if err != nil {
+			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
+			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
+			return
+		}
 	}
 
 	err = h.postService.UpdatePost(r.Context(), uint(postID), userID, text, attachmentFiles, photoFiles)

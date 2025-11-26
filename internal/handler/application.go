@@ -138,7 +138,7 @@ func (h *ApplicationHandler) UpdateApplicationText(w http.ResponseWriter, r *htt
 		return
 	}
 
-	sendJSONResponse(w, "app updated", http.StatusOK)
+	sendJSONResponse(w, "main updated", http.StatusOK)
 }
 
 type updateStatusRequest struct {
@@ -176,5 +176,5 @@ func (h *ApplicationHandler) UpdateApplicationStatus(w http.ResponseWriter, r *h
 		sendJSONError(w, err)
 		return
 	}
-	sendJSONResponse(w, "app updated", http.StatusOK)
+	sendJSONResponse(w, "main updated", http.StatusOK)
 }

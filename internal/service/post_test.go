@@ -87,7 +87,7 @@ func TestPostService_PostsPaginate(t *testing.T) {
 	t.Run("DB error", func(t *testing.T) {
 		postStore.EXPECT().
 			PostsPaginatedList(ctx, 20, 0).
-			Return(nil, errors.New("db error"))
+			Return(nil, errors.New("dbconn error"))
 
 		result, err := svc.PostsPaginate(ctx, domain.PaginateQueryParams{
 			Page:  1,
@@ -134,7 +134,7 @@ func TestPostService_GetPost(t *testing.T) {
 	t.Run("DB error", func(t *testing.T) {
 		postStore.EXPECT().
 			GetPostByID(ctx, postID).
-			Return(nil, errors.New("db error"))
+			Return(nil, errors.New("dbconn error"))
 
 		result, err := svc.GetPost(ctx, postID)
 
@@ -177,7 +177,7 @@ func TestPostService_CreatePost(t *testing.T) {
 	t.Run("DB error on create", func(t *testing.T) {
 		postStore.EXPECT().
 			CreatePost(ctx, gomock.Any()).
-			Return(errors.New("db error"))
+			Return(errors.New("dbconn error"))
 
 		_, err := svc.CreatePost(ctx, userID, text, nil, nil)
 
@@ -348,7 +348,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 	t.Run("DB error on user check", func(t *testing.T) {
 		userStore.EXPECT().
 			GetUserByID(ctx, int32(userID)).
-			Return(domain.User{}, errors.New("db error"))
+			Return(domain.User{}, errors.New("dbconn error"))
 
 		result, err := svc.GetUserPosts(ctx, userID, domain.PaginateQueryParams{
 			Page:  1,
@@ -366,7 +366,7 @@ func TestPostService_GetUserPosts(t *testing.T) {
 
 		postStore.EXPECT().
 			GetPostsByUser(ctx, userID, 20, 0).
-			Return(nil, errors.New("db error"))
+			Return(nil, errors.New("dbconn error"))
 
 		result, err := svc.GetUserPosts(ctx, userID, domain.PaginateQueryParams{
 			Page:  1,

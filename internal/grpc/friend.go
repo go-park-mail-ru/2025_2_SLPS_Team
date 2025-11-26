@@ -11,7 +11,7 @@ import (
 
 type GrpcFriendHandler struct {
 	ser domain.FriendService
-	pb.UnimplementedAuthServiceServer
+	pb.UnimplementedFriendServiceServer
 }
 
 func NewGrpcFriendHandler(ser domain.FriendService) *GrpcFriendHandler {

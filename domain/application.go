@@ -15,8 +15,8 @@ type Application struct {
 	Category      Category  `json:"category" example:"app_freezing" `
 	Text          string    `json:"text"`
 	AuthorID      *string   `json:"authorID"`
-	CreatedAt     time.Time `db:"createdAt" json:"createdAt" example:"1990-01-01T00:00:00Z"`
-	UpdatedAt     time.Time `db:"updated_at" json:"updatedAt" example:"1990-01-01T00:00:00Z"`
+	CreatedAt     time.Time `dbconn:"createdAt" json:"createdAt" example:"1990-01-01T00:00:00Z"`
+	UpdatedAt     time.Time `dbconn:"updated_at" json:"updatedAt" example:"1990-01-01T00:00:00Z"`
 	FullName      string    `json:"fullName"`
 	EmailReg      string    `json:"emailReg"`
 	EmailFeedBack string    `json:"emailFeedBack"`

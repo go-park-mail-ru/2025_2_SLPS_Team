@@ -91,7 +91,7 @@ func TestProfileService_UpdateAvatar(t *testing.T) {
 	})
 
 	t.Run("GetAvatar error", func(t *testing.T) {
-		profileStore.EXPECT().GetAvatarByUserID(ctx, userID).Return(nil, errors.New("db"))
+		profileStore.EXPECT().GetAvatarByUserID(ctx, userID).Return(nil, errors.New("dbconn"))
 		err := svc.UpdateAvatar(ctx, userID, files)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -118,7 +118,7 @@ func TestProfileService_UpdateHeader(t *testing.T) {
 	})
 
 	t.Run("GetHeader error", func(t *testing.T) {
-		profileStore.EXPECT().GetHeaderByUserID(ctx, userID).Return(nil, errors.New("db"))
+		profileStore.EXPECT().GetHeaderByUserID(ctx, userID).Return(nil, errors.New("dbconn"))
 		err := svc.UpdateHeader(ctx, userID, files)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"net/url"
 	"os"
 	"path"
@@ -18,44 +17,33 @@ import (
 
 const uploadDir = "./uploads"
 
-func UploadFile(header *domain.File) (string, error) {
-
-	file, err := header.Open()
-	if err != nil {
-		return "", err
-	}
-
-	defer file.Close()
-	ext := filepath.Ext(header.Filename)
+// UploadFile загружает один файл из []byte
+func UploadFile(file *domain.File) (string, error) {
+	ext := filepath.Ext(file.Filename)
 	fileName := fmt.Sprintf("%s%s", uuid.New().String(), ext)
 
-	if _, err := os.Stat(uploadDir); os.IsNotExist(err) {
-		os.Mkdir(uploadDir, 0755)
+	if err := os.MkdirAll(uploadDir, 0755); err != nil {
+		return "", err
 	}
 
 	filePath := filepath.Join(uploadDir, fileName)
-	dst, err := os.Create(filePath)
-	if err != nil {
-		return "", err
-	}
-	defer dst.Close()
-
-	_, err = io.Copy(dst, file)
-	if err != nil {
+	if err := os.WriteFile(filePath, file.Data, 0644); err != nil {
 		return "", err
 	}
 
 	return fileName, nil
 }
 
+// UploadFiles загружает несколько файлов
 func UploadFiles(files []*domain.File) ([]string, error) {
 	var fileNames []string
 
-	for _, header := range files {
-		fileName, err := UploadFile(header)
+	for _, file := range files {
+		fileName, err := UploadFile(file)
 		if err != nil {
-			for _, uploadedFile := range fileNames {
-				DeleteFile(uploadedFile)
+			// В случае ошибки удаляем уже загруженные файлы
+			for _, f := range fileNames {
+				_ = DeleteFile(f)
 			}
 			return nil, err
 		}
@@ -65,46 +53,43 @@ func UploadFiles(files []*domain.File) ([]string, error) {
 	return fileNames, nil
 }
 
+// DeleteFile удаляет один файл
 func DeleteFile(fileName string) error {
 	fullPath := filepath.Join(uploadDir, fileName)
-	if err := os.Remove(fullPath); err != nil {
+	if err := os.Remove(fullPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 	return nil
 }
 
+// DeleteFiles удаляет несколько файлов
 func DeleteFiles(fileNames []*string) error {
 	for _, fileName := range fileNames {
 		if fileName != nil && *fileName != "" {
 			if err := DeleteFile(*fileName); err != nil {
-				continue
+				fmt.Printf("failed to delete file %s: %v\n", *fileName, err)
+				return err
 			}
 		}
 	}
 	return nil
 }
 
-func HandleFileUpload(
-	files []*domain.File,
-	oldPaths []*string,
-) ([]string, error) {
-	var newPaths []string
-
-	err := DeleteFiles(oldPaths)
+// HandleFileUpload сначала загружает новые файлы, затем удаляет старые
+func HandleFileUpload(files []*domain.File, oldPaths []*string) ([]string, error) {
+	newPaths, err := UploadFiles(files)
 	if err != nil {
 		return nil, err
 	}
 
-	newPaths, err = UploadFiles(files)
-	if err != nil {
-		return nil, err
-	}
+	// Только после успешной загрузки удаляем старые файлы
+	DeleteFiles(oldPaths)
 
 	return newPaths, nil
 }
 
+// Uploads проверяет путь и возвращает безопасный полный путь к файлу
 func Uploads(ctx context.Context, absStaticDir string, prefix string, URLPath string) (*string, error) {
-
 	if !strings.HasPrefix(URLPath, prefix) {
 		domain.FromContext(ctx).Info("Prefix mismatch", zap.String("url", URLPath))
 		return nil, domain.ErrNotExist
@@ -120,14 +105,16 @@ func Uploads(ctx context.Context, absStaticDir string, prefix string, URLPath st
 	cleanPath = strings.TrimPrefix(cleanPath, "/")
 
 	if strings.Contains(cleanPath, "..") {
-		domain.FromContext(ctx).Warn("Try get access to forbidden file", zap.String("cleanPath", cleanPath))
+		domain.FromContext(ctx).Warn("Attempt to access forbidden file", zap.String("cleanPath", cleanPath))
 		return nil, domain.ErrAccessDenied
 	}
 
 	fullPath := filepath.Join(absStaticDir, filepath.FromSlash(cleanPath))
 
-	if !strings.HasPrefix(fullPath, absStaticDir) {
-		domain.FromContext(ctx).Warn("Try get access to forbidden file", zap.String("cleanPath", cleanPath))
+	// Проверка на выход за пределы директории
+	absFullPath, err := filepath.Abs(fullPath)
+	if err != nil || !strings.HasPrefix(absFullPath, absStaticDir) {
+		domain.FromContext(ctx).Warn("Attempt to access forbidden file", zap.String("cleanPath", cleanPath))
 		return nil, domain.ErrAccessDenied
 	}
 
@@ -137,7 +124,7 @@ func Uploads(ctx context.Context, absStaticDir string, prefix string, URLPath st
 			domain.FromContext(ctx).Info("File not found", zap.String("cleanPath", cleanPath))
 			return nil, domain.ErrNotExist
 		}
-		domain.FromContext(ctx).Error("Failed to stat filed", zap.String("cleanPath", cleanPath), zap.Error(err))
+		domain.FromContext(ctx).Error("Failed to stat file", zap.String("cleanPath", cleanPath), zap.Error(err))
 		return nil, domain.ErrService
 	}
 	if info.IsDir() {
@@ -145,6 +132,6 @@ func Uploads(ctx context.Context, absStaticDir string, prefix string, URLPath st
 		return nil, domain.ErrNotExist
 	}
 
-	domain.FromContext(ctx).Info("Return correct full path")
+	domain.FromContext(ctx).Info("Returning full path")
 	return &fullPath, nil
 }

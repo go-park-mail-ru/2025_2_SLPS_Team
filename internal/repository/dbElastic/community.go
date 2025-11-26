@@ -1,4 +1,4 @@
-package dbElasic
+package dbElastic
 
 import (
 	"bytes"

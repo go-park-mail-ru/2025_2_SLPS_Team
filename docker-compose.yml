@@ -1,20 +1,122 @@
 services:
-  app:
-    image: ${APP_IMAGE:-local/myapp:latest}
+  migrations:
     build:
       context: .
+      dockerfile: Dockerfile.migrations
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    command: ./migrate  # допустим, у тебя есть команда для миграций
+    networks:
+      - network
+  main:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: main
+    image: ${AUTH_IMAGE:-local/main:latest}
     env_file:
       - .env
     ports:
       - "8080:8080"
     depends_on:
-      elasticsearch:
-        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
       postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
         condition: service_healthy
     networks:
       - network
-    command: sh -c "./migrate && ./main"
+    command: ./main
+    volumes:
+      - shared_uploads:/app/uploads
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth
+    image: ${AUTH_IMAGE:-local/auth:latest}
+    env_file:
+      - .env
+    ports:
+      - "50051:8080"
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - network
+    command: ./main
+    volumes:
+      - shared_uploads:/app/uploads
+  profile:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: profile
+    image: ${PROFILE_IMAGE:-local/profile:latest}
+    env_file:
+      - .env
+    ports:
+      - "50052:8080"
+    depends_on:
+      migrations:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - network
+    command: ./main
+    volumes:
+      - shared_uploads:/app/uploads
+
+  friend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: friend
+    image: ${FRIEND_IMAGE:-local/friend:latest}
+    env_file:
+      - .env
+    ports:
+      - "50053:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+      auth:
+        condition: service_started
+      profile:
+        condition: service_started
+    networks:
+      - network
+    command: ./main
+    volumes:
+      - shared_uploads:/app/uploads
+
   postgres:
     image: postgres:15
     container_name: vk_postgres
@@ -28,12 +130,13 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d vk" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME}"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
       - network
+
   redis:
     image: redis:alpine
     command: redis-server --bind 0.0.0.0 --port 6380 --requirepass ${REDIS_PASSWORD}
@@ -42,12 +145,13 @@ services:
     environment:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
     healthcheck:
-      test: [ "CMD-SHELL", "redis-cli -h localhost -p 6380 -a ${REDIS_PASSWORD} ping | grep PONG" ]
+      test: ["CMD-SHELL", "redis-cli -h localhost -p 6380 -a ${REDIS_PASSWORD} ping | grep PONG"]
       interval: 5s
       timeout: 5s
       retries: 5
     networks:
       - network
+
   elasticsearch:
     image: ${ELASTIC_IMAGE:-local/elasticsearch:latest}
     build:
@@ -65,11 +169,7 @@ services:
     ports:
       - "9200:9200"
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "curl -s --user ${ELASTIC_USER}:${ELASTIC_PASSWORD} http://elasticsearch:9200/ | grep -q 'You Know, for Search'"
-        ]
+      test: ["CMD-SHELL", "curl -s --user ${ELASTIC_USER}:${ELASTIC_PASSWORD} http://elasticsearch:9200/ | grep -q 'You Know, for Search'"]
       interval: 10s
       timeout: 10s
       retries: 20
@@ -77,11 +177,12 @@ services:
       - es_data:/usr/share/elasticsearch/data
     networks:
       - network
+
 networks:
   network:
     driver: bridge
+
 volumes:
   pg_data:
   es_data:
-
-
+  shared_uploads:
