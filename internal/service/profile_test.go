@@ -36,7 +36,7 @@ func TestProfileService_UpdateProfile(t *testing.T) {
 
 	t.Run("GetAvatar error", func(t *testing.T) {
 		files := []*multipart.FileHeader{{Filename: "avatar.png"}}
-		profileStore.EXPECT().GetAvatarByUserID(ctx, userID).Return(nil, errors.New("db"))
+		profileStore.EXPECT().GetAvatarByUserID(ctx, userID).Return(nil, errors.New("dbconn"))
 		err := svc.UpdateProfile(ctx, profile, userID, files)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -50,7 +50,7 @@ func TestProfileService_UpdateProfile(t *testing.T) {
 	})
 
 	t.Run("UpdateProfile error", func(t *testing.T) {
-		profileStore.EXPECT().UpdateProfile(ctx, profile, userID).Return(errors.New("db"))
+		profileStore.EXPECT().UpdateProfile(ctx, profile, userID).Return(errors.New("dbconn"))
 		err := svc.UpdateProfile(ctx, profile, userID, nil)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -71,7 +71,7 @@ func TestProfileService_UpdateAvatar(t *testing.T) {
 	})
 
 	t.Run("GetAvatar error", func(t *testing.T) {
-		profileStore.EXPECT().GetAvatarByUserID(ctx, userID).Return(nil, errors.New("db"))
+		profileStore.EXPECT().GetAvatarByUserID(ctx, userID).Return(nil, errors.New("dbconn"))
 		err := svc.UpdateAvatar(ctx, userID, files)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -104,7 +104,7 @@ func TestProfileService_UpdateHeader(t *testing.T) {
 	})
 
 	t.Run("GetHeader error", func(t *testing.T) {
-		profileStore.EXPECT().GetHeaderByUserID(ctx, userID).Return(nil, errors.New("db"))
+		profileStore.EXPECT().GetHeaderByUserID(ctx, userID).Return(nil, errors.New("dbconn"))
 		err := svc.UpdateHeader(ctx, userID, files)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -139,7 +139,7 @@ func TestProfileService_GetProfileByUserID(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		profileStore.EXPECT().GetProfileByUserID(ctx, userID).Return(domain.Profile{}, errors.New("db"))
+		profileStore.EXPECT().GetProfileByUserID(ctx, userID).Return(domain.Profile{}, errors.New("dbconn"))
 		res, err := svc.GetProfileByUserID(ctx, userID)
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, domain.ErrDB)

@@ -51,7 +51,7 @@ func TestFriendService_SendFriendRequest(t *testing.T) {
 	})
 
 	t.Run("DB error on get user", func(t *testing.T) {
-		userStore.EXPECT().GetUserByID(ctx, 2).Return(domain.User{}, errors.New("db"))
+		userStore.EXPECT().GetUserByID(ctx, 2).Return(domain.User{}, errors.New("dbconn"))
 		err := svc.SendFriendRequest(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -98,7 +98,7 @@ func TestFriendService_SendFriendRequest(t *testing.T) {
 
 	t.Run("DB error on get friendship status", func(t *testing.T) {
 		userStore.EXPECT().GetUserByID(ctx, 2).Return(domain.User{ID: 2}, nil)
-		friendStore.EXPECT().GetFriendshipStatus(ctx, 1, 2).Return(domain.FriendshipStatus(""), errors.New("db"))
+		friendStore.EXPECT().GetFriendshipStatus(ctx, 1, 2).Return(domain.FriendshipStatus(""), errors.New("dbconn"))
 		err := svc.SendFriendRequest(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -106,7 +106,7 @@ func TestFriendService_SendFriendRequest(t *testing.T) {
 	t.Run("DB error on get friendship details", func(t *testing.T) {
 		userStore.EXPECT().GetUserByID(ctx, 2).Return(domain.User{ID: 2}, nil)
 		friendStore.EXPECT().GetFriendshipStatus(ctx, 1, 2).Return(domain.FriendshipPending, nil)
-		friendStore.EXPECT().GetFriendship(ctx, 1, 2).Return(nil, errors.New("db"))
+		friendStore.EXPECT().GetFriendship(ctx, 1, 2).Return(nil, errors.New("dbconn"))
 		err := svc.SendFriendRequest(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -114,7 +114,7 @@ func TestFriendService_SendFriendRequest(t *testing.T) {
 	t.Run("DB error on create friendship", func(t *testing.T) {
 		userStore.EXPECT().GetUserByID(ctx, 2).Return(domain.User{ID: 2}, nil)
 		friendStore.EXPECT().GetFriendshipStatus(ctx, 1, 2).Return(domain.FriendshipStatus(""), domain.ErrNotFound)
-		friendStore.EXPECT().CreateFriendship(ctx, 1, 2).Return(errors.New("db"))
+		friendStore.EXPECT().CreateFriendship(ctx, 1, 2).Return(errors.New("dbconn"))
 		err := svc.SendFriendRequest(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -142,7 +142,7 @@ func TestFriendService_AcceptFriendRequest(t *testing.T) {
 	})
 
 	t.Run("DB error on get friendship", func(t *testing.T) {
-		friendStore.EXPECT().GetFriendship(ctx, 1, 2).Return(nil, errors.New("db"))
+		friendStore.EXPECT().GetFriendship(ctx, 1, 2).Return(nil, errors.New("dbconn"))
 		err := svc.AcceptFriendRequest(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -170,7 +170,7 @@ func TestFriendService_AcceptFriendRequest(t *testing.T) {
 			Status:       domain.FriendshipPending,
 			ActionUserID: 2,
 		}, nil)
-		friendStore.EXPECT().UpdateFriendshipStatus(ctx, 1, 2, domain.FriendshipAccepted).Return(errors.New("db"))
+		friendStore.EXPECT().UpdateFriendshipStatus(ctx, 1, 2, domain.FriendshipAccepted).Return(errors.New("dbconn"))
 		err := svc.AcceptFriendRequest(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -198,7 +198,7 @@ func TestFriendService_RejectFriendRequest(t *testing.T) {
 	})
 
 	t.Run("DB error on get friendship", func(t *testing.T) {
-		friendStore.EXPECT().GetFriendship(ctx, 1, 2).Return(nil, errors.New("db"))
+		friendStore.EXPECT().GetFriendship(ctx, 1, 2).Return(nil, errors.New("dbconn"))
 		err := svc.RejectFriendRequest(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -226,7 +226,7 @@ func TestFriendService_RejectFriendRequest(t *testing.T) {
 			Status:       domain.FriendshipPending,
 			ActionUserID: 2,
 		}, nil)
-		friendStore.EXPECT().UpdateFriendshipStatus(ctx, 1, 2, domain.FriendshipRejected).Return(errors.New("db"))
+		friendStore.EXPECT().UpdateFriendshipStatus(ctx, 1, 2, domain.FriendshipRejected).Return(errors.New("dbconn"))
 		err := svc.RejectFriendRequest(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -251,14 +251,14 @@ func TestFriendService_RemoveFriend(t *testing.T) {
 	})
 
 	t.Run("DB error on are friends check", func(t *testing.T) {
-		friendStore.EXPECT().AreFriends(ctx, 1, 2).Return(false, errors.New("db"))
+		friendStore.EXPECT().AreFriends(ctx, 1, 2).Return(false, errors.New("dbconn"))
 		err := svc.RemoveFriend(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
 
 	t.Run("DB error on delete friendship", func(t *testing.T) {
 		friendStore.EXPECT().AreFriends(ctx, 1, 2).Return(true, nil)
-		friendStore.EXPECT().DeleteFriendship(ctx, 1, 2).Return(errors.New("db"))
+		friendStore.EXPECT().DeleteFriendship(ctx, 1, 2).Return(errors.New("dbconn"))
 		err := svc.RemoveFriend(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -284,7 +284,7 @@ func TestFriendService_GetFriends(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		friendStore.EXPECT().GetUserFriends(ctx, 1, 10, 0).Return(nil, errors.New("db"))
+		friendStore.EXPECT().GetUserFriends(ctx, 1, 10, 0).Return(nil, errors.New("dbconn"))
 		res, err := svc.GetFriends(ctx, 1, domain.PaginateQueryParams{Limit: 10, Page: 1})
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, res)
@@ -311,7 +311,7 @@ func TestFriendService_GetAllUsers(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		friendStore.EXPECT().GetAllUsers(ctx, 1, 10, 0).Return(nil, errors.New("db"))
+		friendStore.EXPECT().GetAllUsers(ctx, 1, 10, 0).Return(nil, errors.New("dbconn"))
 		res, err := svc.GetAllUsers(ctx, 1, domain.PaginateQueryParams{Limit: 10, Page: 1})
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, res)
@@ -338,7 +338,7 @@ func TestFriendService_GetFriendRequests(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		friendStore.EXPECT().GetFriendshipRequests(ctx, 1, 10, 0).Return(nil, errors.New("db"))
+		friendStore.EXPECT().GetFriendshipRequests(ctx, 1, 10, 0).Return(nil, errors.New("dbconn"))
 		res, err := svc.GetFriendRequests(ctx, 1, domain.PaginateQueryParams{Limit: 10, Page: 1})
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, res)
@@ -365,7 +365,7 @@ func TestFriendService_GetSentRequests(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		friendStore.EXPECT().GetSentRequests(ctx, 1, 10, 0).Return(nil, errors.New("db"))
+		friendStore.EXPECT().GetSentRequests(ctx, 1, 10, 0).Return(nil, errors.New("dbconn"))
 		res, err := svc.GetSentRequests(ctx, 1, domain.PaginateQueryParams{Limit: 10, Page: 1})
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, res)
@@ -392,7 +392,7 @@ func TestFriendService_GetFriendshipStatus(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		friendStore.EXPECT().GetFriendshipStatus(ctx, 1, 2).Return(domain.FriendshipStatus(""), errors.New("db"))
+		friendStore.EXPECT().GetFriendshipStatus(ctx, 1, 2).Return(domain.FriendshipStatus(""), errors.New("dbconn"))
 		status, err := svc.GetFriendshipStatus(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Equal(t, domain.FriendshipStatus(""), status)
@@ -458,7 +458,7 @@ func TestFriendService_CountUserRelations(t *testing.T) {
 	})
 
 	t.Run("DB error on get user", func(t *testing.T) {
-		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{}, errors.New("db"))
+		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{}, errors.New("dbconn"))
 		count, err := svc.CountUserRelations(ctx, 1, domain.CountAccepted)
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Equal(t, 0, count)
@@ -466,7 +466,7 @@ func TestFriendService_CountUserRelations(t *testing.T) {
 
 	t.Run("DB error on count relations", func(t *testing.T) {
 		userStore.EXPECT().GetUserByID(ctx, 1).Return(domain.User{ID: 1}, nil)
-		friendStore.EXPECT().CountUserRelations(ctx, 1, domain.CountAccepted).Return(0, errors.New("db"))
+		friendStore.EXPECT().CountUserRelations(ctx, 1, domain.CountAccepted).Return(0, errors.New("dbconn"))
 		count, err := svc.CountUserRelations(ctx, 1, domain.CountAccepted)
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Equal(t, 0, count)

@@ -63,7 +63,7 @@ func TestChatService_GetOrCreateChatWithUser(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		userStore.EXPECT().IsUserExists(ctx, 2).Return(false, errors.New("db"))
+		userStore.EXPECT().IsUserExists(ctx, 2).Return(false, errors.New("dbconn"))
 		chatID, err := svc.GetOrCreateChatWithUser(ctx, 1, 2)
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Equal(t, 0, chatID)
@@ -98,7 +98,7 @@ func TestChatService_GetMessagesByChatId(t *testing.T) {
 
 	t.Run("Get messages error", func(t *testing.T) {
 		chatStore.EXPECT().IsMemberOfChat(ctx, userID, chatID).Return(true, nil)
-		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, 10, 0).Return(nil, errors.New("db"))
+		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, 10, 0).Return(nil, errors.New("dbconn"))
 		res, err := svc.GetMessagesByChatId(ctx, domain.PaginateQueryParams{Limit: 10, Page: 1}, userID, chatID)
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, res)
@@ -107,7 +107,7 @@ func TestChatService_GetMessagesByChatId(t *testing.T) {
 	t.Run("Get authors error", func(t *testing.T) {
 		chatStore.EXPECT().IsMemberOfChat(ctx, userID, chatID).Return(true, nil)
 		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, 10, 0).Return(messages, nil)
-		profileStore.EXPECT().GetShortProfileByUserIDs(ctx, []int32{2}).Return(nil, errors.New("db"))
+		profileStore.EXPECT().GetShortProfileByUserIDs(ctx, []int32{2}).Return(nil, errors.New("dbconn"))
 		res, err := svc.GetMessagesByChatId(ctx, domain.PaginateQueryParams{Limit: 10, Page: 1}, userID, chatID)
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, res)
@@ -145,7 +145,7 @@ func TestChatService_CreateMessage(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		chatStore.EXPECT().IsChatExist(ctx, chatID).Return(false, errors.New("db"))
+		chatStore.EXPECT().IsChatExist(ctx, chatID).Return(false, errors.New("dbconn"))
 		msgID, err := svc.CreateMessage(ctx, userID, chatID, msg)
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Equal(t, 0, msgID)
@@ -167,7 +167,7 @@ func TestChatService_GetUserChats(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		chatStore.EXPECT().GetUserFullChats(ctx, userID, 10, 0).Return(nil, errors.New("db"))
+		chatStore.EXPECT().GetUserFullChats(ctx, userID, 10, 0).Return(nil, errors.New("dbconn"))
 		res, err := svc.GetUserChats(ctx, userID, domain.PaginateQueryParams{Limit: 10, Page: 0})
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, res)

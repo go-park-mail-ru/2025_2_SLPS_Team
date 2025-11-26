@@ -21,6 +21,10 @@ type Config struct {
 	FrontendOrigin     string
 	MigrationsPath     string
 	Origin             string
+	AuthService        string
+	FriendService      string
+	ProfileService     string
+	MainService        string
 }
 
 func NewConfig() *Config {
@@ -66,6 +70,10 @@ func NewConfig() *Config {
 		FrontendOrigin:     os.Getenv("FRONTEND_ORIGIN"),
 		MigrationsPath:     migrationsPath,
 		Origin:             origin,
+		ProfileService:     "profile:" + os.Getenv("PROFILE_SERVICE_PORT"),
+		AuthService:        "auth:" + os.Getenv("AUTH_SERVICE_PORT"),
+		FriendService:      "friend:" + os.Getenv("FRIEND_SERVICE_PORT"),
+		MainService:        "main:" + os.Getenv("MAIN_SERVICE_PORT"),
 	}
 	return config
 }

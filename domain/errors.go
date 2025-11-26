@@ -16,7 +16,7 @@ var (
 	ErrAccessDenied  = errors.New("access denied")
 	ErrInvalidInput  = errors.New("invalid input")
 	ErrNotExist      = errors.New("not exist")
-	ErrDB            = errors.New("db error")
+	ErrDB            = errors.New("dbconn error")
 	ErrAlreadyExists = errors.New("already exist")
 	ErrService       = errors.New("service error") //Какая-то внутренняя ошибк
 )
@@ -130,7 +130,7 @@ func FromGrpcError(err error) error {
 
 	case codes.Internal:
 		// различать БД и сервис?
-		if strings.Contains(st.Message(), "db") {
+		if strings.Contains(st.Message(), "dbconn") {
 			return ErrDB
 		}
 		return ErrService

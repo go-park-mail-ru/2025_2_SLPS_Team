@@ -44,7 +44,7 @@ func TestAuthService_IsLoggedIn(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		sessionStore.EXPECT().GetSessionBySessionID(ctx, cookie.Value).Return(nil, errors.New("db"))
+		sessionStore.EXPECT().GetSessionBySessionID(ctx, cookie.Value).Return(nil, errors.New("dbconn"))
 		res, err := svc.IsLoggedIn(ctx, cookie)
 		assert.Nil(t, res)
 		assert.Error(t, err)
@@ -67,7 +67,7 @@ func TestAuthService_AddSession(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		sessionStore.EXPECT().AddSession(ctx, userID).Return(nil, errors.New("db"))
+		sessionStore.EXPECT().AddSession(ctx, userID).Return(nil, errors.New("dbconn"))
 		res, err := svc.AddSession(ctx, userID)
 		assert.Nil(t, res)
 		assert.ErrorIs(t, err, domain.ErrDB)
@@ -98,7 +98,7 @@ func TestAuthService_Login(t *testing.T) {
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		userStore.EXPECT().GetUserByEmail(ctx, req.Email).Return(nil, errors.New("db"))
+		userStore.EXPECT().GetUserByEmail(ctx, req.Email).Return(nil, errors.New("dbconn"))
 		id, err := svc.Login(ctx, req)
 		assert.Equal(t, 0, id)
 		assert.ErrorIs(t, err, domain.ErrDB)
@@ -127,7 +127,7 @@ func TestAuthService_Logout(t *testing.T) {
 	})
 
 	t.Run("Error", func(t *testing.T) {
-		sessionStore.EXPECT().DeleteSession(ctx, cookie.Value).Return(errors.New("db"))
+		sessionStore.EXPECT().DeleteSession(ctx, cookie.Value).Return(errors.New("dbconn"))
 		err := svc.Logout(ctx, cookie)
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -171,7 +171,7 @@ func TestAuthService_Register(t *testing.T) {
 	})
 
 	t.Run("DB error on GetUserByEmail", func(t *testing.T) {
-		userStore.EXPECT().GetUserByEmail(ctx, req.Email).Return(nil, errors.New("db"))
+		userStore.EXPECT().GetUserByEmail(ctx, req.Email).Return(nil, errors.New("dbconn"))
 		id, err := svc.Register(ctx, req)
 		assert.Equal(t, 0, id)
 		assert.ErrorIs(t, err, domain.ErrDB)
@@ -188,7 +188,7 @@ func TestAuthService_Register(t *testing.T) {
 
 	t.Run("CreateUser error", func(t *testing.T) {
 		userStore.EXPECT().GetUserByEmail(ctx, req.Email).Return(nil, domain.ErrNotFound)
-		userStore.EXPECT().CreateUser(ctx, gomock.Any(), gomock.Any()).Return(0, errors.New("db"))
+		userStore.EXPECT().CreateUser(ctx, gomock.Any(), gomock.Any()).Return(0, errors.New("dbconn"))
 		id, err := svc.Register(ctx, req)
 		assert.Equal(t, 0, id)
 		assert.ErrorIs(t, err, domain.ErrDB)

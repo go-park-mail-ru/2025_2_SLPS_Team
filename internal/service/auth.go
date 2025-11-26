@@ -134,7 +134,7 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 		domain.FromContext(ctx).Error("Failed to create user", zap.Error(err))
 		return 0, domain.ErrDB
 	}
-
+	profile.UserID = userID
 	_, err = api.profileService.CreateProfile(ctx, &pb.CreateProfileRequest{Profile: generated.ToProtoProfile(profile)})
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))

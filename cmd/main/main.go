@@ -4,13 +4,16 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"project/cmd/dbconn"
+	"project/cmd/grpcclient"
+	"project/cmd/logger"
 	"project/config"
 	_ "project/docs"
 	"project/internal/handler"
 	"project/internal/repository/db"
-	"project/internal/repository/dbElasic"
-	"project/internal/repository/dbRedis"
+	"project/internal/repository/dbElastic"
 	"project/internal/service"
+	"project/shared/pb"
 	"time"
 
 	"github.com/elastic/go-elasticsearch/v8"
@@ -19,124 +22,41 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
 )
 
-func NewPostgres(dataSourceName string) *sql.DB {
-	db, err := sql.Open("pgx", dataSourceName)
-	if err != nil {
-		log.Fatalf("ошибка подключения к БД: %v", err)
-	}
+func NewApiRouter(logger *zap.Logger,
+	dbConn *sql.DB,
+	redisPool *redis.Pool,
+	elasticConn *elasticsearch.Client,
+	config *config.Config,
+	authClient pb.AuthServiceClient,
+	profileClient pb.ProfileServiceClient,
+	friendClient pb.FriendServiceClient,
 
-	if err := db.Ping(); err != nil {
-		log.Fatalf("ошибка ping БД: %v", err)
-	}
+) *mux.Router {
 
-	return db
-}
-
-func NewRedisPool(dataSourceName string) *redis.Pool {
-	return &redis.Pool{
-		MaxIdle:   10,
-		MaxActive: 50, // 0 = без лимита
-		Dial: func() (redis.Conn, error) {
-			c, err := redis.DialURL(dataSourceName)
-			if err != nil {
-				log.Fatalf("Can't connect to Redis: %v", err)
-			}
-			return c, nil
-		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
-			_, err := c.Do("PING")
-			return err
-		},
-		IdleTimeout: 240 * time.Second,
-	}
-}
-func NewElastic(config *config.Config) *elasticsearch.Client {
-	cfg := elasticsearch.Config{
-		Addresses: []string{
-			"http://elasticsearch:" + config.ElasticPort,
-		},
-		Username: config.ElasticUser,
-		Password: config.ElasticPassword,
-	}
-
-	es, err := elasticsearch.NewClient(cfg)
-	if err != nil {
-		log.Fatalf("Ошибка создания клиента: %s", err)
-	}
-
-	res, err := es.Info()
-	if err != nil {
-		log.Fatalf("Ошибка подключения: %s", err)
-	}
-	defer res.Body.Close()
-	log.Println("Elasticsearch подключен:", res.Status())
-	return es
-}
-
-func NewLogger(config *config.Config) *zap.Logger {
-	isDebug := config.Debug
-	atom := zap.NewAtomicLevel()
-	incodeCfg := zap.NewProductionEncoderConfig()
-	var cfg zap.Config
-	if isDebug {
-		atom.SetLevel(zap.DebugLevel)
-		incodeCfg.EncodeTime = zapcore.ISO8601TimeEncoder
-		cfg = zap.Config{
-			Encoding:      "console",
-			Level:         atom,
-			OutputPaths:   []string{"stdout", "logs/app.log"},
-			EncoderConfig: incodeCfg,
-		}
-	} else {
-		atom.SetLevel(zap.InfoLevel)
-		cfg = zap.Config{
-			Encoding:      "json",
-			Level:         atom,
-			OutputPaths:   []string{"stdout", "logs/app.log"},
-			EncoderConfig: incodeCfg,
-		}
-	}
-
-	logger, err := cfg.Build()
-	if err != nil {
-		log.Println(err)
-	}
-	return logger
-}
-
-func NewApiRouter(logger *zap.Logger, dbConn *sql.DB, redisPool *redis.Pool, elasticConn *elasticsearch.Client, config *config.Config) *mux.Router {
-
-	userStore := db.NewDBUserStore(dbConn)
-	sessionStore := dbRedis.NewRedisSessionStore(redisPool)
-	profileStore := db.NewDBProfileStore(dbConn)
 	chatStore := db.NewDBChatStore(dbConn)
 	messageStore := db.NewDBMessageStore(dbConn)
 	postStore := db.NewDBPostStore(dbConn)
 	applicationStore := db.NewDBApplicationStore(dbConn)
-	elasticProfileStore := dbElasic.NewElasticProfileStore(elasticConn, "profile")
-	elasticCommunityStore := dbElasic.NewElasticCommunityStore(elasticConn, "community_index")
+
+	elasticCommunityStore := dbElastic.NewElasticCommunityStore(elasticConn, "community_index")
 	communityStore := db.NewDBCommunityStore(dbConn)
 	wsHub := service.NewHub()
-	friendStore := db.NewDBFriendStore(dbConn)
-	authService := service.NewAuthService(userStore, sessionStore, elasticProfileStore)
-	profileService := service.NewProfileService(profileStore, friendStore, elasticProfileStore)
-	chatService := service.NewChatService(userStore, profileStore, chatStore, messageStore, wsHub)
-	communityService := service.NewCommunityService(communityStore, userStore, elasticCommunityStore, profileClient)
-	applicationService := service.NewApplicationService(userStore, applicationStore, wsHub)
+
+	chatService := service.NewChatService(authClient, profileClient, chatStore, messageStore, wsHub)
+	communityService := service.NewCommunityService(communityStore, postStore, authClient, elasticCommunityStore, profileClient)
+	applicationService := service.NewApplicationService(authClient, applicationStore, wsHub)
 	application := handler.NewApplicationHandler(applicationService)
-	auth := handler.NewAuthHandler(authService, config)
-	profile := handler.NewProfileHandler(profileService)
+	auth := handler.NewAuthHandler(authClient, config)
+	profile := handler.NewProfileHandler(profileClient)
 	chat := handler.NewChatHandler(chatService)
-	postService := service.NewPostService(postStore, userStore, communityStore, profileClient)
+	postService := service.NewPostService(postStore, authClient, communityStore, profileClient)
 	middleware := handler.NewMiddlewareHandler(config)
 	posts := handler.NewPostsHandler(postService)
 	community := handler.NewCommunityHandler(communityService)
 	wshandler := handler.NewWSHandler(wsHub)
-	friendService := service.NewFriendService(friendStore, userStore, elasticProfileStore, profileStore)
-	friend := handler.NewFriendHandler(friendService)
+	friend := handler.NewFriendHandler(friendClient)
 
 	r := mux.NewRouter()
 
@@ -239,17 +159,36 @@ func main() {
 	if config.Debug {
 		log.Println("Debug mode enabled")
 	}
-	logger := NewLogger(config)
+	logger := logger.NewLogger(config)
 	defer logger.Sync()
-	dbConn := NewPostgres(config.PostgresURL)
+	dbConn := dbconn.NewPostgres(config.PostgresURL)
 	defer dbConn.Close()
 
-	redisConn := NewRedisPool(config.RedisURL)
+	redisConn := dbconn.NewRedisPool(config.RedisURL)
 	defer redisConn.Close()
-	elasticConn := NewElastic(config)
-	apiRouter := NewApiRouter(logger, dbConn, redisConn, elasticConn, config)
+	elasticConn := dbconn.NewElastic(config)
 
-	if err := http.ListenAndServe(":8080", apiRouter); err != nil {
+	profileClient, profileConn, err := grpcclient.WaitForGRPC(config.ProfileService, pb.NewProfileServiceClient, 10, 2*time.Second)
+	if err != nil {
+		log.Fatalf("не удалось подключиться к ProfileService: %v", err)
+	}
+	defer profileConn.Close()
+
+	authClient, authConn, err := grpcclient.WaitForGRPC(config.AuthService, pb.NewAuthServiceClient, 10, 2*time.Second)
+	if err != nil {
+		log.Fatalf("не удалось подключиться к AuthService: %v", err)
+	}
+	defer authConn.Close()
+
+	friendClient, friendConn, err := grpcclient.WaitForGRPC(config.FriendService, pb.NewFriendServiceClient, 10, 2*time.Second)
+	if err != nil {
+		log.Fatalf("не удалось подключиться к AuthService: %v", err)
+	}
+	defer friendConn.Close()
+
+	apiRouter := NewApiRouter(logger, dbConn, redisConn, elasticConn, config, authClient, profileClient, friendClient)
+
+	if err := http.ListenAndServe(config.MainService, apiRouter); err != nil {
 		log.Fatalf("Server failed start: %v", err)
 	}
 

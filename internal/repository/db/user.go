@@ -35,25 +35,24 @@ func (store *DBUserStore) CreateUser(ctx context.Context, user domain.User) (int
 		return 0, fmt.Errorf("begin tx: %w", err)
 	}
 
-	defer func() {
-		if err != nil {
-			dblogger.Error("Rollback tx", zap.Error(err))
-			tx.Rollback()
-		} else {
-			err = tx.Commit()
-			dblogger.Info("Tx commited", zap.Error(err))
-		}
-	}()
-
 	var userID int32
 	queryUser := `INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id`
 	err = tx.QueryRow(queryUser, user.Email, user.Password).Scan(&userID)
 	if err != nil {
-		dblogger.Error("Failed to insert user", zap.String("query", queryUser))
+		tx.Rollback()
+		dblogger.Error("Failed to insert user", zap.String("query", queryUser), zap.Error(err))
 		return 0, fmt.Errorf("insert user: %w", err)
 	}
 
+	// Если всё ок, коммитим
+	if err := tx.Commit(); err != nil {
+		dblogger.Error("Failed to commit tx", zap.Error(err))
+		return 0, fmt.Errorf("commit tx: %w", err)
+	}
+
+	dblogger.Info("User created", zap.Int32("userID", userID))
 	return userID, nil
+
 }
 
 func (store *DBUserStore) GetUserByEmail(ctx context.Context, email string) (*domain.User, error) {
