@@ -7,7 +7,6 @@ import (
 	"project/domain"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
@@ -19,24 +18,18 @@ func TestCreateUser_Success(t *testing.T) {
 	store := NewDBUserStore(dbConn)
 	ctx := context.Background()
 
-	dob := time.Now()
 	user := domain.User{Email: "test@example.com", Password: "pass"}
-	profile := domain.Profile{FirstName: "John", LastName: "Doe", Gender: "M", Dob: dob}
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id")).
 		WithArgs(user.Email, user.Password).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(1))
-	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO profiles (user_id, first_name, last_name, gender, dob) VALUES ($1, $2, $3, $4, $5)")).
-		WithArgs(1, profile.FirstName, profile.LastName, profile.Gender, profile.Dob).
-		WillReturnResult(sqlmock.NewResult(1, 1))
 	mock.ExpectCommit()
 
-	id, err := store.CreateUser(ctx, user, profile)
+	id, err := store.CreateUser(ctx, user)
 	assert.NoError(t, err)
-	assert.Equal(t, 1, id)
+	assert.Equal(t, int32(1), id)
 }
-
 func TestCreateUser_InsertUserFail(t *testing.T) {
 	dbConn, mock, _ := sqlmock.New()
 	defer dbConn.Close()
@@ -44,7 +37,6 @@ func TestCreateUser_InsertUserFail(t *testing.T) {
 	ctx := context.Background()
 
 	user := domain.User{Email: "test@example.com", Password: "pass"}
-	profile := domain.Profile{}
 
 	mock.ExpectBegin()
 	mock.ExpectQuery(regexp.QuoteMeta("INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id")).
@@ -52,9 +44,9 @@ func TestCreateUser_InsertUserFail(t *testing.T) {
 		WillReturnError(errors.New("insert user error"))
 	mock.ExpectRollback()
 
-	id, err := store.CreateUser(ctx, user, profile)
+	id, err := store.CreateUser(ctx, user)
 	assert.Error(t, err)
-	assert.Equal(t, 0, id)
+	assert.Equal(t, int32(0), id)
 }
 
 func TestGetUserByEmail_Success(t *testing.T) {
@@ -97,10 +89,10 @@ func TestGetUserByID_Success(t *testing.T) {
 	store := NewDBUserStore(dbConn)
 	ctx := context.Background()
 
-	userID := 1
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, password FROM users WHERE id = $1")).
+	userID := int32(1)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, password, role FROM users WHERE id = $1")).
 		WithArgs(userID).
-		WillReturnRows(sqlmock.NewRows([]string{"id", "email", "password"}).AddRow(userID, "test@example.com", "pass"))
+		WillReturnRows(sqlmock.NewRows([]string{"id", "email", "password", "role"}).AddRow(userID, "test@example.com", "pass", "user"))
 
 	user, err := store.GetUserByID(ctx, userID)
 	assert.NoError(t, err)
@@ -113,8 +105,8 @@ func TestGetUserByID_NotFound(t *testing.T) {
 	store := NewDBUserStore(dbConn)
 	ctx := context.Background()
 
-	userID := 1
-	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, password FROM users WHERE id = $1")).
+	userID := int32(1)
+	mock.ExpectQuery(regexp.QuoteMeta("SELECT id, email, password, role FROM users WHERE id = $1")).
 		WithArgs(userID).
 		WillReturnError(sql.ErrNoRows)
 
@@ -129,7 +121,7 @@ func TestIsUserExists_True(t *testing.T) {
 	store := NewDBUserStore(dbConn)
 	ctx := context.Background()
 
-	userID := 1
+	userID := int32(1)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)")).
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(true))
@@ -145,7 +137,7 @@ func TestIsUserExists_False(t *testing.T) {
 	store := NewDBUserStore(dbConn)
 	ctx := context.Background()
 
-	userID := 1
+	userID := int32(1)
 	mock.ExpectQuery(regexp.QuoteMeta("SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)")).
 		WithArgs(userID).
 		WillReturnRows(sqlmock.NewRows([]string{"exists"}).AddRow(false))

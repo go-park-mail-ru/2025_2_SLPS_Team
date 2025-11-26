@@ -95,6 +95,20 @@ func (mr *MockChatServiceMockRecorder) GetUserChats(ctx, userID, params interfac
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserChats", reflect.TypeOf((*MockChatService)(nil).GetUserChats), ctx, userID, params)
 }
 
+// UpdateLastReadMessage mocks base method.
+func (m *MockChatService) UpdateLastReadMessage(ctx context.Context, userID, chatID, lastReadMessageID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLastReadMessage", ctx, userID, chatID, lastReadMessageID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateLastReadMessage indicates an expected call of UpdateLastReadMessage.
+func (mr *MockChatServiceMockRecorder) UpdateLastReadMessage(ctx, userID, chatID, lastReadMessageID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLastReadMessage", reflect.TypeOf((*MockChatService)(nil).UpdateLastReadMessage), ctx, userID, chatID, lastReadMessageID)
+}
+
 // MockChatStore is a mock of ChatStore interface.
 type MockChatStore struct {
 	ctrl     *gomock.Controller
@@ -119,12 +133,13 @@ func (m *MockChatStore) EXPECT() *MockChatStoreMockRecorder {
 }
 
 // GetFullChatByIDAndSenderID mocks base method.
-func (m *MockChatStore) GetFullChatByIDAndSenderID(ctx context.Context, userID, chatID int32) (*domain.FullChat, error) {
+func (m *MockChatStore) GetFullChatByIDAndSenderID(ctx context.Context, userID, chatID int32) (*domain.FullChat, []int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetFullChatByIDAndSenderID", ctx, userID, chatID)
 	ret0, _ := ret[0].(*domain.FullChat)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].([]int32)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // GetFullChatByIDAndSenderID indicates an expected call of GetFullChatByIDAndSenderID.
@@ -149,10 +164,10 @@ func (mr *MockChatStoreMockRecorder) GetOrCreateChatWithUser(ctx, selfUserID, us
 }
 
 // GetOtherChatMembersIdByAuthorId mocks base method.
-func (m *MockChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, userID, chatID int32) ([]int32, error) {
+func (m *MockChatStore) GetOtherChatMembersIdByAuthorId(ctx context.Context, userID, chatID int32) ([]domain.MemberWithLastReadMessage, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetOtherChatMembersIdByAuthorId", ctx, userID, chatID)
-	ret0, _ := ret[0].([]int32)
+	ret0, _ := ret[0].([]domain.MemberWithLastReadMessage)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -164,12 +179,13 @@ func (mr *MockChatStoreMockRecorder) GetOtherChatMembersIdByAuthorId(ctx, userID
 }
 
 // GetUserFullChats mocks base method.
-func (m *MockChatStore) GetUserFullChats(ctx context.Context, userID, limit, offset int32) ([]domain.FullChat, error) {
+func (m *MockChatStore) GetUserFullChats(ctx context.Context, userID, limit, offset int32) ([]domain.FullChat, []int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetUserFullChats", ctx, userID, limit, offset)
 	ret0, _ := ret[0].([]domain.FullChat)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
+	ret1, _ := ret[1].([]int32)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
 }
 
 // GetUserFullChats indicates an expected call of GetUserFullChats.
@@ -206,4 +222,18 @@ func (m *MockChatStore) IsMemberOfChat(ctx context.Context, userID, chatID int32
 func (mr *MockChatStoreMockRecorder) IsMemberOfChat(ctx, userID, chatID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsMemberOfChat", reflect.TypeOf((*MockChatStore)(nil).IsMemberOfChat), ctx, userID, chatID)
+}
+
+// UpdateLastReadMessageByUserIDAndChatID mocks base method.
+func (m *MockChatStore) UpdateLastReadMessageByUserIDAndChatID(ctx context.Context, userID, chatID, lastReadMessageID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLastReadMessageByUserIDAndChatID", ctx, userID, chatID, lastReadMessageID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateLastReadMessageByUserIDAndChatID indicates an expected call of UpdateLastReadMessageByUserIDAndChatID.
+func (mr *MockChatStoreMockRecorder) UpdateLastReadMessageByUserIDAndChatID(ctx, userID, chatID, lastReadMessageID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLastReadMessageByUserIDAndChatID", reflect.TypeOf((*MockChatStore)(nil).UpdateLastReadMessageByUserIDAndChatID), ctx, userID, chatID, lastReadMessageID)
 }

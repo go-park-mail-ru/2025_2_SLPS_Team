@@ -6,7 +6,6 @@ package mocks
 
 import (
 	context "context"
-	http "net/http"
 	domain "project/domain"
 	reflect "reflect"
 
@@ -51,8 +50,23 @@ func (mr *MockAuthServiceMockRecorder) AddSession(ctx, userID interface{}) *gomo
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSession", reflect.TypeOf((*MockAuthService)(nil).AddSession), ctx, userID)
 }
 
+// GetUserRole mocks base method.
+func (m *MockAuthService) GetUserRole(ctx context.Context, userID int32) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetUserRole", ctx, userID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetUserRole indicates an expected call of GetUserRole.
+func (mr *MockAuthServiceMockRecorder) GetUserRole(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserRole", reflect.TypeOf((*MockAuthService)(nil).GetUserRole), ctx, userID)
+}
+
 // IsLoggedIn mocks base method.
-func (m *MockAuthService) IsLoggedIn(ctx context.Context, sessionCookie *http.Cookie) (*domain.Session, error) {
+func (m *MockAuthService) IsLoggedIn(ctx context.Context, sessionCookie string) (*domain.Session, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "IsLoggedIn", ctx, sessionCookie)
 	ret0, _ := ret[0].(*domain.Session)
@@ -64,6 +78,21 @@ func (m *MockAuthService) IsLoggedIn(ctx context.Context, sessionCookie *http.Co
 func (mr *MockAuthServiceMockRecorder) IsLoggedIn(ctx, sessionCookie interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsLoggedIn", reflect.TypeOf((*MockAuthService)(nil).IsLoggedIn), ctx, sessionCookie)
+}
+
+// IsUserExists mocks base method.
+func (m *MockAuthService) IsUserExists(ctx context.Context, userID int32) (bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsUserExists", ctx, userID)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// IsUserExists indicates an expected call of IsUserExists.
+func (mr *MockAuthServiceMockRecorder) IsUserExists(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsUserExists", reflect.TypeOf((*MockAuthService)(nil).IsUserExists), ctx, userID)
 }
 
 // Login mocks base method.
@@ -82,17 +111,17 @@ func (mr *MockAuthServiceMockRecorder) Login(ctx, req interface{}) *gomock.Call 
 }
 
 // Logout mocks base method.
-func (m *MockAuthService) Logout(ctx context.Context, session *http.Cookie) error {
+func (m *MockAuthService) Logout(ctx context.Context, sessionCookie string) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Logout", ctx, session)
+	ret := m.ctrl.Call(m, "Logout", ctx, sessionCookie)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Logout indicates an expected call of Logout.
-func (mr *MockAuthServiceMockRecorder) Logout(ctx, session interface{}) *gomock.Call {
+func (mr *MockAuthServiceMockRecorder) Logout(ctx, sessionCookie interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logout", reflect.TypeOf((*MockAuthService)(nil).Logout), ctx, session)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Logout", reflect.TypeOf((*MockAuthService)(nil).Logout), ctx, sessionCookie)
 }
 
 // Register mocks base method.

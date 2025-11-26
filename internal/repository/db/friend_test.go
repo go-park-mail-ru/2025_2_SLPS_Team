@@ -281,17 +281,16 @@ func TestGetUserFriends(t *testing.T) {
 	_, mock, store := setupMockDB(t)
 
 	t.Run("Success", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"user_id", "full_name", "avatar_path"}).
-			AddRow(2, "John Doe", "/avatar.jpg").
-			AddRow(3, "Jane Smith", "/avatar2.jpg")
-		mock.ExpectQuery(`SELECT p.user_id, p.first_name \|\| ' '\|\|p.last_name, p.avatar_path`).
+		rows := sqlmock.NewRows([]string{"friend_id"}).
+			AddRow(2).
+			AddRow(3)
+		mock.ExpectQuery(`SELECT CASE`).
 			WithArgs(1, 10, 0).
 			WillReturnRows(rows)
-		friends, err := store.GetUserFriends(context.Background(), 1, 10, 0)
+		friendIDs, err := store.GetUserFriends(context.Background(), 1, 10, 0)
 		assert.NoError(t, err)
-		assert.Len(t, friends, 2)
-		assert.Equal(t, 2, friends[0].UserID)
-		assert.Equal(t, "John Doe", friends[0].FullName)
+		assert.Len(t, friendIDs, 2)
+		assert.Equal(t, []int32{2, 3}, friendIDs)
 	})
 
 	t.Run("Empty result", func(t *testing.T) {
@@ -341,34 +340,35 @@ func TestGetAllUsers(t *testing.T) {
 	_, mock, store := setupMockDB(t)
 
 	t.Run("Success", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"user_id", "full_name", "avatar_path"}).
-			AddRow(2, "User Two", "/avatar2.jpg").
-			AddRow(3, "User Three", "/avatar3.jpg")
-		mock.ExpectQuery(`SELECT user_id, first_name`).
-			WithArgs(1, 10, 0).
+		rows := sqlmock.NewRows([]string{"friend_id"}).
+			AddRow(2).
+			AddRow(3)
+		mock.ExpectQuery(`SELECT CASE`).
+			WithArgs(1).
 			WillReturnRows(rows)
-		users, err := store.GetAllUsers(context.Background(), 1, 10, 0)
+		userIDs, err := store.GetAllUsers(context.Background(), 1)
 		assert.NoError(t, err)
-		assert.Len(t, users, 2)
+		assert.Len(t, userIDs, 2)
+		assert.Equal(t, []int32{2, 3}, userIDs)
 	})
 
 	t.Run("Empty result", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"user_id", "full_name", "avatar_path"})
-		mock.ExpectQuery(`SELECT user_id, first_name`).
-			WithArgs(1, 10, 0).
+		rows := sqlmock.NewRows([]string{"friend_id"})
+		mock.ExpectQuery(`SELECT CASE`).
+			WithArgs(1).
 			WillReturnRows(rows)
-		users, err := store.GetAllUsers(context.Background(), 1, 10, 0)
+		userIDs, err := store.GetAllUsers(context.Background(), 1)
 		assert.NoError(t, err)
-		assert.Empty(t, users)
+		assert.Empty(t, userIDs)
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT user_id, first_name`).
-			WithArgs(1, 10, 0).
+		mock.ExpectQuery(`SELECT CASE`).
+			WithArgs(1).
 			WillReturnError(assert.AnError)
-		users, err := store.GetAllUsers(context.Background(), 1, 10, 0)
+		userIDs, err := store.GetAllUsers(context.Background(), 1)
 		assert.Error(t, err)
-		assert.Nil(t, users)
+		assert.Nil(t, userIDs)
 	})
 }
 func TestGetFriendshipRequests(t *testing.T) {
@@ -444,65 +444,54 @@ func TestGetSentRequests(t *testing.T) {
 func TestCountUserRelations(t *testing.T) {
 	_, mock, store := setupMockDB(t)
 
-	t.Run("Count accepted", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT COUNT\(\*\)`).
+	t.Run("Success", func(t *testing.T) {
+		rows := sqlmock.NewRows([]string{"accepted_count", "pending_count", "sent_count", "blocked_count"}).
+			AddRow(5, 3, 2, 1)
+		mock.ExpectQuery(`WITH counts AS`).
 			WithArgs(1).
-			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(5))
-		count, err := store.CountUserRelations(context.Background(), 1, domain.CountAccepted)
+			WillReturnRows(rows)
+		counts, err := store.CountUserRelations(context.Background(), 1)
 		assert.NoError(t, err)
-		assert.Equal(t, 5, count)
+		assert.NotNil(t, counts)
+		assert.Equal(t, int32(5), counts.Accepted)
+		assert.Equal(t, int32(3), counts.Pending)
+		assert.Equal(t, int32(2), counts.Sent)
+		assert.Equal(t, int32(1), counts.Blocked)
 	})
 
-	t.Run("Count pending", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT COUNT\(\*\)`).
+	t.Run("Empty counts", func(t *testing.T) {
+		rows := sqlmock.NewRows([]string{"accepted_count", "pending_count", "sent_count", "blocked_count"}).
+			AddRow(0, 0, 0, 0)
+		mock.ExpectQuery(`WITH counts AS`).
 			WithArgs(1).
-			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(3))
-		count, err := store.CountUserRelations(context.Background(), 1, domain.CountPending)
+			WillReturnRows(rows)
+		counts, err := store.CountUserRelations(context.Background(), 1)
 		assert.NoError(t, err)
-		assert.Equal(t, 3, count)
-	})
-
-	t.Run("Count sent", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT COUNT\(\*\)`).
-			WithArgs(1).
-			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(2))
-		count, err := store.CountUserRelations(context.Background(), 1, domain.CountSent)
-		assert.NoError(t, err)
-		assert.Equal(t, 2, count)
-	})
-
-	t.Run("Count blocked", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT COUNT\(\*\)`).
-			WithArgs(1).
-			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
-		count, err := store.CountUserRelations(context.Background(), 1, domain.CountBlocked)
-		assert.NoError(t, err)
-		assert.Equal(t, 1, count)
-	})
-
-	t.Run("Invalid count type", func(t *testing.T) {
-		count, err := store.CountUserRelations(context.Background(), 1, "invalid")
-		assert.Error(t, err)
-		assert.Equal(t, 0, count)
+		assert.NotNil(t, counts)
+		assert.Equal(t, int32(0), counts.Accepted)
+		assert.Equal(t, int32(0), counts.Pending)
+		assert.Equal(t, int32(0), counts.Sent)
+		assert.Equal(t, int32(0), counts.Blocked)
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		// Используем упрощенное регулярное выражение, которое соответствует началу любого COUNT запроса
-		mock.ExpectQuery(`SELECT`).
+		mock.ExpectQuery(`WITH counts AS`).
 			WithArgs(1).
 			WillReturnError(assert.AnError)
-		count, err := store.CountUserRelations(context.Background(), 1, domain.CountAccepted)
+		counts, err := store.CountUserRelations(context.Background(), 1)
 		assert.Error(t, err)
-		assert.Equal(t, 0, count)
+		assert.Nil(t, counts)
 	})
 
 	t.Run("Scan error", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT`).
+		rows := sqlmock.NewRows([]string{"accepted_count", "pending_count", "sent_count", "blocked_count"}).
+			AddRow("invalid", 3, 2, 1)
+		mock.ExpectQuery(`WITH counts AS`).
 			WithArgs(1).
-			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow("invalid"))
-		count, err := store.CountUserRelations(context.Background(), 1, domain.CountAccepted)
+			WillReturnRows(rows)
+		counts, err := store.CountUserRelations(context.Background(), 1)
 		assert.Error(t, err)
-		assert.Equal(t, 0, count)
+		assert.Nil(t, counts)
 	})
 }
 func TestEnsureUserOrder(t *testing.T) {
@@ -600,30 +589,29 @@ func TestNullAvatarPath(t *testing.T) {
 	_, mock, store := setupMockDB(t)
 
 	t.Run("Null avatar path", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"user_id", "full_name", "avatar_path"}).
-			AddRow(2, "John Doe", nil)
-		mock.ExpectQuery(`SELECT p.user_id, p.first_name \|\| ' '\|\|p.last_name, p.avatar_path`).
+		rows := sqlmock.NewRows([]string{"friend_id"}).
+			AddRow(2)
+		mock.ExpectQuery(`SELECT CASE`).
 			WithArgs(1, 10, 0).
 			WillReturnRows(rows)
-		friends, err := store.GetUserFriends(context.Background(), 1, 10, 0)
+		friendIDs, err := store.GetUserFriends(context.Background(), 1, 10, 0)
 		assert.NoError(t, err)
-		assert.Len(t, friends, 1)
-		assert.Nil(t, friends[0].AvatarPath)
+		assert.Len(t, friendIDs, 1)
+		assert.Equal(t, int32(2), friendIDs[0])
 	})
 }
-
 func TestEmptyUserName(t *testing.T) {
 	_, mock, store := setupMockDB(t)
 
 	t.Run("Empty user name", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{"user_id", "full_name", "avatar_path"}).
-			AddRow(2, "", "/avatar.jpg")
-		mock.ExpectQuery(`SELECT p.user_id, p.first_name \|\| ' '\|\|p.last_name, p.avatar_path`).
+		rows := sqlmock.NewRows([]string{"friend_id"}).
+			AddRow(2)
+		mock.ExpectQuery(`SELECT CASE`).
 			WithArgs(1, 10, 0).
 			WillReturnRows(rows)
-		friends, err := store.GetUserFriends(context.Background(), 1, 10, 0)
+		friendIDs, err := store.GetUserFriends(context.Background(), 1, 10, 0)
 		assert.NoError(t, err)
-		assert.Len(t, friends, 1)
-		assert.Equal(t, "", friends[0].FullName)
+		assert.Len(t, friendIDs, 1)
+		assert.Equal(t, int32(2), friendIDs[0])
 	})
 }
