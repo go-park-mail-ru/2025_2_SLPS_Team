@@ -13,6 +13,7 @@ import (
 	"project/internal/repository/db"
 	"project/internal/repository/dbElastic"
 	"project/internal/service"
+	"project/metrics"
 	"project/shared/pb"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/gorilla/mux"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 )
@@ -59,7 +61,8 @@ func NewApiRouter(logger *zap.Logger,
 	friend := handler.NewFriendHandler(friendClient)
 
 	r := mux.NewRouter()
-
+	mt := metrics.NewHTTPMetrics("main")
+	r.Use(mt.HTTPMiddleware)
 	r.Use(middleware.CorsMiddleware)
 	r.PathPrefix("/uploads/").Handler(handler.UploadsHandler("./uploads", "/uploads/"))
 
@@ -140,7 +143,16 @@ func NewApiRouter(logger *zap.Logger,
 	communityRouter.HandleFunc("/{id:[0-9]+}/subscribers", community.GetCommunitySubscribers).Methods("GET")
 	communityRouter.HandleFunc("/{id:[0-9]+}/subscribe", community.Subscribe).Methods("POST", "OPTIONS")
 	communityRouter.HandleFunc("/{id:[0-9]+}/unsubscribe", community.Unsubscribe).Methods("POST", "OPTIONS")
+	// Отдельный endpoint для метрик Prometheus
+	metricsRouter := r.PathPrefix("/metrics").Subrouter()
+	metricsRouter.Handle("", promhttp.Handler()).Methods("GET")
 
+	// Health check endpoint
+	r.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "healthy", "service": "main-service"}`))
+	}).Methods("GET")
 	r.NotFoundHandler = http.HandlerFunc(handler.NotFoundHandler)
 
 	return r
@@ -188,8 +200,9 @@ func main() {
 
 	apiRouter := NewApiRouter(logger, dbConn, redisConn, elasticConn, config, authClient, profileClient, friendClient)
 
-	if err := http.ListenAndServe(config.MainService, apiRouter); err != nil {
+	metrics.StartHealthUpdater("profile-service", 5)
+
+	if err := http.ListenAndServe(":8080", apiRouter); err != nil {
 		log.Fatalf("Server failed start: %v", err)
 	}
-
 }

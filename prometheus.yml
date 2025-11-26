@@ -1,0 +1,42 @@
+# prometheus.yml
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Метрики приложений
+  - job_name: 'main'
+    static_configs:
+      - targets: ['main:8080']
+    scrape_interval: 10s
+
+  - job_name: 'auth-service'
+    static_configs:
+      - targets: ['auth:8080']
+    scrape_interval: 10s
+
+  - job_name: 'profile-service'
+    static_configs:
+      - targets: ['profile:8080']
+    scrape_interval: 10s
+
+  - job_name: 'friend-service'
+    static_configs:
+      - targets: ['friend:8080']
+    scrape_interval: 10s
+
+  # Железные метрики хоста - Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+  # Метрики контейнеров - cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+    metrics_path: /metrics
+
+

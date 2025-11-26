@@ -70,10 +70,10 @@ func NewConfig() *Config {
 		FrontendOrigin:     os.Getenv("FRONTEND_ORIGIN"),
 		MigrationsPath:     migrationsPath,
 		Origin:             origin,
-		ProfileService:     "profile:" + os.Getenv("PROFILE_SERVICE_PORT"),
-		AuthService:        "auth:" + os.Getenv("AUTH_SERVICE_PORT"),
-		FriendService:      "friend:" + os.Getenv("FRIEND_SERVICE_PORT"),
-		MainService:        "main:" + os.Getenv("MAIN_SERVICE_PORT"),
+		ProfileService:     "profile:" + "50050",
+		AuthService:        "auth:" + "50050",
+		FriendService:      "friend:" + "50050",
+		MainService:        "main:" + "50050",
 	}
 	return config
 }

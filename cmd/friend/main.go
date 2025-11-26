@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net"
+	"net/http"
 	"project/cmd/dbconn"
 	"project/cmd/grpcclient"
 	"project/config"
@@ -10,20 +11,21 @@ import (
 	"project/internal/repository/db"
 	"project/internal/repository/dbElastic"
 	"project/internal/service"
+	"project/metrics"
 	"project/shared/pb"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/grpc"
 )
 
 func main() {
 	cfg := config.NewConfig()
-	//log := logger.NewLogger(cfg)
+	friendMetrics := metrics.NewGRPCMetrics("friend-service")
 
 	dbConn := dbconn.NewPostgres(cfg.PostgresURL)
 	elasticConn := dbconn.NewElastic(cfg)
 
-	// Хранилища
 	friendStore := db.NewDBFriendStore(dbConn)
 	elasticProfileStore := dbElastic.NewElasticProfileStore(elasticConn, "profile")
 
@@ -46,11 +48,31 @@ func main() {
 		log.Fatal("failed to listen:", err)
 	}
 	grpcFriendHandler := friendHandler.NewGrpcFriendHandler(friendService)
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(friendHandler.ServerUnaryInterceptor()))
+	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(friendHandler.ServerUnaryInterceptor(), friendMetrics.UnaryServerInterceptor()))
 	pb.RegisterFriendServiceServer(grpcServer, grpcFriendHandler)
+	go func() {
+		log.Println("FriendService gRPC server listening on", cfg.FriendService)
+		if err := grpcServer.Serve(lis); err != nil {
+			log.Fatal(err)
+		}
 
-	log.Println("FriendService gRPC server listening on", cfg.FriendService)
-	if err := grpcServer.Serve(lis); err != nil {
-		log.Fatal(err)
-	}
+	}()
+
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status": "healthy"}`))
+	})
+
+	mux.Handle("/metrics", promhttp.Handler())
+
+	go func() {
+		if err := http.ListenAndServe(":8080", mux); err != nil {
+			panic(err)
+		}
+	}()
+	metrics.StartHealthUpdater("friend-service", 5)
+	select {}
 }
