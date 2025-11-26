@@ -42,7 +42,7 @@ func main() {
 		log.Fatalf("failed to listen: %v", err)
 	}
 
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpcclient.ServerUnaryInterceptor()))
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(authHandler.ServerUnaryInterceptor()))
 	pb.RegisterAuthServiceServer(grpcServer, grpcAuthHandler)
 
 	log.Println("AuthService gRPC server listening on", cfg.AuthService)

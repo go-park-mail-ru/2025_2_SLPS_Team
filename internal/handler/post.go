@@ -158,7 +158,8 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 			domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", communityIDStr))
 			return
 		}
-		*communityID = int32(id)
+		cid := int32(id)
+		communityID = &cid
 	}
 
 	post, err := h.postService.CreatePost(r.Context(), userID, text, communityID, attachmentFiles, photoFiles)

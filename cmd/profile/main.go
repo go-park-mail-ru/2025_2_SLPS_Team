@@ -4,7 +4,6 @@ import (
 	"log"
 	"net"
 	"project/cmd/dbconn"
-	"project/cmd/grpcclient"
 	"project/config"
 	profileHandler "project/internal/grpc"
 	"project/internal/repository/db"
@@ -34,7 +33,7 @@ func main() {
 		log.Fatal("failed to listen:", err)
 	}
 	grpcProfileHandler := profileHandler.NewGrpcProfileHandler(profileService)
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpcclient.ServerUnaryInterceptor()))
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(profileHandler.ServerUnaryInterceptor()))
 	pb.RegisterProfileServiceServer(grpcServer, grpcProfileHandler)
 
 	log.Println("ProfileService gRPC server listening on", cfg.ProfileService)

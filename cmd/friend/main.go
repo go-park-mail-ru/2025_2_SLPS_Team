@@ -46,7 +46,7 @@ func main() {
 		log.Fatal("failed to listen:", err)
 	}
 	grpcFriendHandler := friendHandler.NewGrpcFriendHandler(friendService)
-	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(grpcclient.ServerUnaryInterceptor()))
+	grpcServer := grpc.NewServer(grpc.UnaryInterceptor(friendHandler.ServerUnaryInterceptor()))
 	pb.RegisterFriendServiceServer(grpcServer, grpcFriendHandler)
 
 	log.Println("FriendService gRPC server listening on", cfg.FriendService)
