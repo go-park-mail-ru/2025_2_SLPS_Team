@@ -239,10 +239,7 @@ services:
       - cadvisor
 
   grafana:
-    image: ${GRAFANA_IMAGE:-local/grafana:latest}
-    build:
-      context: .
-      dockerfile: Dockerfile.grafana
+    image: grafana/grafana:latest
     container_name: grafana
     ports:
       - "3000:3000"
