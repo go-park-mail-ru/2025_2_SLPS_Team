@@ -1,0 +1,202 @@
+{
+  "dashboard": {
+    "id": null,
+    "uid": "all-services-dashboard",
+    "title": "Full Service Metrics",
+    "timezone": "browser",
+    "schemaVersion": 36,
+    "version": 1,
+    "panels": [
+      {
+        "type": "row",
+        "title": "Hardware Metrics",
+        "collapsed": false,
+        "panels": []
+      },
+      {
+        "type": "graph",
+        "title": "CPU Usage & Throttling",
+        "targets": [
+          {
+            "expr": "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+            "legendFormat": "{{instance}} CPU"
+          },
+          {
+            "expr": "rate(node_cpu_seconds_total{mode=\"iowait\"}[5m])",
+            "legendFormat": "{{instance}} IO Wait"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 }
+      },
+      {
+        "type": "graph",
+        "title": "RAM & Memory Usage",
+        "targets": [
+          {
+            "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+            "legendFormat": "{{instance}} used RAM"
+          },
+          {
+            "expr": "node_memory_MemAvailable_bytes",
+            "legendFormat": "{{instance}} free RAM"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 }
+      },
+      {
+        "type": "graph",
+        "title": "Disk I/O & Network",
+        "targets": [
+          {
+            "expr": "rate(node_disk_read_bytes_total[5m])",
+            "legendFormat": "{{instance}} read bytes/s"
+          },
+          {
+            "expr": "rate(node_disk_written_bytes_total[5m])",
+            "legendFormat": "{{instance}} write bytes/s"
+          },
+          {
+            "expr": "rate(node_network_receive_bytes_total[5m])",
+            "legendFormat": "{{instance}} rx bytes/s"
+          },
+          {
+            "expr": "rate(node_network_transmit_bytes_total[5m])",
+            "legendFormat": "{{instance}} tx bytes/s"
+          }
+        ],
+        "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 }
+      },
+      {
+        "type": "row",
+        "title": "Go Runtime Metrics",
+        "collapsed": false
+      },
+      {
+        "type": "graph",
+        "title": "Goroutines",
+        "targets": [
+          {
+            "expr": "go_goroutines",
+            "legendFormat": "{{instance}} goroutines"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 16 }
+      },
+      {
+        "type": "graph",
+        "title": "Heap Allocation",
+        "targets": [
+          {
+            "expr": "go_memstats_heap_alloc_bytes",
+            "legendFormat": "{{instance}} heap"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 12, "x": 12, "y": 16 }
+      },
+      {
+        "type": "graph",
+        "title": "GC Pause Time",
+        "targets": [
+          {
+            "expr": "go_gc_duration_seconds",
+            "legendFormat": "{{instance}} GC"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 22 }
+      },
+      {
+        "type": "row",
+        "title": "HTTP / gRPC Metrics",
+        "collapsed": false
+      },
+      {
+        "type": "graph",
+        "title": "HTTP RPS by Path",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total[1m])) by (path)",
+            "legendFormat": "{{path}}"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 28 }
+      },
+      {
+        "type": "graph",
+        "title": "HTTP Request Duration",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le,path))",
+            "legendFormat": "{{path}} p95"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 12, "x": 12, "y": 28 }
+      },
+      {
+        "type": "graph",
+        "title": "HTTP Status Codes",
+        "targets": [
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"2..\"}[1m])) by (status)",
+            "legendFormat": "2xx"
+          },
+          {
+            "expr": "sum(rate(http_requests_total{status=~\"5..\"}[1m])) by (status)",
+            "legendFormat": "5xx"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 12, "x": 0, "y": 34 }
+      },
+      {
+        "type": "graph",
+        "title": "gRPC Requests & Errors",
+        "targets": [
+          {
+            "expr": "sum(rate(grpc_requests_total[1m])) by (service, method)",
+            "legendFormat": "{{service}} {{method}}"
+          },
+          {
+            "expr": "sum(rate(grpc_requests_errors_total[1m])) by (service, method)",
+            "legendFormat": "{{service}} errors"
+          }
+        ],
+        "gridPos": { "h": 6, "w": 12, "x": 12, "y": 34 }
+      },
+      {
+        "type": "table",
+        "title": "Health Checks",
+        "targets": [
+          {
+            "expr": "up",
+            "format": "table"
+          }
+        ],
+        "gridPos": { "h": 4, "w": 24, "x": 0, "y": 40 }
+      },
+      {
+        "type": "stat",
+        "title": "Service Health Status",
+        "targets": [
+          {
+            "expr": "service_health_status",
+            "legendFormat": "{{service}}",
+            "interval": "",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "h": 4, "w": 24, "x": 0, "y": 40 },
+        "options": {
+          "colorMode": "value",
+          "graphMode": "none",
+          "justifyMode": "center",
+          "orientation": "horizontal",
+          "reduceOptions": {
+            "calcs": ["last"],
+            "fields": "",
+            "values": false
+          },
+          "textMode": "value"
+        }
+      }
+    ]
+  }
+}

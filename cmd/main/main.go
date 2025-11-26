@@ -63,6 +63,7 @@ func NewApiRouter(logger *zap.Logger,
 	r := mux.NewRouter()
 	mt := metrics.NewHTTPMetrics("main")
 	r.Use(mt.HTTPMiddleware)
+
 	r.Use(middleware.CorsMiddleware)
 	r.PathPrefix("/uploads/").Handler(handler.UploadsHandler("./uploads", "/uploads/"))
 

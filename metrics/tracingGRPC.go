@@ -2,9 +2,15 @@ package metrics
 
 import (
 	"context"
+	"log"
 
 	"github.com/opentracing/opentracing-go"
 	"github.com/opentracing/opentracing-go/ext"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"go.opentelemetry.io/otel/sdk/trace"
+	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -168,4 +174,25 @@ func (tcs *tracedClientStream) SendMsg(m interface{}) error {
 		tcs.span.SetTag("error.message", err.Error())
 	}
 	return err
+}
+
+func initTracer() func(context.Context) error {
+	ctx := context.Background()
+
+	exporter, err := otlptracegrpc.New(ctx)
+	if err != nil {
+		log.Fatalf("failed to create exporter: %v", err)
+	}
+
+	tp := trace.NewTracerProvider(
+		trace.WithBatcher(exporter),
+		trace.WithResource(resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.ServiceNameKey.String("my-go-service"),
+		)),
+	)
+
+	otel.SetTracerProvider(tp)
+
+	return tp.Shutdown
 }
