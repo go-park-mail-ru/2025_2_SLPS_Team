@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [myapp, myapp-elasticsearch]
+        image: [main, auth, friend, profile, migrations, myapp-elasticsearch]
 
     steps:
       - name: Checkout code
@@ -21,23 +21,16 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Set build context and Dockerfile
+      - name: Set build args
         run: |
+          echo "SERVICE=${{ matrix.image }}" >> $GITHUB_ENV
+          BUILD_DOCKERFILE="Dockerfile"
           case "${{ matrix.image }}" in
-            myapp)
-              echo "DOCKERFILE=Dockerfile" >> $GITHUB_ENV
-              echo "BUILD_CONTEXT=." >> $GITHUB_ENV
-              ;;
-            myapp-elasticsearch)
-              echo "DOCKERFILE=Dockerfile.elasticsearch" >> $GITHUB_ENV
-              echo "BUILD_CONTEXT=." >> $GITHUB_ENV
-              ;;
-            *)
-              echo "Unknown image: ${{ matrix.image }}"
-              exit 1
-              ;;
+            myapp-elasticsearch) BUILD_DOCKERFILE="Dockerfile.elasticsearch" ;;
+            migrations) BUILD_DOCKERFILE="Dockerfile.migrations" ;;
           esac
+          echo "DOCKERFILE=$BUILD_DOCKERFILE" >> $GITHUB_ENV
+          echo "BUILD_CONTEXT=." >> $GITHUB_ENV
 
       - name: Build Docker image
         run: |
@@ -77,7 +70,11 @@ jobs:
             mkdir -p /home/ubuntu/myapp
             
             printf '%s\n' "${{ secrets.ENV_FILE }}" > /home/ubuntu/myapp/.env
-            echo "APP_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp:latest" >> /home/ubuntu/myapp/.env
+            echo "MIGRATIONS_IMAGE=${{ secrets.DOCKER_USERNAME }}/migrations:latest" >> /home/ubuntu/myapp/.env
+            echo "MAIN_IMAGE=${{ secrets.DOCKER_USERNAME }}/main:latest" >> /home/ubuntu/myapp/.env
+            echo "AUTH_IMAGE=${{ secrets.DOCKER_USERNAME }}/auth:latest" >> /home/ubuntu/myapp/.env
+            echo "PROFILE_IMAGE=${{ secrets.DOCKER_USERNAME }}/profile:latest" >> /home/ubuntu/myapp/.env
+            echo "FRIEND_IMAGE=${{ secrets.DOCKER_USERNAME }}/friend:latest" >> /home/ubuntu/myapp/.env
             echo "ELASTIC_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:latest" >> /home/ubuntu/myapp/.env 
             cd /home/ubuntu/myapp
             

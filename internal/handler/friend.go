@@ -3,6 +3,7 @@ package handler
 import (
 	"net/http"
 	"project/domain"
+	"project/shared/mapper/generated"
 	"project/shared/pb"
 
 	"strconv"
@@ -219,7 +220,7 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, friends); err != nil {
+	if err := sendJSONData(r.Context(), w, generated.FromPbShortProfileList(friends)); err != nil {
 		return
 	}
 }
@@ -258,7 +259,7 @@ func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, users); err != nil {
+	if err := sendJSONData(r.Context(), w, generated.FromPbShortProfileList(users)); err != nil {
 		return
 	}
 }
@@ -297,7 +298,7 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, requests); err != nil {
+	if err := sendJSONData(r.Context(), w, generated.FromPbShortProfileList(requests)); err != nil {
 		return
 	}
 }
@@ -336,7 +337,7 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, requests); err != nil {
+	if err := sendJSONData(r.Context(), w, generated.FromPbShortProfileList(requests)); err != nil {
 		return
 	}
 }
@@ -405,12 +406,12 @@ func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	count, err := h.friendService.CountUserRelations(r.Context(), &pb.CountUserRelationsRequest{UserID: int32(userID)})
+	resp, err := h.friendService.CountUserRelations(r.Context(), &pb.CountUserRelationsRequest{UserID: int32(userID)})
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
-
+	count := domain.UserRelationsCounts{Pending: resp.Pending, Accepted: resp.Accepted, Sent: resp.Sent, Blocked: resp.Blocked}
 	if err := sendJSONData(r.Context(), w, count); err != nil {
 		return
 	}

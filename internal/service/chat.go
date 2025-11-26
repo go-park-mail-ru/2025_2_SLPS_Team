@@ -5,6 +5,7 @@ import (
 	"project/domain"
 	"project/shared/mapper/generated"
 	"project/shared/pb"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -115,13 +116,15 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 		return 0, domain.ErrDB
 	}
 	message.ID = messageID
-	go func(ctx context.Context, userId int32, chatID int32) {
-		chat, userIDs, err := api.chatStore.GetFullChatByIDAndSenderID(ctx, userID, chatID)
+	go func(ctx context.Context, userID int32, chatID int32) {
+		ctx2, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+		defer cancel()
+		chat, userIDs, err := api.chatStore.GetFullChatByIDAndSenderID(ctx2, userID, chatID)
 		if err != nil {
 			domain.FromContext(ctx).Error("Fail to get chat", zap.Error(err))
 			return
 		}
-		resp, err := api.profileService.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{UserIDs: userIDs})
+		resp, err := api.profileService.GetShortProfileMapByUserIDs(ctx2, &pb.GetShortProfileMapByUserIDsRequest{UserIDs: userIDs})
 		if err != nil {
 			domain.FromContext(ctx).Error("Fail to get profiles", zap.Error(err))
 			return
@@ -130,10 +133,11 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 		profiles := generated.FromProtoShortProfileMap(resp)
 		if !chat.IsGroup {
 			chat.AvatarPath = profiles[chat.UserIDWith].AvatarPath
-			*chat.Name = profiles[chat.UserIDWith].FullName
+			name := profiles[chat.UserIDWith].FullName
+			chat.Name = &name
 		}
 		chat.LastMessageAuthor = profiles[chat.LastMessage.AuthorID]
-		recipients, err := api.chatStore.GetOtherChatMembersIdByAuthorId(ctx, userID, chatID)
+		recipients, err := api.chatStore.GetOtherChatMembersIdByAuthorId(ctx2, userID, chatID)
 		if err != nil {
 			domain.FromContext(ctx).Error("Fail to get recipients", zap.Error(err))
 			return
@@ -142,7 +146,7 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 		for _, recipient := range recipients {
 			chat.LastReadMessageID = recipient.LastReadMessageID
 			chat.UnreadCounts = recipient.UnreadCounts
-			err = api.wsHub.SendJSON(ctx, recipient.MemberID, "new_message", chat)
+			err = api.wsHub.SendJSON(ctx2, recipient.MemberID, "new_message", chat)
 			if err != nil {
 				domain.FromContext(ctx).Error("Fail to marshal chat", zap.Error(err))
 			}
@@ -169,7 +173,8 @@ func (api *ChatService) GetUserChats(ctx context.Context, userID int32, params d
 	for _, chat := range chats {
 		if !chat.IsGroup {
 			chat.AvatarPath = profiles[chat.UserIDWith].AvatarPath
-			*chat.Name = profiles[chat.UserIDWith].FullName
+			name := profiles[chat.UserIDWith].FullName
+			chat.Name = &name
 		}
 		chat.LastMessageAuthor = profiles[chat.LastMessage.AuthorID]
 	}
