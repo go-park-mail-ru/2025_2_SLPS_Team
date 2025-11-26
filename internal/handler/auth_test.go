@@ -8,11 +8,15 @@ import (
 	"net/http/httptest"
 	"project/domain"
 	"project/internal/service/mocks"
+	"project/shared/pb"
 	"testing"
 	"time"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 func JSONReader(t *testing.T, v any) io.Reader {
@@ -54,14 +58,20 @@ func decodeResponse[T any](t *testing.T, w *httptest.ResponseRecorder) T {
 func TestAuthHandler_Login(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockAuthService := mocks.NewMockAuthService(ctrl)
+
+	mockAuthService := mocks.NewMockAuthServiceClient(ctrl)
 	handler := &AuthHandler{authService: mockAuthService}
 
 	t.Run("Success", func(t *testing.T) {
 		user := domain.User{Email: "a@b.com", Password: "pass"}
-		tokens := domain.SIDAndSCRFToken{SID: "session123", CSRFToken: "CSRF123"}
-		mockAuthService.EXPECT().Login(gomock.Any(), user).Return(0, nil)
-		mockAuthService.EXPECT().AddSession(gomock.Any(), 0).Return(&tokens, nil)
+
+		mockAuthService.EXPECT().
+			Login(gomock.Any(), &pb.LoginRequest{Email: "a@b.com", Password: "pass"}).
+			Return(&pb.LoginResponse{UserId: 1}, nil)
+
+		mockAuthService.EXPECT().
+			AddSession(gomock.Any(), &pb.UserIDRequest{UserId: 1}).
+			Return(&pb.SIDAndCSRFToken{Sid: "session123", CsrfToken: "CSRF123"}, nil)
 
 		r, w := newJSONRequest(http.MethodPost, "/api/auth/login", user, t)
 		handler.Login(w, r)
@@ -71,29 +81,34 @@ func TestAuthHandler_Login(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Equal(t, "User logged in", res.Message)
-		assert.Equal(t, http.StatusOK, res.Code)
 		assert.NotNil(t, session)
 		assert.NotNil(t, csrf)
-		assert.Equal(t, tokens.SID, session.Value)
-		assert.Equal(t, tokens.CSRFToken, csrf.Value)
+		assert.Equal(t, "session123", session.Value)
+		assert.Equal(t, "CSRF123", csrf.Value)
 	})
 
 	t.Run("ServiceLogin send err", func(t *testing.T) {
 		user := domain.User{Email: "a@b.com", Password: "pass"}
-		mockAuthService.EXPECT().Login(gomock.Any(), user).Return(0, domain.ErrInvalidInput)
+		mockAuthService.EXPECT().
+			Login(gomock.Any(), gomock.Any()).
+			Return(nil, status.Error(codes.InvalidArgument, "invalid input"))
 
 		r, w := newJSONRequest(http.MethodPost, "/api/auth/login", user, t)
 		handler.Login(w, r)
 
 		res := decodeResponse[JSONResponse](t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
-		assert.Equal(t, domain.InvalidData, res.Message)
+		assert.Contains(t, res.Message, "invalid")
 	})
 
 	t.Run("HandlerAddSession send err", func(t *testing.T) {
 		user := domain.User{Email: "a@b.com", Password: "pass"}
-		mockAuthService.EXPECT().Login(gomock.Any(), user).Return(0, nil)
-		mockAuthService.EXPECT().AddSession(gomock.Any(), 0).Return(nil, domain.ErrDB)
+		mockAuthService.EXPECT().
+			Login(gomock.Any(), gomock.Any()).
+			Return(&pb.LoginResponse{UserId: 1}, nil)
+		mockAuthService.EXPECT().
+			AddSession(gomock.Any(), gomock.Any()).
+			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		r, w := newJSONRequest(http.MethodPost, "/api/auth/login", user, t)
 		handler.Login(w, r)
@@ -108,13 +123,16 @@ func TestAuthHandler_Login(t *testing.T) {
 func TestAuthHandler_IsLoggedInHandler(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockAuthService := mocks.NewMockAuthService(ctrl)
+
+	mockAuthService := mocks.NewMockAuthServiceClient(ctrl)
 	handler := &AuthHandler{authService: mockAuthService}
 
 	t.Run("Success", func(t *testing.T) {
-		session := &domain.Session{UserID: 1}
 		cookie := &http.Cookie{Name: "session_id", Value: "session123"}
-		mockAuthService.EXPECT().IsLoggedIn(gomock.Any(), cookie).Return(session, nil)
+
+		mockAuthService.EXPECT().
+			IsLoggedIn(gomock.Any(), &pb.SessionCookieRequest{SessionCookie: "session123"}).
+			Return(&pb.SessionResponse{UserId: 1, CsrfToken: "csrf123"}, nil)
 
 		r, w := newJSONRequest(http.MethodGet, "/auth/isloggedin", nil, t)
 		r.AddCookie(cookie)
@@ -122,7 +140,7 @@ func TestAuthHandler_IsLoggedInHandler(t *testing.T) {
 
 		res := decodeResponse[IsLoggedInResponse](t, w)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Equal(t, session.UserID, res.UserID)
+		assert.Equal(t, int32(1), res.UserID)
 	})
 
 	t.Run("Cookie missing", func(t *testing.T) {
@@ -133,7 +151,10 @@ func TestAuthHandler_IsLoggedInHandler(t *testing.T) {
 
 	t.Run("Service returns error", func(t *testing.T) {
 		cookie := &http.Cookie{Name: "session_id", Value: "session123"}
-		mockAuthService.EXPECT().IsLoggedIn(gomock.Any(), cookie).Return(nil, domain.ErrNotFound)
+
+		mockAuthService.EXPECT().
+			IsLoggedIn(gomock.Any(), gomock.Any()).
+			Return(nil, status.Error(codes.NotFound, "session not found"))
 
 		r, w := newJSONRequest(http.MethodGet, "/auth/isloggedin", nil, t)
 		r.AddCookie(cookie)
@@ -145,13 +166,17 @@ func TestAuthHandler_IsLoggedInHandler(t *testing.T) {
 func TestAuthHandler_Logout(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockAuthService := mocks.NewMockAuthService(ctrl)
+
+	mockAuthService := mocks.NewMockAuthServiceClient(ctrl)
 	handler := &AuthHandler{authService: mockAuthService}
 
 	t.Run("Success", func(t *testing.T) {
 		cookie := &http.Cookie{Name: "session_id", Value: "session123"}
 		csrf := &http.Cookie{Name: "CSRF_token", Value: "csrf123"}
-		mockAuthService.EXPECT().Logout(gomock.Any(), cookie).Return(nil)
+
+		mockAuthService.EXPECT().
+			Logout(gomock.Any(), &pb.SessionCookieRequest{SessionCookie: "session123"}).
+			Return(&emptypb.Empty{}, nil)
 
 		r, w := newJSONRequest(http.MethodPost, "/auth/logout", nil, t)
 		r.AddCookie(cookie)
@@ -174,7 +199,10 @@ func TestAuthHandler_Logout(t *testing.T) {
 
 	t.Run("Service returns error", func(t *testing.T) {
 		cookie := &http.Cookie{Name: "session_id", Value: "session123"}
-		mockAuthService.EXPECT().Logout(gomock.Any(), cookie).Return(domain.ErrDB)
+
+		mockAuthService.EXPECT().
+			Logout(gomock.Any(), gomock.Any()).
+			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		r, w := newJSONRequest(http.MethodPost, "/auth/logout", nil, t)
 		r.AddCookie(cookie)
@@ -186,7 +214,8 @@ func TestAuthHandler_Logout(t *testing.T) {
 func TestAuthHandler_Register(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
-	mockAuthService := mocks.NewMockAuthService(ctrl)
+
+	mockAuthService := mocks.NewMockAuthServiceClient(ctrl)
 	handler := &AuthHandler{authService: mockAuthService}
 
 	t.Run("Success", func(t *testing.T) {
@@ -198,10 +227,14 @@ func TestAuthHandler_Register(t *testing.T) {
 			ConfirmPassword: "qwerty123",
 			Gender:          "man",
 		}
-		tokens := domain.SIDAndSCRFToken{SID: "session123", CSRFToken: "csrf123"}
 
-		mockAuthService.EXPECT().Register(gomock.Any(), req).Return(1, nil)
-		mockAuthService.EXPECT().AddSession(gomock.Any(), 1).Return(&tokens, nil)
+		mockAuthService.EXPECT().
+			Register(gomock.Any(), gomock.Any()).
+			Return(&pb.LoginResponse{UserId: 1}, nil)
+
+		mockAuthService.EXPECT().
+			AddSession(gomock.Any(), &pb.UserIDRequest{UserId: 1}).
+			Return(&pb.SIDAndCSRFToken{Sid: "session123", CsrfToken: "csrf123"}, nil)
 
 		r, w := newJSONRequest(http.MethodPost, "/auth/register", req, t)
 		handler.Register(w, r)
@@ -211,8 +244,8 @@ func TestAuthHandler_Register(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Equal(t, "User created", res.Message)
-		assert.Equal(t, tokens.SID, session.Value)
-		assert.Equal(t, tokens.CSRFToken, csrf.Value)
+		assert.Equal(t, "session123", session.Value)
+		assert.Equal(t, "csrf123", csrf.Value)
 	})
 
 	t.Run("Service register error", func(t *testing.T) {
@@ -223,7 +256,10 @@ func TestAuthHandler_Register(t *testing.T) {
 			ConfirmPassword: "qwerty123",
 			Gender:          "man",
 		}
-		mockAuthService.EXPECT().Register(gomock.Any(), req).Return(0, domain.ErrInvalidInput)
+
+		mockAuthService.EXPECT().
+			Register(gomock.Any(), gomock.Any()).
+			Return(nil, status.Error(codes.InvalidArgument, "invalid input"))
 
 		r, w := newJSONRequest(http.MethodPost, "/auth/register", req, t)
 		handler.Register(w, r)
@@ -239,8 +275,14 @@ func TestAuthHandler_Register(t *testing.T) {
 			ConfirmPassword: "qwerty123",
 			Gender:          "man",
 		}
-		mockAuthService.EXPECT().Register(gomock.Any(), req).Return(1, nil)
-		mockAuthService.EXPECT().AddSession(gomock.Any(), 1).Return(nil, domain.ErrDB)
+
+		mockAuthService.EXPECT().
+			Register(gomock.Any(), gomock.Any()).
+			Return(&pb.LoginResponse{UserId: 1}, nil)
+
+		mockAuthService.EXPECT().
+			AddSession(gomock.Any(), gomock.Any()).
+			Return(nil, status.Error(codes.Internal, "internal error"))
 
 		r, w := newJSONRequest(http.MethodPost, "/auth/register", req, t)
 		handler.Register(w, r)

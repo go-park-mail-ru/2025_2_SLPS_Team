@@ -25,7 +25,6 @@ reload-swagger:
 
 
 generate-mocks:
-	generate-mocks:
 	mockgen -source=domain/auth.go -destination=internal/service/mocks/mock_auth.go -package=mocks
 	mockgen -source=domain/chat.go -destination=internal/service/mocks/mock_chat.go -package=mocks
 	mockgen -source=domain/profile.go -destination=internal/service/mocks/mock_profile.go -package=mocks
@@ -34,12 +33,11 @@ generate-mocks:
 	mockgen -source=domain/community.go -destination=internal/service/mocks/mock_community.go -package=mocks CommunityStore
 	
 	# gRPC clients (для использования в сервисах)
-	mockgen -source=shared/pb/auth_grpc.pb.go -destination=internal/service/mocks/mock_auth_grpc.go -package=mocks AuthServiceClient
+	mockgen -source=shared/pb/auth_grpc.pb.go -destination=internal/service/mocks/mock_auth_grpc.go -package=mocks
 	mockgen -source=shared/pb/profile_grpc.pb.go -destination=internal/service/mocks/mock_profile_grpc.go -package=mocks ProfileServiceClient
 	mockgen -source=shared/pb/friend_grpc.pb.go -destination=internal/service/mocks/mock_friend_grpc.go -package=mocks FriendServiceClient
 	
 	# gRPC server interfaces (для тестирования хендлеров)
-	mockgen -source=shared/pb/auth_grpc.pb.go -destination=internal/handler/grpc/mocks/mock_auth_server.go -package=mocks AuthServiceServer
 	mockgen -source=shared/pb/profile_grpc.pb.go -destination=internal/handler/grpc/mocks/mock_profile_server.go -package=mocks ProfileServiceServer
 	mockgen -source=shared/pb/friend_grpc.pb.go -destination=internal/handler/grpc/mocks/mock_friend_server.go -package=mocks FriendServiceServer
 	

@@ -12,6 +12,7 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func contextWithUserID(ctx context.Context, userID int32) context.Context {
@@ -156,5 +157,118 @@ func TestChatHandler_GetUserChats(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Equal(t, chats, res)
+	})
+}
+
+func TestChatHandler_UpdateLastReadMessage(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockChatService := mocks.NewMockChatService(ctrl)
+	handler := &ChatHandler{chatService: mockChatService}
+
+	t.Run("Success", func(t *testing.T) {
+		userID := int32(1)
+		chatID := int32(10)
+		lastReadMessageID := int32(100)
+
+		mockChatService.EXPECT().UpdateLastReadMessage(gomock.Any(), userID, chatID, lastReadMessageID).Return(nil)
+
+		req := NewTestRequest(t, TestRequestConfig{
+			Method:  http.MethodPut,
+			URL:     "/chats/10/last-read",
+			Vars:    map[string]string{"id": "10"},
+			UserID:  userID,
+			Body:    map[string]interface{}{"lastReadMessageID": lastReadMessageID},
+			AddAuth: true,
+		})
+
+		w := httptest.NewRecorder()
+		handler.UpdateLastReadMessage(w, req)
+
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var response JSONResponse
+		err := json.NewDecoder(w.Body).Decode(&response)
+		require.NoError(t, err)
+		assert.Equal(t, "last read message updated", response.Message)
+	})
+
+	t.Run("Invalid chat ID", func(t *testing.T) {
+		req := NewTestRequest(t, TestRequestConfig{
+			Method:  http.MethodPut,
+			URL:     "/chats/invalid/last-read",
+			Vars:    map[string]string{"id": "invalid"},
+			UserID:  1,
+			Body:    map[string]interface{}{"lastReadMessageID": 100},
+			AddAuth: true,
+		})
+
+		w := httptest.NewRecorder()
+		handler.UpdateLastReadMessage(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("Invalid request body", func(t *testing.T) {
+		req := NewTestRequest(t, TestRequestConfig{
+			Method:  http.MethodPut,
+			URL:     "/chats/10/last-read",
+			Vars:    map[string]string{"id": "10"},
+			UserID:  1,
+			Body:    "invalid json",
+			AddAuth: true,
+		})
+
+		w := httptest.NewRecorder()
+		handler.UpdateLastReadMessage(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+func TestChatHandler_GetUserChats_InvalidParams(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockChatService := mocks.NewMockChatService(ctrl)
+	handler := &ChatHandler{chatService: mockChatService}
+
+	t.Run("Invalid query params", func(t *testing.T) {
+		req := NewTestRequest(t, TestRequestConfig{
+			Method:  http.MethodGet,
+			URL:     "/chats?limit=invalid&page=invalid",
+			UserID:  1,
+			AddAuth: true,
+		})
+
+		w := httptest.NewRecorder()
+		handler.GetUserChats(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+func TestChatHandler_CreateMessage_InvalidBody(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	mockChatService := mocks.NewMockChatService(ctrl)
+	handler := &ChatHandler{chatService: mockChatService}
+
+	t.Run("Invalid message body", func(t *testing.T) {
+		req := NewTestRequest(t, TestRequestConfig{
+			Method:  http.MethodPost,
+			URL:     "/chats/10/message",
+			Vars:    map[string]string{"id": "10"},
+			UserID:  1,
+			Body:    "invalid json",
+			AddAuth: true,
+		})
+
+		w := httptest.NewRecorder()
+		handler.CreateMessage(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
 }
