@@ -7,7 +7,6 @@ import (
 	"net/http/httptest"
 	"project/domain"
 	"project/internal/service/mocks"
-	"strconv"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -44,12 +43,12 @@ func TestChatHandler_GetOrCreateChatWithUser(t *testing.T) {
 	handler := &ChatHandler{chatService: mockChatService}
 
 	t.Run("Success test", func(t *testing.T) {
-		selfUserID := 1
-		otherUserID := 2
-		chatID := 10
+		selfUserID := int32(1)
+		otherUserID := int32(2)
+		chatID := int32(10)
 		mockChatService.EXPECT().GetOrCreateChatWithUser(gomock.Any(), selfUserID, otherUserID).Return(chatID, nil)
 
-		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats/user/2", map[string]string{"id": strconv.Itoa(otherUserID)}, selfUserID, nil, t)
+		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats/user/2", map[string]string{"id": "2"}, selfUserID, nil, t)
 		w := httptest.NewRecorder()
 		handler.GetOrCreateChatWithUser(w, req)
 
@@ -61,13 +60,12 @@ func TestChatHandler_GetOrCreateChatWithUser(t *testing.T) {
 	})
 
 	t.Run("Invalid userID", func(t *testing.T) {
-		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats/user/invalid", map[string]string{"id": "invalid"}, 0, nil, t)
+		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats/user/invalid", map[string]string{"id": "invalid"}, int32(0), nil, t)
 		w := httptest.NewRecorder()
 		handler.GetOrCreateChatWithUser(w, req)
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
 	})
 }
-
 func TestChatHandler_GetMessagesByChatId(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -76,15 +74,15 @@ func TestChatHandler_GetMessagesByChatId(t *testing.T) {
 	handler := &ChatHandler{chatService: mockChatService}
 
 	t.Run("Success test", func(t *testing.T) {
-		chatID := 1
-		userID := 2
+		chatID := int32(1)
+		userID := int32(2)
 		messagesResp := domain.MessagesWithAuthors{
 			Messages: []domain.Message{{ID: 1, Text: "hello"}},
 			Authors:  map[int32]domain.ShortProfile{2: {UserID: 2, FullName: "user2"}},
 		}
 		mockChatService.EXPECT().GetMessagesByChatId(gomock.Any(), gomock.Any(), userID, chatID).Return(&messagesResp, nil)
 
-		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats/1/messages", map[string]string{"id": strconv.Itoa(chatID)}, userID, nil, t)
+		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats/1/messages", map[string]string{"id": "1"}, userID, nil, t)
 		w := httptest.NewRecorder()
 		handler.GetMessagesByChatId(w, req)
 
@@ -111,13 +109,13 @@ func TestChatHandler_CreateMessage(t *testing.T) {
 	handler := &ChatHandler{chatService: mockChatService}
 
 	t.Run("Success test", func(t *testing.T) {
-		chatID := 1
-		userID := 2
+		chatID := int32(1)
+		userID := int32(2)
 		message := domain.Message{Text: "Hello"}
-		messageID := 10
+		messageID := int32(10)
 		mockChatService.EXPECT().CreateMessage(gomock.Any(), userID, chatID, message).Return(messageID, nil)
 
-		req := newRequestWithVarsAndCtx(http.MethodPost, "/chats/1/message", map[string]string{"id": strconv.Itoa(chatID)}, userID, message, t)
+		req := newRequestWithVarsAndCtx(http.MethodPost, "/chats/1/message", map[string]string{"id": "1"}, userID, message, t)
 		w := httptest.NewRecorder()
 		handler.CreateMessage(w, req)
 
@@ -144,8 +142,9 @@ func TestChatHandler_GetUserChats(t *testing.T) {
 	handler := &ChatHandler{chatService: mockChatService}
 
 	t.Run("Success test", func(t *testing.T) {
-		userID := 1
-		chats := []domain.FullChat{{ID: 1, Name: "Chat1"}}
+		userID := int32(1)
+		chatName := "Chat1"
+		chats := []domain.FullChat{{ID: 1, Name: &chatName}}
 		mockChatService.EXPECT().GetUserChats(gomock.Any(), userID, gomock.Any()).Return(chats, nil)
 
 		req := newRequestWithVarsAndCtx(http.MethodGet, "/chats?limit=10&page=1", nil, userID, nil, t)

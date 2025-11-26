@@ -128,6 +128,7 @@ func TestGetProfileByUserID_Success(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, profile.UserID, result.UserID)
 	assert.Equal(t, profile.FirstName, result.FirstName)
+	assert.Equal(t, profile.LastName, result.LastName)
 }
 
 func TestGetProfileByUserID_NotFound(t *testing.T) {
