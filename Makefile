@@ -25,22 +25,31 @@ reload-swagger:
 
 
 generate-mocks:
-	mockgen -source=domain/auth.go -destination=internal/service/mocks/mock_auth.go -package=mocks AuthService
-	mockgen -source=domain/chat.go -destination=internal/service/mocks/mock_chat.go -package=mocks ChatService
-	mockgen -source=domain/profile.go -destination=internal/service/mocks/mock_profile.go -package=mocks ProfileService
+	mockgen -source=domain/auth.go -destination=internal/service/mocks/mock_auth.go -package=mocks
+	mockgen -source=domain/chat.go -destination=internal/service/mocks/mock_chat.go -package=mocks
+	mockgen -source=domain/profile.go -destination=internal/service/mocks/mock_profile.go -package=mocks
+	mockgen -source=domain/post.go -destination=internal/service/mocks/mock_post.go -package=mocks
+	mockgen -source=domain/friend.go -destination=internal/service/mocks/mock_friend.go -package=mocks
+	mockgen -source=domain/community.go -destination=internal/service/mocks/mock_community.go -package=mocks CommunityStore
 	
-	mockgen -source=domain/post.go -destination=internal/service/mocks/mock_post.go -package=mocks PostService
-	mockgen -source=domain/friend.go -destination=internal/service/mocks/mock_friend.go -package=mocks FriendService
+	# gRPC clients (для использования в сервисах)
+	mockgen -source=shared/pb/auth_grpc.pb.go -destination=internal/service/mocks/mock_auth_grpc.go -package=mocks
+	mockgen -source=shared/pb/profile_grpc.pb.go -destination=internal/service/mocks/mock_profile_grpc.go -package=mocks ProfileServiceClient
+	mockgen -source=shared/pb/friend_grpc.pb.go -destination=internal/service/mocks/mock_friend_grpc.go -package=mocks FriendServiceClient
 	
-	mockgen -source=domain/profile.go -destination=internal/repository/mocks/mock_profile.go -package=mocks ProfileStore
-	mockgen -source=domain/chat.go -destination=internal/repository/mocks/mock_chat.go -package=mocks ChatStore
-	mockgen -source=domain/message.go -destination=internal/repository/mocks/mock_message.go -package=mocks MessageStore
-	mockgen -source=domain/session.go -destination=internal/repository/mocks/mock_session.go -package=mocks SessionStore
-	mockgen -source=domain/user.go -destination=internal/repository/mocks/mock_user.go -package=mocks UserStore
-
-	mockgen -source=domain/post.go -destination=internal/repository/mocks/mock_post.go -package=mocks PostStore
-	mockgen -source=domain/friend.go -destination=internal/repository/mocks/mock_friend.go -package=mocks FriendStore
+	# gRPC server interfaces (для тестирования хендлеров)
+	mockgen -source=shared/pb/profile_grpc.pb.go -destination=internal/handler/grpc/mocks/mock_profile_server.go -package=mocks ProfileServiceServer
+	mockgen -source=shared/pb/friend_grpc.pb.go -destination=internal/handler/grpc/mocks/mock_friend_server.go -package=mocks FriendServiceServer
 	
+	# Store interfaces
+	mockgen -source=domain/profile.go -destination=internal/repository/mocks/mock_profile.go -package=mocks
+	mockgen -source=domain/chat.go -destination=internal/repository/mocks/mock_chat.go -package=mocks
+	mockgen -source=domain/message.go -destination=internal/repository/mocks/mock_message.go -package=mocks
+	mockgen -source=domain/session.go -destination=internal/repository/mocks/mock_session.go -package=mocks
+	mockgen -source=domain/user.go -destination=internal/repository/mocks/mock_user.go -package=mocks
+	mockgen -source=domain/post.go -destination=internal/repository/mocks/mock_post.go -package=mocks
+	mockgen -source=domain/friend.go -destination=internal/repository/mocks/mock_friend.go -package=mocks
+	mockgen -source=domain/community.go -destination=internal/repository/mocks/mock_community.go -package=mocks
 test-coverage:
 	@rm -f coverage.out coverage_filtered.out
 	go clean -testcache

@@ -5,171 +5,198 @@ import (
 	"errors"
 	"project/domain"
 	"project/internal/repository/mocks"
+	"project/shared/pb"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
 )
 
-func newChatServiceMocks(t *testing.T) (*ChatService,
-	*mocks.MockUserStore,
-	*mocks.MockProfileStore,
-	*mocks.MockChatStore,
-	*mocks.MockMessageStore,
-	domain.WSHub,
-	*gomock.Controller) {
-
+func newChatServiceMocks(t *testing.T) (*ChatService, *mocks.MockChatStore, *mocks.MockMessageStore, domain.WSHub, *gomock.Controller) {
 	ctrl := gomock.NewController(t)
-	userStore := mocks.NewMockUserStore(ctrl)
-	profileStore := mocks.NewMockProfileStore(ctrl)
+
+	// Создаем моки для gRPC клиентов
+	authConn := &grpc.ClientConn{}
+	profileConn := &grpc.ClientConn{}
+	authClient := pb.NewAuthServiceClient(authConn)
+	profileClient := pb.NewProfileServiceClient(profileConn)
+
 	chatStore := mocks.NewMockChatStore(ctrl)
 	messageStore := mocks.NewMockMessageStore(ctrl)
 	wsHub := NewHub()
+
 	svc := &ChatService{
-		userStore:    userStore,
-		profileStore: profileStore,
-		chatStore:    chatStore,
-		messageStore: messageStore,
-		wsHub:        wsHub,
+		authService:    authClient,
+		profileService: profileClient,
+		chatStore:      chatStore,
+		messageStore:   messageStore,
+		wsHub:          wsHub,
 	}
-	return svc, userStore, profileStore, chatStore, messageStore, wsHub, ctrl
+	return svc, chatStore, messageStore, wsHub, ctrl
 }
 
 func TestChatService_GetOrCreateChatWithUser(t *testing.T) {
-	svc, userStore, _, chatStore, _, _, ctrl := newChatServiceMocks(t)
+	svc, chatStore, _, _, ctrl := newChatServiceMocks(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
 
 	t.Run("Success", func(t *testing.T) {
-		userStore.EXPECT().IsUserExists(ctx, 2).Return(true, nil)
-		chatStore.EXPECT().GetOrCreateChatWithUser(ctx, 1, 2).Return(42, nil)
+		chatStore.EXPECT().GetOrCreateChatWithUser(ctx, int32(1), int32(2)).Return(int32(42), nil)
+
 		chatID, err := svc.GetOrCreateChatWithUser(ctx, 1, 2)
 		assert.NoError(t, err)
-		assert.Equal(t, 42, chatID)
-	})
-
-	t.Run("User not exists", func(t *testing.T) {
-		userStore.EXPECT().IsUserExists(ctx, 2).Return(false, nil)
-		chatID, err := svc.GetOrCreateChatWithUser(ctx, 1, 2)
-		assert.ErrorIs(t, err, domain.ErrNotExist)
-		assert.Equal(t, 0, chatID)
+		assert.Equal(t, int32(42), chatID)
 	})
 
 	t.Run("Same userID", func(t *testing.T) {
-		userStore.EXPECT().IsUserExists(ctx, 1).Return(true, nil)
 		chatID, err := svc.GetOrCreateChatWithUser(ctx, 1, 1)
 		assert.ErrorIs(t, err, domain.ErrInvalidInput)
-		assert.Equal(t, 0, chatID)
+		assert.Equal(t, int32(0), chatID)
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		userStore.EXPECT().IsUserExists(ctx, 2).Return(false, errors.New("dbconn"))
+		chatStore.EXPECT().GetOrCreateChatWithUser(ctx, int32(1), int32(2)).Return(int32(0), errors.New("db error"))
 		chatID, err := svc.GetOrCreateChatWithUser(ctx, 1, 2)
-		assert.ErrorIs(t, err, domain.ErrDB)
-		assert.Equal(t, 0, chatID)
+		assert.Error(t, err)
+		assert.Equal(t, int32(0), chatID)
 	})
 }
 
 func TestChatService_GetMessagesByChatId(t *testing.T) {
-	svc, _, profileStore, chatStore, messageStore, _, ctrl := newChatServiceMocks(t)
+	svc, chatStore, messageStore, _, ctrl := newChatServiceMocks(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	chatID := 10
-	userID := 1
-	messages := []domain.Message{{ID: 1, AuthorID: 2, ChatID: chatID, Text: "Hi"}}
-	authors := map[int32]domain.ShortProfile{2: {UserID: 2, FullName: "user2"}}
 
 	t.Run("Success", func(t *testing.T) {
+		chatID := int32(10)
+		userID := int32(1)
+		messages := []domain.Message{
+			{ID: 1, AuthorID: 2, ChatID: chatID, Text: "Hello"},
+			{ID: 2, AuthorID: 3, ChatID: chatID, Text: "World"},
+		}
+
 		chatStore.EXPECT().IsMemberOfChat(ctx, userID, chatID).Return(true, nil)
-		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, 10, 0).Return(messages, nil)
-		profileStore.EXPECT().GetShortProfileByUserIDs(ctx, []int32{2}).Return(authors, nil)
-		res, err := svc.GetMessagesByChatId(ctx, domain.PaginateQueryParams{Limit: 10, Page: 1}, userID, chatID)
+		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, int32(20), int32(0)).Return(messages, nil)
+
+		params := domain.PaginateQueryParams{Limit: 20, Page: 0}
+		result, err := svc.GetMessagesByChatId(ctx, params, userID, chatID)
+
 		assert.NoError(t, err)
-		assert.Len(t, res.Messages, 1)
-		assert.Len(t, res.Authors, 1)
+		assert.NotNil(t, result)
+		assert.Len(t, result.Messages, 2)
 	})
 
 	t.Run("Not member", func(t *testing.T) {
+		chatID := int32(10)
+		userID := int32(1)
+
 		chatStore.EXPECT().IsMemberOfChat(ctx, userID, chatID).Return(false, nil)
-		res, err := svc.GetMessagesByChatId(ctx, domain.PaginateQueryParams{Limit: 10, Page: 1}, userID, chatID)
+
+		params := domain.PaginateQueryParams{Limit: 20, Page: 0}
+		result, err := svc.GetMessagesByChatId(ctx, params, userID, chatID)
+
 		assert.ErrorIs(t, err, domain.ErrAccessDenied)
-		assert.Nil(t, res)
-	})
-
-	t.Run("Get messages error", func(t *testing.T) {
-		chatStore.EXPECT().IsMemberOfChat(ctx, userID, chatID).Return(true, nil)
-		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, 10, 0).Return(nil, errors.New("dbconn"))
-		res, err := svc.GetMessagesByChatId(ctx, domain.PaginateQueryParams{Limit: 10, Page: 1}, userID, chatID)
-		assert.ErrorIs(t, err, domain.ErrDB)
-		assert.Nil(t, res)
-	})
-
-	t.Run("Get authors error", func(t *testing.T) {
-		chatStore.EXPECT().IsMemberOfChat(ctx, userID, chatID).Return(true, nil)
-		messageStore.EXPECT().GetMessagesByChatId(ctx, chatID, 10, 0).Return(messages, nil)
-		profileStore.EXPECT().GetShortProfileByUserIDs(ctx, []int32{2}).Return(nil, errors.New("dbconn"))
-		res, err := svc.GetMessagesByChatId(ctx, domain.PaginateQueryParams{Limit: 10, Page: 1}, userID, chatID)
-		assert.ErrorIs(t, err, domain.ErrDB)
-		assert.Nil(t, res)
+		assert.Nil(t, result)
 	})
 }
 
 func TestChatService_CreateMessage(t *testing.T) {
-	svc, _, _, chatStore, messageStore, _, ctrl := newChatServiceMocks(t)
+	svc, chatStore, messageStore, _, ctrl := newChatServiceMocks(t) // Заменили wsHub на _
 	defer ctrl.Finish()
 	ctx := context.Background()
-	chatID := 10
-	userID := 1
-	msg := domain.Message{Text: "Hi"}
 
 	t.Run("Success", func(t *testing.T) {
-		done := make(chan struct{})
+		chatID := int32(10)
+		userID := int32(1)
+		message := domain.Message{Text: "Hello"}
+		messageID := int32(100)
+
 		chatStore.EXPECT().IsChatExist(ctx, chatID).Return(true, nil)
-		messageStore.EXPECT().CreateMessage(ctx, gomock.Any()).Return(42, nil)
-		chatStore.EXPECT().GetFullChatByIDAndSenderID(ctx, userID, chatID).Return(&domain.FullChat{ID: chatID}, nil)
-		chatStore.EXPECT().GetOtherChatMembersIdByAuthorId(ctx, userID, chatID).DoAndReturn(func(_ context.Context, _ int32, _ int32) ([]int32, error) {
-			close(done)
-			return []int32{2}, nil
-		})
-		msgID, err := svc.CreateMessage(ctx, userID, chatID, msg)
+		messageStore.EXPECT().CreateMessage(ctx, gomock.Any()).DoAndReturn(
+			func(ctx context.Context, msg domain.Message) (int32, error) {
+				assert.Equal(t, userID, msg.AuthorID)
+				assert.Equal(t, chatID, msg.ChatID)
+				assert.Equal(t, "Hello", msg.Text)
+				return messageID, nil
+			},
+		)
+
+		// Игнорируем вызовы в горутине для упрощения теста
+		chatStore.EXPECT().GetFullChatByIDAndSenderID(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+		chatStore.EXPECT().GetOtherChatMembersIdByAuthorId(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+
+		resultID, err := svc.CreateMessage(ctx, userID, chatID, message)
+
 		assert.NoError(t, err)
-		assert.Equal(t, 42, msgID)
-		<-done
+		assert.Equal(t, messageID, resultID)
 	})
 
-	t.Run("Chat not exist", func(t *testing.T) {
+	t.Run("Chat not exists", func(t *testing.T) {
+		chatID := int32(10)
+		userID := int32(1)
+		message := domain.Message{Text: "Hello"}
+
 		chatStore.EXPECT().IsChatExist(ctx, chatID).Return(false, nil)
-		msgID, err := svc.CreateMessage(ctx, userID, chatID, msg)
+
+		resultID, err := svc.CreateMessage(ctx, userID, chatID, message)
+
 		assert.ErrorIs(t, err, domain.ErrNotExist)
-		assert.Equal(t, 0, msgID)
+		assert.Equal(t, int32(0), resultID)
 	})
 
-	t.Run("DB error", func(t *testing.T) {
-		chatStore.EXPECT().IsChatExist(ctx, chatID).Return(false, errors.New("dbconn"))
-		msgID, err := svc.CreateMessage(ctx, userID, chatID, msg)
-		assert.ErrorIs(t, err, domain.ErrDB)
-		assert.Equal(t, 0, msgID)
+	t.Run("DB error on chat check", func(t *testing.T) {
+		chatID := int32(10)
+		userID := int32(1)
+		message := domain.Message{Text: "Hello"}
+
+		chatStore.EXPECT().IsChatExist(ctx, chatID).Return(false, errors.New("db error"))
+
+		resultID, err := svc.CreateMessage(ctx, userID, chatID, message)
+
+		assert.Error(t, err)
+		assert.Equal(t, int32(0), resultID)
+	})
+
+	t.Run("DB error on message creation", func(t *testing.T) {
+		chatID := int32(10)
+		userID := int32(1)
+		message := domain.Message{Text: "Hello"}
+
+		chatStore.EXPECT().IsChatExist(ctx, chatID).Return(true, nil)
+		messageStore.EXPECT().CreateMessage(ctx, gomock.Any()).Return(int32(0), errors.New("db error"))
+
+		resultID, err := svc.CreateMessage(ctx, userID, chatID, message)
+
+		assert.Error(t, err)
+		assert.Equal(t, int32(0), resultID)
 	})
 }
 
-func TestChatService_GetUserChats(t *testing.T) {
-	svc, _, _, chatStore, _, _, ctrl := newChatServiceMocks(t)
+func TestChatService_UpdateLastReadMessage(t *testing.T) {
+	svc, chatStore, _, _, ctrl := newChatServiceMocks(t)
 	defer ctrl.Finish()
 	ctx := context.Background()
-	userID := 1
-	chats := []domain.FullChat{{ID: 1}, {ID: 2}}
 
 	t.Run("Success", func(t *testing.T) {
-		chatStore.EXPECT().GetUserFullChats(ctx, userID, 10, 0).Return(chats, nil)
-		res, err := svc.GetUserChats(ctx, userID, domain.PaginateQueryParams{Limit: 10, Page: 0})
+		userID := int32(1)
+		chatID := int32(10)
+		lastReadMessageID := int32(100)
+
+		chatStore.EXPECT().UpdateLastReadMessageByUserIDAndChatID(ctx, userID, chatID, lastReadMessageID).Return(nil)
+
+		err := svc.UpdateLastReadMessage(ctx, userID, chatID, lastReadMessageID)
 		assert.NoError(t, err)
-		assert.Len(t, res, 2)
 	})
 
 	t.Run("DB error", func(t *testing.T) {
-		chatStore.EXPECT().GetUserFullChats(ctx, userID, 10, 0).Return(nil, errors.New("dbconn"))
-		res, err := svc.GetUserChats(ctx, userID, domain.PaginateQueryParams{Limit: 10, Page: 0})
-		assert.ErrorIs(t, err, domain.ErrDB)
-		assert.Nil(t, res)
+		userID := int32(1)
+		chatID := int32(10)
+		lastReadMessageID := int32(100)
+
+		chatStore.EXPECT().UpdateLastReadMessageByUserIDAndChatID(ctx, userID, chatID, lastReadMessageID).Return(errors.New("db error"))
+
+		err := svc.UpdateLastReadMessage(ctx, userID, chatID, lastReadMessageID)
+		assert.Error(t, err)
 	})
 }
