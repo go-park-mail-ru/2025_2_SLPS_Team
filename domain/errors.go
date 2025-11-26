@@ -130,7 +130,7 @@ func FromGrpcError(err error) error {
 
 	case codes.Internal:
 		// различать БД и сервис?
-		if strings.Contains(st.Message(), "dbconn") {
+		if strings.Contains(st.Message(), "database error") {
 			return ErrDB
 		}
 		return ErrService

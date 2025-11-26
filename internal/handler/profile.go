@@ -188,13 +188,13 @@ func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Req
 		return
 	}
 	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int32)
-	profile, err := api.profileService.GetProfileByUserID(r.Context(), &pb.GetProfileByUserIDRequest{UserID: int32(userID), SelfUserID: selfUserID})
+	resp, err := api.profileService.GetProfileByUserID(r.Context(), &pb.GetProfileByUserIDRequest{UserID: int32(userID), SelfUserID: selfUserID})
 	if err != nil {
 		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
-
+	profile := generated.FromProtoProfile(resp.Profile)
 	err = sendJSONData(r.Context(), w, profile)
 	if err == nil {
 		domain.FromContext(r.Context()).Info("Profile return successfully")

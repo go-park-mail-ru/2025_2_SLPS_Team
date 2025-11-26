@@ -234,7 +234,7 @@ SELECT
     avatar_path, 
     dob
 FROM profiles
-WHERE user_id != ALL($1)  
+WHERE NOT (user_id = ANY($1))
 LIMIT $2
 OFFSET $3;`
 

@@ -204,7 +204,7 @@ func (api *MiddlewareHandler) LoggingMiddleware(logger *zap.Logger) mux.Middlewa
 			//    reqLogger = reqLogger.With(zap.Int32("selfUserID", userID))
 			//}
 			ctx := context.WithValue(r.Context(), domain.LoggerKey, reqLogger)
-
+			ctx = context.WithValue(ctx, "requestID", reqID)
 			reqLogger.Info("incoming request",
 				zap.String("method", r.Method),
 				zap.String("path", r.URL.Path),

@@ -215,6 +215,7 @@ func (s *FriendService) GetAllUsers(ctx context.Context, userID int32, params do
 		domain.Error(ctx, "Failed to get all users", err)
 		return nil, domain.ErrDB
 	}
+	userIDs = append(userIDs, userID)
 	friends, err := s.profileService.GetOtherShortProfileByUserIDs(ctx, &pb.GetOtherShortProfileByUserIDsRequest{UserIDs: userIDs, Limit: limit, Offset: offset})
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", userIDs))

@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.migrations
+    image: ${MIGRATIONS_IMAGE:-local/migrations:latest}
     env_file:
       - .env
     depends_on:
@@ -10,7 +11,7 @@ services:
         condition: service_healthy
       elasticsearch:
         condition: service_healthy
-    command: ./migrate  # допустим, у тебя есть команда для миграций
+    command: ./migrate
     networks:
       - network
   main:
@@ -19,7 +20,7 @@ services:
       dockerfile: Dockerfile
       args:
         SERVICE: main
-    image: ${AUTH_IMAGE:-local/main:latest}
+    image: ${MAIN_IMAGE:-local/main:latest}
     env_file:
       - .env
     ports:

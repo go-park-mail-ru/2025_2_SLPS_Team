@@ -11,7 +11,7 @@ RUN go mod download
 
 # Копируем остальные файлы
 COPY . .
-ARG SERVICE=main
+ARG SERVICE
 # Аргумент для указания сервиса, который хотим собрать
 RUN CGO_ENABLED=0 GOOS=linux go build -o /out/$SERVICE ./cmd/$SERVICE
 
@@ -26,7 +26,7 @@ WORKDIR /app
 RUN apk add --no-cache postgresql-client
 
 # Копируем бинарь сервиса
-ARG SERVICE=authservice
+ARG SERVICE
 COPY --from=builder /out/$SERVICE ./main
 
 

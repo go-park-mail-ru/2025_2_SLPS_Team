@@ -31,6 +31,10 @@ func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 		return nil, domain.ErrNotFound
 	}
 	resp, err := api.authService.IsLoggedIn(r.Context(), &pb.SessionCookieRequest{SessionCookie: sessionCookie.Value})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		return nil, err
+	}
 
 	return &domain.Session{UserID: resp.UserId, CSRFToken: resp.CsrfToken}, err
 }

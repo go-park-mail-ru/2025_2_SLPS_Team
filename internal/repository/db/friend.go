@@ -283,9 +283,8 @@ SELECT CASE
          ELSE fr.first_user_id
        END AS friend_id
 		FROM friend_relationships fr
-		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) 
-		AND fr.action_user_id != $1 
-		AND fr.status = 'pending'
+		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) and
+((fr.status = 'pending' AND fr.action_user_id != $1) OR (fr.status = 'rejected' AND fr.action_user_id = $1))
 		ORDER BY fr.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -343,7 +342,8 @@ SELECT CASE
          ELSE fr.first_user_id
        END AS friend_id
 		FROM friend_relationships fr
-		WHERE fr.action_user_id = $1 AND fr.status = 'pending'
+		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) and
+		((fr.status = 'pending' AND fr.action_user_id = $1) OR (fr.status = 'rejected' AND fr.action_user_id != $1))
 		ORDER BY fr.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
