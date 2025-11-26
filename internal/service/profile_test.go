@@ -140,8 +140,13 @@ func TestProfileService_GetProfileByUserID(t *testing.T) {
 
 	t.Run("Success", func(t *testing.T) {
 		expectedProfile := domain.Profile{UserID: targetUserID}
-		relationsCount := &domain.UserRelationsCounts{Friends: 10}
-		status := domain.FriendshipStatusFriends
+		relationsCount := &domain.UserRelationsCounts{
+			Accepted: 10,
+			Pending:  5,
+			Sent:     3,
+			Blocked:  1,
+		}
+		status := domain.FriendshipAccepted
 
 		profileStore.EXPECT().GetProfileByUserID(ctx, targetUserID).Return(expectedProfile, nil)
 		friendStore.EXPECT().CountUserRelations(ctx, targetUserID).Return(relationsCount, nil)

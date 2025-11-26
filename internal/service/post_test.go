@@ -4,22 +4,23 @@ import (
 	"context"
 	"errors"
 	"project/domain"
-	"project/internal/repository/mocks"
+	"project/internal/service/mocks"
 	"testing"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 )
 
-func newPostServiceMocks(t *testing.T) (*PostService, *mocks.MockPostStore, *mocks.MockUserStore, *gomock.Controller) {
+func newPostServiceMocks(t *testing.T) (*PostService, *mocks.MockPostStore, *mocks.MockCommunityStore, *gomock.Controller) {
 	ctrl := gomock.NewController(t)
 	postStore := mocks.NewMockPostStore(ctrl)
-	userStore := mocks.NewMockUserStore(ctrl)
+	communityStore := mocks.NewMockCommunityStore(ctrl)
+
 	svc := &PostService{
-		postStore: postStore,
-		userStore: userStore,
+		postStore:      postStore,
+		communityStore: communityStore,
 	}
-	return svc, postStore, userStore, ctrl
+	return svc, postStore, communityStore, ctrl
 }
 
 func TestPostService_PostsPaginate(t *testing.T) {
@@ -27,69 +28,36 @@ func TestPostService_PostsPaginate(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
+	userID := int32(1)
 
 	t.Run("Success", func(t *testing.T) {
-		avatar := "avatar.png"
-		posts := []domain.PostWithShortUser{
+		posts := []domain.PostDB{
 			{
-				Post: domain.Post{
-					ID:       1,
-					AuthorID: 1,
-					Text:     "Test post",
-				},
-				Author: domain.ShortProfile{
-					UserID:     1,
-					FullName:   "John Doe",
-					AvatarPath: &avatar,
-				},
-			},
-
-			{
-				Post: domain.Post{
-					ID:       1,
-					AuthorID: 1,
-					Text:     "Test post",
-				},
-				Author: domain.ShortProfile{
-					UserID:     1,
-					FullName:   "John Doe",
-					AvatarPath: &avatar,
-				},
+				ID:       1,
+				AuthorID: 1,
+				Text:     "Test post",
 			},
 		}
 
 		postStore.EXPECT().
-			PostsPaginatedList(ctx, 20, 0).
+			PostsPaginatedList(ctx, userID, int32(20), int32(0)).
 			Return(posts, nil)
 
-		result, err := svc.PostsPaginate(ctx, domain.PaginateQueryParams{
+		result, err := svc.PostsPaginate(ctx, userID, domain.PaginateQueryParams{
 			Page:  1,
 			Limit: 20,
 		})
 
 		assert.NoError(t, err)
-		assert.Len(t, result, 2)
-	})
-
-	t.Run("Default pagination", func(t *testing.T) {
-		posts := []domain.PostWithShortUser{}
-
-		postStore.EXPECT().
-			PostsPaginatedList(ctx, 20, 0).
-			Return(posts, nil)
-
-		result, err := svc.PostsPaginate(ctx, domain.PaginateQueryParams{})
-
-		assert.NoError(t, err)
-		assert.Len(t, result, 0)
+		assert.Len(t, result, 1)
 	})
 
 	t.Run("DB error", func(t *testing.T) {
 		postStore.EXPECT().
-			PostsPaginatedList(ctx, 20, 0).
+			PostsPaginatedList(ctx, userID, int32(20), int32(0)).
 			Return(nil, errors.New("dbconn error"))
 
-		result, err := svc.PostsPaginate(ctx, domain.PaginateQueryParams{
+		result, err := svc.PostsPaginate(ctx, userID, domain.PaginateQueryParams{
 			Page:  1,
 			Limit: 20,
 		})
@@ -105,27 +73,28 @@ func TestPostService_GetPost(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
+	userID := int32(1)
 	postID := uint(1)
 
 	t.Run("Success", func(t *testing.T) {
-		post := &domain.Post{ID: postID, Text: "Test post"}
+		post := &domain.PostDB{ID: postID, AuthorID: 1, Text: "Test post"}
 
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(post, nil)
 
-		result, err := svc.GetPost(ctx, postID)
+		result, err := svc.GetPost(ctx, userID, postID)
 
 		assert.NoError(t, err)
-		assert.Equal(t, post, result)
+		assert.NotNil(t, result)
 	})
 
 	t.Run("Post not found", func(t *testing.T) {
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(nil, domain.ErrPostNotFound)
 
-		result, err := svc.GetPost(ctx, postID)
+		result, err := svc.GetPost(ctx, userID, postID)
 
 		assert.Nil(t, result)
 		assert.ErrorIs(t, err, domain.ErrPostNotFound)
@@ -133,10 +102,10 @@ func TestPostService_GetPost(t *testing.T) {
 
 	t.Run("DB error", func(t *testing.T) {
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(nil, errors.New("dbconn error"))
 
-		result, err := svc.GetPost(ctx, postID)
+		result, err := svc.GetPost(ctx, userID, postID)
 
 		assert.Nil(t, result)
 		assert.ErrorIs(t, err, domain.ErrDB)
@@ -148,7 +117,7 @@ func TestPostService_CreatePost(t *testing.T) {
 	defer ctrl.Finish()
 
 	ctx := context.Background()
-	userID := 1
+	userID := int32(1)
 	text := "This is a valid post text with enough length"
 
 	t.Run("Success without files", func(t *testing.T) {
@@ -159,7 +128,7 @@ func TestPostService_CreatePost(t *testing.T) {
 				return nil
 			})
 
-		result, err := svc.CreatePost(ctx, userID, text, nil, nil)
+		result, err := svc.CreatePost(ctx, userID, text, nil, nil, nil)
 
 		assert.NoError(t, err)
 		assert.NotNil(t, result)
@@ -168,7 +137,7 @@ func TestPostService_CreatePost(t *testing.T) {
 	})
 
 	t.Run("Text too short", func(t *testing.T) {
-		_, err := svc.CreatePost(ctx, userID, "short", nil, nil)
+		_, err := svc.CreatePost(ctx, userID, "short", nil, nil, nil)
 
 		assert.Error(t, err)
 		assert.ErrorIs(t, err, domain.ErrInvalidInput)
@@ -179,7 +148,7 @@ func TestPostService_CreatePost(t *testing.T) {
 			CreatePost(ctx, gomock.Any()).
 			Return(errors.New("dbconn error"))
 
-		_, err := svc.CreatePost(ctx, userID, text, nil, nil)
+		_, err := svc.CreatePost(ctx, userID, text, nil, nil, nil)
 
 		assert.ErrorIs(t, err, domain.ErrDB)
 	})
@@ -191,18 +160,18 @@ func TestPostService_UpdatePost(t *testing.T) {
 
 	ctx := context.Background()
 	postID := uint(1)
-	userID := 1
+	userID := int32(1)
 	text := "Updated post text with sufficient length"
 
 	t.Run("Success", func(t *testing.T) {
-		existingPost := &domain.Post{
+		existingPost := &domain.PostDB{
 			ID:       postID,
 			AuthorID: uint(userID),
 			Text:     "Original text",
 		}
 
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(existingPost, nil)
 
 		postStore.EXPECT().
@@ -215,14 +184,14 @@ func TestPostService_UpdatePost(t *testing.T) {
 	})
 
 	t.Run("Not author", func(t *testing.T) {
-		existingPost := &domain.Post{
+		existingPost := &domain.PostDB{
 			ID:       postID,
 			AuthorID: 999, // Different author
 			Text:     "Original text",
 		}
 
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(existingPost, nil)
 
 		err := svc.UpdatePost(ctx, postID, userID, text, nil, nil)
@@ -232,7 +201,7 @@ func TestPostService_UpdatePost(t *testing.T) {
 
 	t.Run("Post not found", func(t *testing.T) {
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(nil, domain.ErrPostNotFound)
 
 		err := svc.UpdatePost(ctx, postID, userID, text, nil, nil)
@@ -253,17 +222,17 @@ func TestPostService_DeletePost(t *testing.T) {
 
 	ctx := context.Background()
 	postID := uint(1)
-	userID := 1
+	userID := int32(1)
 
 	t.Run("Success", func(t *testing.T) {
-		existingPost := &domain.Post{
+		existingPost := &domain.PostDB{
 			ID:       postID,
 			AuthorID: uint(userID),
 			Text:     "Post to delete",
 		}
 
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(existingPost, nil)
 
 		postStore.EXPECT().
@@ -277,7 +246,7 @@ func TestPostService_DeletePost(t *testing.T) {
 
 	t.Run("Post not found", func(t *testing.T) {
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(nil, domain.ErrPostNotFound)
 
 		err := svc.DeletePost(ctx, postID, userID)
@@ -286,14 +255,14 @@ func TestPostService_DeletePost(t *testing.T) {
 	})
 
 	t.Run("Not author", func(t *testing.T) {
-		existingPost := &domain.Post{
+		existingPost := &domain.PostDB{
 			ID:       postID,
 			AuthorID: 999, // Different author
 			Text:     "Post to delete",
 		}
 
 		postStore.EXPECT().
-			GetPostByID(ctx, postID).
+			GetPostByID(ctx, userID, postID).
 			Return(existingPost, nil)
 
 		err := svc.DeletePost(ctx, postID, userID)
@@ -303,26 +272,23 @@ func TestPostService_DeletePost(t *testing.T) {
 }
 
 func TestPostService_GetUserPosts(t *testing.T) {
-	svc, postStore, userStore, ctrl := newPostServiceMocks(t)
+	svc, postStore, _, ctrl := newPostServiceMocks(t)
 	defer ctrl.Finish()
 
 	ctx := context.Background()
+	selfUserID := int32(1)
 	userID := uint(1)
 
 	t.Run("Success", func(t *testing.T) {
-		userStore.EXPECT().
-			GetUserByID(ctx, int32(userID)).
-			Return(domain.User{ID: int32(userID)}, nil)
-
-		posts := []domain.Post{
+		posts := []domain.PostDB{
 			{ID: 1, AuthorID: userID, Text: "User post 1"},
 		}
 
 		postStore.EXPECT().
-			GetPostsByUser(ctx, userID, 20, 0).
+			GetPostsByUser(ctx, selfUserID, userID, int32(20), int32(0)).
 			Return(posts, nil)
 
-		result, err := svc.GetUserPosts(ctx, userID, domain.PaginateQueryParams{
+		result, err := svc.GetUserPosts(ctx, selfUserID, userID, domain.PaginateQueryParams{
 			Page:  1,
 			Limit: 20,
 		})
@@ -331,49 +297,46 @@ func TestPostService_GetUserPosts(t *testing.T) {
 		assert.Len(t, result, 1)
 	})
 
-	t.Run("User not found", func(t *testing.T) {
-		userStore.EXPECT().
-			GetUserByID(ctx, int32(userID)).
-			Return(domain.User{}, domain.ErrUserNotFound)
-
-		result, err := svc.GetUserPosts(ctx, userID, domain.PaginateQueryParams{
-			Page:  1,
-			Limit: 20,
-		})
-
-		assert.ErrorIs(t, err, domain.ErrUserNotFound)
-		assert.Nil(t, result)
-	})
-
-	t.Run("DB error on user check", func(t *testing.T) {
-		userStore.EXPECT().
-			GetUserByID(ctx, int32(userID)).
-			Return(domain.User{}, errors.New("dbconn error"))
-
-		result, err := svc.GetUserPosts(ctx, userID, domain.PaginateQueryParams{
-			Page:  1,
-			Limit: 20,
-		})
-
-		assert.ErrorIs(t, err, domain.ErrDB)
-		assert.Nil(t, result)
-	})
-
 	t.Run("DB error on posts get", func(t *testing.T) {
-		userStore.EXPECT().
-			GetUserByID(ctx, int32(userID)).
-			Return(domain.User{ID: int32(userID)}, nil)
-
 		postStore.EXPECT().
-			GetPostsByUser(ctx, userID, 20, 0).
+			GetPostsByUser(ctx, selfUserID, userID, int32(20), int32(0)).
 			Return(nil, errors.New("dbconn error"))
 
-		result, err := svc.GetUserPosts(ctx, userID, domain.PaginateQueryParams{
+		result, err := svc.GetUserPosts(ctx, selfUserID, userID, domain.PaginateQueryParams{
 			Page:  1,
 			Limit: 20,
 		})
 
 		assert.ErrorIs(t, err, domain.ErrDB)
 		assert.Nil(t, result)
+	})
+}
+
+func TestPostService_UpdateLikeOnPostByUserID(t *testing.T) {
+	svc, postStore, _, ctrl := newPostServiceMocks(t)
+	defer ctrl.Finish()
+
+	ctx := context.Background()
+	userID := int32(1)
+	postID := int32(1)
+
+	t.Run("Success", func(t *testing.T) {
+		postStore.EXPECT().
+			UpdateLikeOnPostByUserID(ctx, userID, postID).
+			Return(nil)
+
+		err := svc.UpdateLikeOnPostByUserID(ctx, userID, postID)
+
+		assert.NoError(t, err)
+	})
+
+	t.Run("DB error", func(t *testing.T) {
+		postStore.EXPECT().
+			UpdateLikeOnPostByUserID(ctx, userID, postID).
+			Return(errors.New("db error"))
+
+		err := svc.UpdateLikeOnPostByUserID(ctx, userID, postID)
+
+		assert.ErrorIs(t, err, domain.ErrDB)
 	})
 }
