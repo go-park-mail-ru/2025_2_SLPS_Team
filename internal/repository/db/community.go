@@ -456,8 +456,8 @@ func (store *DBCommunityStore) GetCommunitySubscribers(ctx context.Context, comm
 	}()
 
 	query := `
-		SELECT user_id,
-		FROM community_subscriptions
+		SELECT user_id
+		FROM community_subscriptions cs
 		WHERE cs.community_id = $1
 		ORDER BY cs.created_at DESC
 		LIMIT $2 OFFSET $3
