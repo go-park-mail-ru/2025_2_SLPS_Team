@@ -10,7 +10,7 @@ type Chat struct {
 type FullChat struct {
 	ID                int32        `json:"id"`
 	IsGroup           bool         `json:"isGroup"`
-	UserIDWith        int32        `json:"-"`
+	UserIDWith        *int32       `json:"-"`
 	AvatarPath        *string      `json:"avatarPath"`
 	Name              *string      `json:"name"`
 	LastMessage       Message      `json:"lastMessage"`

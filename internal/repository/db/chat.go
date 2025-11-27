@@ -174,7 +174,9 @@ private_user_ids AS (
         cm2.chat_id,
         cm2.member_id AS private_user_id
     FROM chat_members cm2
-    WHERE cm2.member_id != $1
+    JOIN chat_members self ON self.chat_id = cm2.chat_id
+    WHERE self.member_id = $1
+      AND cm2.member_id != $1
 )
 SELECT
     c.id AS chat_id,
@@ -187,7 +189,7 @@ SELECT
     lm.author_id AS last_message_author_id,
     CASE 
         WHEN NOT c.is_group THEN pu.private_user_id
-        ELSE 0
+        ELSE NULL
     END AS private_user_id,
     COALESCE(uc.unread_count, 0) AS unread_count,
     cm.last_read_message_id
@@ -216,7 +218,7 @@ LIMIT $2 OFFSET $3;
 		var c domain.FullChat
 		var m domain.Message
 		var lmUserID int32
-		var privateUserID int32
+		var privateUserID *int32
 		err := rows.Scan(
 			&c.ID,
 			&c.IsGroup,
@@ -241,8 +243,8 @@ LIMIT $2 OFFSET $3;
 
 		chats = append(chats, c)
 		userIDSet[lmUserID] = struct{}{}
-		if !c.IsGroup {
-			userIDSet[privateUserID] = struct{}{}
+		if !c.IsGroup && privateUserID != nil {
+			userIDSet[*privateUserID] = struct{}{}
 		}
 	}
 
@@ -339,7 +341,7 @@ SELECT
 
     CASE 
         WHEN NOT c.is_group THEN cm2.member_id
-        ELSE 0
+        ELSE null
     END AS private_user_id
 
 FROM chats c
@@ -351,7 +353,7 @@ LEFT JOIN messages m ON m.id = (
     LIMIT 1
 )
 LEFT JOIN chat_members cm2 
-    ON cm2.chat_id = c.id AND cm2.member_id != $2
+    ON cm2.chat_id = c.id AND cm2.member_id = $2
 WHERE c.id = $1;
 
     `
@@ -363,7 +365,7 @@ WHERE c.id = $1;
 	var c domain.FullChat
 	var m domain.Message
 	var lmUserID int32
-	var privateUserID int32
+	var privateUserID *int32
 
 	err := row.Scan(
 		&c.ID,
@@ -387,9 +389,13 @@ WHERE c.id = $1;
 	m.AuthorID = lmUserID
 	m.ChatID = c.ID
 	c.LastMessage = m
+	c.UserIDWith = privateUserID
 
 	var allUserIDs []int32
-	allUserIDs = append(allUserIDs, lmUserID, privateUserID)
+	if !c.IsGroup {
+		allUserIDs = append(allUserIDs, *privateUserID)
+	}
+	allUserIDs = append(allUserIDs, lmUserID)
 	dblogger.Info("Chat returned successfully", zap.Int32("chat_id", chatID))
 	return &c, allUserIDs, nil
 }

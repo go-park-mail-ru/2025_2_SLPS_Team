@@ -132,8 +132,8 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 
 		profiles := generated.FromProtoShortProfileMap(resp)
 		if !chat.IsGroup {
-			chat.AvatarPath = profiles[chat.UserIDWith].AvatarPath
-			name := profiles[chat.UserIDWith].FullName
+			chat.AvatarPath = profiles[*chat.UserIDWith].AvatarPath
+			name := profiles[*chat.UserIDWith].FullName
 			chat.Name = &name
 		}
 		chat.LastMessageAuthor = profiles[chat.LastMessage.AuthorID]
@@ -168,12 +168,12 @@ func (api *ChatService) GetUserChats(ctx context.Context, userID int32, params d
 		domain.FromContext(ctx).Error("Fail to get profiles", zap.Error(err))
 		return nil, err
 	}
-
 	profiles := generated.FromProtoShortProfileMap(resp)
-	for _, chat := range chats {
-		if !chat.IsGroup {
-			chat.AvatarPath = profiles[chat.UserIDWith].AvatarPath
-			name := profiles[chat.UserIDWith].FullName
+	for i := range chats {
+		chat := &chats[i]
+		if !chat.IsGroup && chat.UserIDWith != nil {
+			chat.AvatarPath = profiles[*chat.UserIDWith].AvatarPath
+			name := profiles[*chat.UserIDWith].FullName
 			chat.Name = &name
 		}
 		chat.LastMessageAuthor = profiles[chat.LastMessage.AuthorID]
