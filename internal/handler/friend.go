@@ -455,13 +455,13 @@ func (api *FriendHandler) SearchProfilesByFullName(w http.ResponseWriter, r *htt
 		return
 	}
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
-	profiles, err := api.friendService.SearchShortProfilesByFullNameAndRelationType(r.Context(), &pb.SearchProfilesRequest{FullName: fullName, UserID: userID, Limit: qParams.Limit, Page: qParams.Page, Type: string(fType)})
+	resp, err := api.friendService.SearchShortProfilesByFullNameAndRelationType(r.Context(), &pb.SearchProfilesRequest{FullName: fullName, UserID: userID, Limit: qParams.Limit, Page: qParams.Page, Type: string(fType)})
 	if err != nil {
 		sendJSONError(w, err)
 		domain.FromContext(r.Context()).Error("Fail search profiles by full name", zap.Error(err))
 		return
 	}
-
+	profiles := generated.FromPbShortProfileList(resp)
 	err = sendJSONData(r.Context(), w, profiles)
 	if err == nil {
 		domain.FromContext(r.Context()).Info("Profiles returned successfully")
