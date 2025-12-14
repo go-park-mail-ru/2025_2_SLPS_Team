@@ -21,7 +21,7 @@ reload-db:
 
 	go run ./cmd/app/main.go
 reload-swagger:
-	swag init -g cmd/app/main.go
+	swag init -g cmd/main/main.go
 
 
 generate-mocks:
