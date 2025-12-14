@@ -313,7 +313,6 @@ networks:
   network:
     driver: bridge
 
-
 volumes:
   pg_data:
   es_data:
