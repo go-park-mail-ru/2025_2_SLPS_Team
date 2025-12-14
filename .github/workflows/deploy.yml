@@ -11,7 +11,7 @@ jobs:
     strategy:
       matrix:
         image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx]
-
+      max-parallel: 3
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
