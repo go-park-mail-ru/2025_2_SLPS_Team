@@ -257,47 +257,63 @@ services:
     depends_on:
       - prometheus
 
+
   nginx:
-    image: ${NGINX_IMAGE:-local/nginx:latest}
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
+    image: nginx:1.25-alpine
     container_name: nginx
     ports:
       - "80:80"
       - "443:443"
     volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs
+      - ./certbot-webroot:/var/www/certbot
       - ./dist:/usr/share/nginx/html:ro
     depends_on:
       - main
+    restart: unless-stopped
     networks:
       - network
-    restart: unless-stopped
 
   certbot:
     image: certbot/certbot
     container_name: certbot
     volumes:
-      - ./dist:/usr/share/nginx/html:ro
-      - ./certbot-webroot:/var/www/certbot   # certbot
-      - ./nginx/certs:/etc/letsencrypt
+      - ./nginx/certs:/etc/nginx/certs
+      - ./certbot-webroot:/var/www/certbot
     entrypoint: >
       sh -c "
-      if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then
-        certbot certonly --webroot -w /var/www/certbot  -d unitesm.ru --non-interactive --agree-tos -m mr.loshkariov@yandex.ru;
+      if [ ! -f /etc/nginx/certs/live/unitesm.ru/fullchain.pem ]; then
+        certbot certonly
+        --config-dir /etc/nginx/certs
+        --work-dir /etc/nginx/certs/work
+        --logs-dir /etc/nginx/certs/logs
+        --webroot
+        -w /var/www/certbot
+        -d unitesm.ru
+        --non-interactive
+        --agree-tos
+        -m mr.loshkariov@yandex.ru;
       fi;
-      trap exit TERM;
       while :; do
-        certbot renew --webroot -w /var/www/certbot  && nginx -s reload;
+        certbot renew
+        --config-dir /etc/nginx/certs
+        --work-dir /etc/nginx/certs/work
+        --logs-dir /etc/nginx/certs/logs;
         sleep 12h;
       done
       "
     depends_on:
       - nginx
+    restart: unless-stopped
     networks:
       - network
-    restart: unless-stopped
+
+  networks:
+    network:
+      driver: bridge
+
+
 
 
 networks:
