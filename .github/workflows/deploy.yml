@@ -78,7 +78,7 @@ jobs:
             echo "PROFILE_IMAGE=${{ secrets.DOCKER_USERNAME }}/profile:latest" >> /home/ubuntu/myapp/.env
             echo "FRIEND_IMAGE=${{ secrets.DOCKER_USERNAME }}/friend:latest" >> /home/ubuntu/myapp/.env
             echo "ELASTIC_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:latest" >> /home/ubuntu/myapp/.env 
-            echo "NGINX_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp-nginx:latest" >> /home/ubuntu/myapp/.env 
+            echo "NGINX_IMAGE=${{ secrets.DOCKER_USERNAME }}/nginx:latest" >> /home/ubuntu/myapp/.env 
             cd /home/ubuntu/myapp
             
             docker-compose down -v || true
