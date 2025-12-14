@@ -85,6 +85,14 @@ jobs:
             docker login ghcr.io -u "${{ github.repository_owner }}" -p "${{ secrets.GITHUB_TOKEN }}"
             mkdir -p /home/ubuntu/myapp
             printf '%s\n' "${{ secrets.ENV_FILE }}" > /home/ubuntu/myapp/.env
+            echo "MIGRATIONS_IMAGE=ghcr.io/${{ github.repository_owner }}/migrations:latest" >> /home/ubuntu/myapp/.env
+            echo "MAIN_IMAGE=ghcr.io/${{ github.repository_owner }}/main:latest" >> /home/ubuntu/myapp/.env
+            echo "AUTH_IMAGE=ghcr.io/${{ github.repository_owner }}/auth:latest" >> /home/ubuntu/myapp/.env
+            echo "PROFILE_IMAGE=ghcr.io/${{ github.repository_owner }}/profile:latest" >> /home/ubuntu/myapp/.env
+            echo "FRIEND_IMAGE=ghcr.io/${{ github.repository_owner }}/friend:latest" >> /home/ubuntu/myapp/.env
+            echo "ELASTIC_IMAGE=ghcr.io/${{ github.repository_owner }}/myapp-elasticsearch:latest" >> /home/ubuntu/myapp/.env
+            echo "NGINX_IMAGE=ghcr.io/${{ github.repository_owner }}/nginx:latest" >> /home/ubuntu/myapp/.env
+      
             cd /home/ubuntu/myapp
             docker-compose down -v || true
             docker-compose pull
