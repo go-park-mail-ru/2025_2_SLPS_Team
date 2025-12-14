@@ -280,41 +280,22 @@ services:
     volumes:
       - ./nginx/certs:/etc/letsencrypt
       - ./certbot-webroot:/var/www/certbot
-      # Добавляем volume для хранения конфигурации между перезапусками
-      - ./certbot-data:/var/lib/letsencrypt
-    entrypoint: >
-      /bin/sh -c '
-      # Создаем начальный сертификат, если его нет
+    command: >
+      /bin/sh -c "
       if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then
-        echo "Создаем новый сертификат..."
-        certbot certonly \
-          --webroot -w /var/www/certbot \
-          -d unitesm.ru \
-          --email mr.loshkariov@yandex.ru \
-          --agree-tos \
-          --non-interactive \
-          --force-renewal \
-          --config-dir /etc/letsencrypt \
-          --work-dir /etc/letsencrypt/work \
-          --logs-dir /etc/letsencrypt/logs;
-      else
-        echo "Сертификат уже существует, проверяем срок действия..."
+        echo 'Создаем новый сертификат...';
+        certbot certonly --webroot -w /var/www/certbot -d unitesm.ru \
+          --email mr.loshkariov@yandex.ru --agree-tos --non-interactive \
+          --config-dir /etc/letsencrypt --work-dir /etc/letsencrypt/work --logs-dir /etc/letsencrypt/logs;
       fi;
-      
-      # Запускаем автоматическое продление
-      trap exit TERM;
-      while :; do
-        echo "Проверяем необходимость обновления сертификатов..."
+      while true; do
+        echo 'Проверяем необходимость обновления...';
         certbot renew \
-          --quiet \
           --config-dir /etc/letsencrypt \
           --work-dir /etc/letsencrypt/work \
           --logs-dir /etc/letsencrypt/logs;
-      
-        # Ждем 12 часов перед следующей проверкой
-        echo "Следующая проверка через 12 часов..."
-        sleep 12h & wait $!;
-      done'
+        sleep 12h;
+      done"
     depends_on:
       - nginx
     restart: unless-stopped
