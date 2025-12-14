@@ -257,51 +257,63 @@ services:
     depends_on:
       - prometheus
 
+
   nginx:
-    image: ${NGINX_IMAGE:-local/nginx:latest}
-    build:
-      context: .
-      dockerfile: Dockerfile.nginx
+    image: nginx:1.25-alpine
     container_name: nginx
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx/certs:/etc/nginx/certs
+      - ./certbot-webroot:/var/www/certbot
       - ./dist:/usr/share/nginx/html:ro
     depends_on:
       - main
+    restart: unless-stopped
     networks:
       - network
-    restart: unless-stopped
 
   certbot:
     image: certbot/certbot
     container_name: certbot
     volumes:
-      - ./dist:/usr/share/nginx/html:ro
-      - ./certbot-webroot:/var/www/certbot   # certbot
       - ./nginx/certs:/etc/letsencrypt
-    entrypoint: >
-      sh -c "
-      if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then
-        certbot certonly --webroot -w /var/www/certbot  -d unitesm.ru --non-interactive --agree-tos -m mr.loshkariov@yandex.ru;
-      fi;
-      trap exit TERM;
-      while :; do
-        certbot renew --webroot -w /var/www/certbot  && nginx -s reload;
-        sleep 12h;
-      done
-      "
+      - ./certbot-webroot:/var/www/certbot
+    command:
+      - /bin/sh
+      - -c
+      - |
+        sleep 5
+        if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then
+          echo "Создаем новый сертификат..."
+          certbot certonly --webroot -w /var/www/certbot -d unitesm.ru \
+            --email mr.loshkariov@yandex.ru --agree-tos --non-interactive \
+            --config-dir /etc/letsencrypt --work-dir /etc/letsencrypt/work --logs-dir /etc/letsencrypt/logs
+        fi
+        echo "Запускаем автоматическое обновление..."
+        while true; do
+          echo "Проверяем сертификаты..."
+          certbot renew \
+            --config-dir /etc/letsencrypt \
+            --work-dir /etc/letsencrypt/work \
+            --logs-dir /etc/letsencrypt/logs
+          echo "Следующая проверка через 12 часов..."
+          sleep 12h
+        done
     depends_on:
       - nginx
+    restart: unless-stopped
     networks:
       - network
-    restart: unless-stopped
+
+
+
 
 
 networks:
   network:
+    driver: bridge
 
 volumes:
   pg_data:
