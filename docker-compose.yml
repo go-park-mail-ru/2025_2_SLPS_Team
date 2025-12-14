@@ -280,7 +280,14 @@ services:
     volumes:
       - ./nginx/certs:/etc/letsencrypt
       - ./certbot-webroot:/var/www/certbot
-    command: ["/bin/sh", "-c", "sleep 10 && certbot certonly --webroot -w /var/www/certbot -d unitesm.ru --email mr.loshkariov@yandex.ru --agree-tos --non-interactive --force-renewal && while :; do sleep 43200 && certbot renew; done"]
+    entrypoint: ["/bin/sh", "-c"]
+    command: |
+      sleep 10
+      certbot certonly --webroot -w /var/www/certbot -d unitesm.ru --email mr.loshkariov@yandex.ru --agree-tos --non-interactive --force-renewal
+      while true; do
+        sleep 43200
+        certbot renew
+      done
     depends_on:
       - nginx
     restart: unless-stopped
