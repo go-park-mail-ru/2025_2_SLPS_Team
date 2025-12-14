@@ -281,25 +281,13 @@ services:
       - ./nginx/certs:/etc/letsencrypt
       - ./certbot-webroot:/var/www/certbot
     command: >
-      sh -c "
-        certbot certonly --webroot -w /var/www/certbot \
-        -d unitesm.ru \
-        --email mr.loshkariov@yandex.ru \
-        --agree-tos \
-        --non-interactive \
-        --config-dir /etc/letsencrypt \
-        --work-dir /etc/letsencrypt/work \
-        --logs-dir /etc/letsencrypt/logs || true
-        && while :; do
-          certbot renew --config-dir /etc/letsencrypt --work-dir /etc/letsencrypt/work --logs-dir /etc/letsencrypt/logs;
-          sleep 12h;
-        done
-      "
+      sh -c "if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then certbot certonly --webroot -w /var/www/certbot -d unitesm.ru --email mr.loshkariov@yandex.ru --agree-tos --non-interactive --config-dir /etc/letsencrypt --work-dir /etc/letsencrypt/work --logs-dir /etc/letsencrypt/logs; fi; while true; do certbot renew --config-dir /etc/letsencrypt --work-dir /etc/letsencrypt/work --logs-dir /etc/letsencrypt/logs; sleep 12h; done"
     depends_on:
       - nginx
     restart: unless-stopped
     networks:
       - network
+
 
 
 
