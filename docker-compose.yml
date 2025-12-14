@@ -309,15 +309,10 @@ services:
     networks:
       - network
 
-  networks:
-    network:
-      driver: bridge
-
-
-
-
 networks:
   network:
+    driver: bridge
+
 
 volumes:
   pg_data:
