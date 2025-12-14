@@ -479,60 +479,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/chats/{chatID}/message": {
-            "post": {
-                "description": "Создает новое сообщение в указанном чате",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "messages"
-                ],
-                "summary": "Создать сообщение",
-                "parameters": [
-                    {
-                        "type": "integer",
-                        "format": "int32",
-                        "description": "ID чата",
-                        "name": "chatID",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Тело сообщения",
-                        "name": "message",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/domain.Message"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/handler.MessageIDResponse"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/handler.JSONResponse"
-                        }
-                    }
-                }
-            }
-        },
         "/chats/{id}/last-read": {
             "put": {
                 "description": "Обновляет значение lastReadMessageID для текущего (аутентифицированного) пользователя в указанном чате.",
@@ -574,6 +520,91 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Некорректные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{id}/message": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Создает новое сообщение в указанном чате с возможностью прикрепления файлов",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messages"
+                ],
+                "summary": "Создать сообщение (текст + файлы)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Текст сообщения",
+                        "name": "text",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "file"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Вложения к сообщению",
+                        "name": "attachments",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Сообщение успешно создано",
+                        "schema": {
+                            "$ref": "#/definitions/handler.MessageIDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен (не участник чата)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Чат не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -3551,6 +3582,12 @@ const docTemplate = `{
         "domain.Message": {
             "type": "object",
             "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "authorID": {
                     "type": "integer"
                 },
