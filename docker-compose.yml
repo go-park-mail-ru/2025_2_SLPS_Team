@@ -280,21 +280,27 @@ services:
     volumes:
       - ./nginx/certs:/etc/letsencrypt
       - ./certbot-webroot:/var/www/certbot
-    entrypoint: >
-      sh -c " \
-      if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then \
-        certbot certonly --config-dir /etc/letsencrypt --work-dir /etc/letsencrypt/work --logs-dir /etc/letsencrypt/logs \
-        --webroot -w /var/www/certbot -d unitesm.ru --non-interactive --agree-tos -m mr.loshkariov@yandex.ru; \
-      fi; \
-      while :; do \
-        certbot renew --config-dir /etc/letsencrypt --work-dir /etc/letsencrypt/work --logs-dir /etc/letsencrypt/logs; \
-        sleep 12h; \
-      done"
+    command: >
+      sh -c "
+        certbot certonly --webroot -w /var/www/certbot \
+        -d unitesm.ru \
+        --email mr.loshkariov@yandex.ru \
+        --agree-tos \
+        --non-interactive \
+        --config-dir /etc/letsencrypt \
+        --work-dir /etc/letsencrypt/work \
+        --logs-dir /etc/letsencrypt/logs || true
+        && while :; do
+          certbot renew --config-dir /etc/letsencrypt --work-dir /etc/letsencrypt/work --logs-dir /etc/letsencrypt/logs;
+          sleep 12h;
+        done
+      "
     depends_on:
       - nginx
     restart: unless-stopped
     networks:
       - network
+
 
 
 networks:
