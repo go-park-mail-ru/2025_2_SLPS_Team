@@ -134,6 +134,10 @@ definitions:
     type: object
   domain.Message:
     properties:
+      attachments:
+        items:
+          type: string
+        type: array
       authorID:
         type: integer
       chatID:
@@ -630,42 +634,6 @@ paths:
       summary: Получить список чатов пользователя
       tags:
       - chats
-  /chats/{chatID}/message:
-    post:
-      consumes:
-      - application/json
-      description: Создает новое сообщение в указанном чате
-      parameters:
-      - description: ID чата
-        format: int32
-        in: path
-        name: chatID
-        required: true
-        type: integer
-      - description: Тело сообщения
-        in: body
-        name: message
-        required: true
-        schema:
-          $ref: '#/definitions/domain.Message'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/handler.MessageIDResponse'
-        "400":
-          description: Bad Request
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-        "500":
-          description: Internal Server Error
-          schema:
-            $ref: '#/definitions/handler.JSONResponse'
-      summary: Создать сообщение
-      tags:
-      - messages
   /chats/{id}/last-read:
     put:
       consumes:
@@ -703,6 +671,63 @@ paths:
       summary: Обновить последнее прочитанное сообщение
       tags:
       - chats
+  /chats/{id}/message:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Создает новое сообщение в указанном чате с возможностью прикрепления
+        файлов
+      parameters:
+      - description: ID чата
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Текст сообщения
+        in: formData
+        name: text
+        required: true
+        type: string
+      - collectionFormat: multi
+        description: Вложения к сообщению
+        in: formData
+        items:
+          type: file
+        name: attachments
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение успешно создано
+          schema:
+            $ref: '#/definitions/handler.MessageIDResponse'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Доступ запрещен (не участник чата)
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Чат не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Создать сообщение (текст + файлы)
+      tags:
+      - messages
   /chats/{id}/messages:
     get:
       description: Возвращает сообщения из чата с пагинацией и краткую информацию

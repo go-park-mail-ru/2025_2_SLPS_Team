@@ -29,7 +29,6 @@ func NewChatService(authService pb.AuthServiceClient, profileService pb.ProfileS
 }
 
 func (api *ChatService) GetOrCreateChatWithUser(ctx context.Context, selfUserID int32, userID int32) (int32, error) {
-
 	resp, err := api.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: userID})
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
@@ -56,7 +55,6 @@ func (api *ChatService) GetOrCreateChatWithUser(ctx context.Context, selfUserID 
 }
 
 func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.PaginateQueryParams, userID int32, chatID int32) (*domain.MessagesWithAuthors, error) {
-
 	isMember, err := api.chatStore.IsMemberOfChat(ctx, userID, chatID)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to check membership", zap.Error(err), zap.Int32("chatID", chatID))
@@ -97,33 +95,78 @@ func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.P
 	return &messagesWithAuthors, nil
 }
 
-func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID int32, message domain.Message) (int32, error) {
-	exits, err := api.chatStore.IsChatExist(ctx, chatID)
+func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID int32, text string, attachmentFiles []*domain.File) (int32, error) {
+	// Валидация текста
+	if text == "" && len(attachmentFiles) == 0 {
+		domain.FromContext(ctx).Warn("Message must have text or attachments")
+		return 0, domain.ErrInvalidInput
+	}
+
+	// Проверяем существование чата
+	exists, err := api.chatStore.IsChatExist(ctx, chatID)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to get chat", zap.Error(err), zap.Int32("chatID", chatID))
 		return 0, domain.ErrDB
 	}
 
-	if !exits {
+	if !exists {
 		domain.FromContext(ctx).Warn("Chat not found", zap.Int32("chatID", chatID))
-		return 0, domain.ErrNotExist
+		return 0, domain.ErrNotFound
 	}
-	message.AuthorID = userID
-	message.ChatID = chatID
+
+	// Проверяем, является ли пользователь участником чата
+	isMember, err := api.chatStore.IsMemberOfChat(ctx, userID, chatID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to check membership", zap.Error(err), zap.Int32("chatID", chatID))
+		return 0, domain.ErrDB
+	}
+	if !isMember {
+		domain.FromContext(ctx).Warn("User not a member of chat", zap.Int32("chatID", chatID))
+		return 0, domain.ErrAccessDenied
+	}
+
+	// Обработка вложений
+	var attachmentPaths []string
+	if len(attachmentFiles) > 0 {
+		attachmentPaths, err = UploadFiles(attachmentFiles)
+		if err != nil {
+			domain.FromContext(ctx).Error("Failed to upload attachments", zap.Error(err))
+			return 0, domain.ErrService
+		}
+	}
+
+	// Создаем объект сообщения
+	message := domain.Message{
+		AuthorID:    userID,
+		ChatID:      chatID,
+		Text:        text,
+		Attachments: attachmentPaths,
+	}
+
+	// Сохраняем сообщение в БД
 	messageID, err := api.messageStore.CreateMessage(ctx, message)
 	if err != nil {
+		// Удаляем загруженные файлы в случае ошибки
+		if len(attachmentPaths) > 0 {
+			DeleteFiles(convertToPointerSlice(attachmentPaths))
+		}
 		domain.FromContext(ctx).Error("Failed to create message", zap.Error(err), zap.Int32("chatID", chatID))
 		return 0, domain.ErrDB
 	}
-	message.ID = messageID
-	go func(ctx context.Context, userID int32, chatID int32) {
+
+	// Отправляем сообщение через WebSocket
+	go func(ctx context.Context, userID int32, chatID int32, messageID int32) {
 		ctx2, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
+
+		// Получаем чат для отправки через WS
 		chat, userIDs, err := api.chatStore.GetFullChatByIDAndSenderID(ctx2, userID, chatID)
 		if err != nil {
 			domain.FromContext(ctx).Error("Fail to get chat", zap.Error(err))
 			return
 		}
+
+		// Получаем профили участников
 		resp, err := api.profileService.GetShortProfileMapByUserIDs(ctx2, &pb.GetShortProfileMapByUserIDsRequest{UserIDs: userIDs})
 		if err != nil {
 			domain.FromContext(ctx).Error("Fail to get profiles", zap.Error(err))
@@ -137,12 +180,15 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 			chat.Name = &name
 		}
 		chat.LastMessageAuthor = profiles[chat.LastMessage.AuthorID]
+
+		// Получаем получателей
 		recipients, err := api.chatStore.GetOtherChatMembersIdByAuthorId(ctx2, userID, chatID)
 		if err != nil {
 			domain.FromContext(ctx).Error("Fail to get recipients", zap.Error(err))
 			return
 		}
 
+		// Отправляем сообщение всем получателям через WS
 		for _, recipient := range recipients {
 			chat.LastReadMessageID = recipient.LastReadMessageID
 			chat.UnreadCounts = recipient.UnreadCounts
@@ -153,9 +199,13 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 		}
 
 		domain.FromContext(ctx).Info("message send to recipients")
-	}(ctx, userID, chatID)
+	}(ctx, userID, chatID, messageID)
 
-	domain.FromContext(ctx).Info("Message created successfully", zap.Int32("messageID", messageID), zap.Int32("chatID", chatID))
+	domain.FromContext(ctx).Info("Message created successfully",
+		zap.Int32("messageID", messageID),
+		zap.Int32("chatID", chatID),
+		zap.Int("attachmentsCount", len(attachmentPaths)))
+
 	return messageID, nil
 }
 
@@ -163,11 +213,17 @@ func (api *ChatService) GetUserChats(ctx context.Context, userID int32, params d
 	offset, limit := domain.ValidatePaginationParams(params)
 
 	chats, userIDs, err := api.chatStore.GetUserFullChats(ctx, userID, limit, offset)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get chats", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+
 	resp, err := api.profileService.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{UserIDs: userIDs})
 	if err != nil {
 		domain.FromContext(ctx).Error("Fail to get profiles", zap.Error(err))
 		return nil, err
 	}
+
 	profiles := generated.FromProtoShortProfileMap(resp)
 	for i := range chats {
 		chat := &chats[i]
@@ -178,10 +234,6 @@ func (api *ChatService) GetUserChats(ctx context.Context, userID int32, params d
 		}
 		chat.LastMessageAuthor = profiles[chat.LastMessage.AuthorID]
 	}
-	if err != nil {
-		domain.FromContext(ctx).Error("Failed to get chats", zap.Error(err))
-		return nil, domain.ErrDB
-	}
 
 	domain.FromContext(ctx).Info("Chats retrieved successfully", zap.Int32("limit", limit), zap.Int32("offset", offset))
 	return chats, nil
@@ -190,10 +242,8 @@ func (api *ChatService) GetUserChats(ctx context.Context, userID int32, params d
 func (api *ChatService) UpdateLastReadMessage(ctx context.Context, userID, chatID, lastReadMessageID int32) error {
 	err := api.chatStore.UpdateLastReadMessageByUserIDAndChatID(ctx, userID, chatID, lastReadMessageID)
 	if err != nil {
-
 		domain.FromContext(ctx).Error("Failed update last read message", zap.Error(err))
 		return domain.ErrDB
-
 	}
 
 	domain.FromContext(ctx).Info("last read message updated")

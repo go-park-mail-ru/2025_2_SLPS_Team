@@ -21,7 +21,7 @@ reload-db:
 
 	go run ./cmd/app/main.go
 reload-swagger:
-	swag init -g cmd/main/main.go
+	swag init -g cmd/main/main.godocker compose --env-file .env up --build
 
 
 generate-mocks:
