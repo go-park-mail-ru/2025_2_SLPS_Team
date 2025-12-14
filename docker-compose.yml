@@ -275,24 +275,17 @@ services:
       - network
 
   certbot:
-    image: certbot/certbot
     container_name: certbot
+    image: certbot/certbot:latest
+    depends_on:
+      - nginx
+    command: >-
+      certonly --reinstall --webroot --webroot-path=/var/www/certbot
+      --email mr.loshkariov@yandex.ru --agree-tos --no-eff-email
+      -d unitesm.ru
     volumes:
       - ./nginx/certs:/etc/letsencrypt
       - ./certbot-webroot:/var/www/certbot
-    entrypoint: ["/bin/sh", "-c"]
-    command: |
-      sleep 10
-      certbot certonly --webroot -w /var/www/certbot -d unitesm.ru --email mr.loshkariov@yandex.ru --agree-tos --non-interactive --force-renewal
-      while true; do
-        sleep 43200
-        certbot renew
-      done
-    depends_on:
-      - nginx
-    restart: unless-stopped
-    networks:
-      - network
 
 
 
