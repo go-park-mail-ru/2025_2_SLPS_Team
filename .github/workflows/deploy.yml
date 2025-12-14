@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [main, auth, friend, profile, migrations, myapp-elasticsearch]
+        image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx]
 
     steps:
       - name: Checkout code
@@ -28,6 +28,7 @@ jobs:
           BUILD_DOCKERFILE="Dockerfile"
           case "${{ matrix.image }}" in
             myapp-elasticsearch) BUILD_DOCKERFILE="Dockerfile.elasticsearch" ;;
+            nginx) BUILD_DOCKERFILE="Dockerfile.nginx" ;;
             migrations) BUILD_DOCKERFILE="Dockerfile.migrations" ;;
           esac
           echo "DOCKERFILE=$BUILD_DOCKERFILE" >> $GITHUB_ENV
@@ -77,6 +78,7 @@ jobs:
             echo "PROFILE_IMAGE=${{ secrets.DOCKER_USERNAME }}/profile:latest" >> /home/ubuntu/myapp/.env
             echo "FRIEND_IMAGE=${{ secrets.DOCKER_USERNAME }}/friend:latest" >> /home/ubuntu/myapp/.env
             echo "ELASTIC_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp-elasticsearch:latest" >> /home/ubuntu/myapp/.env 
+            echo "NGINX_IMAGE=${{ secrets.DOCKER_USERNAME }}/myapp-nginx:latest" >> /home/ubuntu/myapp/.env 
             cd /home/ubuntu/myapp
             
             docker-compose down -v || true

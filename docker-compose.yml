@@ -258,18 +258,17 @@ services:
       - prometheus
 
   nginx:
-    image: nginx:1.25
+    image: ${NGINX_IMAGE:-local/nginx:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
     container_name: nginx
     ports:
       - "80:80"
       - "443:443"
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d/site.conf:/etc/nginx/conf.d/site.conf:ro
       - ./nginx/certs:/etc/nginx/certs
-      - ./nginx/html:/usr/share/nginx/html
+      - ./dist:/usr/share/nginx/html:ro
     depends_on:
       - main
     networks:
@@ -280,16 +279,17 @@ services:
     image: certbot/certbot
     container_name: certbot
     volumes:
-      - ./nginx/html:/usr/share/nginx/html
+      - ./dist:/usr/share/nginx/html:ro
+      - ./certbot-webroot:/var/www/certbot   # certbot
       - ./nginx/certs:/etc/letsencrypt
     entrypoint: >
       sh -c "
       if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then
-        certbot certonly --webroot -w /usr/share/nginx/html -d unitesm.ru --non-interactive --agree-tos -m mr.loshkariov@yandex.ru;
+        certbot certonly --webroot -w /var/www/certbot  -d unitesm.ru --non-interactive --agree-tos -m mr.loshkariov@yandex.ru;
       fi;
       trap exit TERM;
       while :; do
-        certbot renew --webroot -w /usr/share/nginx/html && nginx -s reload;
+        certbot renew --webroot -w /var/www/certbot  && nginx -s reload;
         sleep 12h;
       done
       "

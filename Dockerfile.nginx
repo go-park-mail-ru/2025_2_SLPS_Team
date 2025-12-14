@@ -1,0 +1,18 @@
+# Берём официальный Nginx
+FROM nginx:1.25
+
+# Копируем конфиги
+COPY nginx/nginx.conf /etc/nginx/nginx.conf
+COPY nginx/conf.d /etc/nginx/conf.d
+
+# Создаём папку для сертификатов, её можно монтировать потом
+RUN mkdir -p /etc/nginx/certs
+
+# Создаём папку для фронта, её потом будем монтировать
+RUN mkdir -p /usr/share/nginx/html
+
+# Экспонируем порты
+EXPOSE 80 443
+
+# Старт Nginx в foreground
+CMD ["nginx", "-g", "daemon off;"]
