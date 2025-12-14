@@ -212,7 +212,9 @@ services:
       - /dev/kmsg
     privileged: true
     command:
-      --docker_only
+      - "--docker_only"
+      - "--logtostderr"
+      - "--stderrthreshold=1"
     networks:
       - network
     restart: unless-stopped
@@ -255,34 +257,49 @@ services:
     depends_on:
       - prometheus
 
-  nginx-proxy:
-    image: jwilder/nginx-proxy
+  nginx:
+    image: nginx:1.25
+    container_name: nginx
     ports:
       - "80:80"
       - "443:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./nginx/conf/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d/site.conf:/etc/nginx/conf.d/site.conf:ro
       - ./nginx/certs:/etc/nginx/certs
-      - ./nginx/www:/var/www/certbot
-    environment:
-          - NGINX_PROXY_PASS=false
+      - ./nginx/html:/usr/share/nginx/html
     depends_on:
       - main
     networks:
       - network
+    restart: unless-stopped
 
-  letsencrypt:
-    image: nginxproxy/acme-companion
-    environment:
-      - NGINX_PROXY_CONTAINER=nginx-proxy
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./nginx/certs:/etc/nginx/certs:rw
-      - ./nginx/conf.d:/etc/nginx/conf.d:rw
-      - ./nginx/www:/var/www/certbot:rw
+      - ./nginx/html:/usr/share/nginx/html
+      - ./nginx/certs:/etc/letsencrypt
+    entrypoint: >
+      sh -c "
+      if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then
+        certbot certonly --webroot -w /usr/share/nginx/html -d unitesm.ru --non-interactive --agree-tos -m mr.loshkariov@yandex.ru;
+      fi;
+      trap exit TERM;
+      while :; do
+        certbot renew --webroot -w /usr/share/nginx/html && nginx -s reload;
+        sleep 12h;
+      done
+      "
+    depends_on:
+      - nginx
     networks:
       - network
+    restart: unless-stopped
+
+
 networks:
   network:
 
