@@ -33,28 +33,34 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit,
 	}()
 
 	query := `
-        SELECT 
-            p.id,
-            p.author_id,
-            p.community_id,
-            p.text,
-            p.created_at,
-            c.name as community_name,
-            c.avatar_path as community_avatar,
-            COALESCE(likes.count, 0) AS likes_count,
-            EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $3) AS liked_by_user
-        FROM posts p
-        LEFT JOIN communities c ON p.community_id = c.id
-        LEFT JOIN (
-            SELECT post_id, COUNT(*) AS count
-            FROM post_likes
-            GROUP BY post_id
-        ) likes ON likes.post_id = p.id
-        WHERE p.community_id IS NULL 
-        OR p.community_id IN (SELECT community_id FROM community_subscriptions WHERE user_id = $3)
-        ORDER BY p.created_at DESC
-        LIMIT $1 OFFSET $2
-    `
+	SELECT 
+		p.id,
+		p.author_id,
+		p.community_id,
+		p.text,
+		p.created_at,
+		c.name as community_name,
+		c.avatar_path as community_avatar,
+		COALESCE(likes.count, 0) AS likes_count,
+		COALESCE(comments.count, 0) AS comments_count, -- <-- ДОБАВИЛИ
+		EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $3) AS liked_by_user
+	FROM posts p
+	LEFT JOIN communities c ON p.community_id = c.id
+	LEFT JOIN (
+		SELECT post_id, COUNT(*) AS count
+		FROM post_likes
+		GROUP BY post_id
+	) likes ON likes.post_id = p.id
+	LEFT JOIN ( -- <-- ДОБАВИЛИ
+		SELECT post_id, COUNT(*) AS count
+		FROM comments
+		GROUP BY post_id
+	) comments ON comments.post_id = p.id
+	WHERE p.community_id IS NULL 
+	OR p.community_id IN (SELECT community_id FROM community_subscriptions WHERE user_id = $3)
+	ORDER BY p.created_at DESC
+	LIMIT $1 OFFSET $2
+`
 
 	rows, err := store.db.QueryContext(ctx, query, limit, offset, userID)
 	if err != nil {
@@ -80,6 +86,7 @@ func (store *DBPostStore) PostsPaginatedList(ctx context.Context, userID, limit,
 			&commName,
 			&commAvatar,
 			&post.LikeCount,
+			&post.CommentsCount,
 			&post.IsLiked,
 		)
 		if err != nil {
@@ -143,6 +150,7 @@ func (store *DBPostStore) GetPostByID(ctx context.Context, userID int32, id uint
 			c.name as community_name,
 			c.avatar_path as community_avatar,
 			COALESCE(likes.count, 0) AS likes_count,
+			COALESCE(comments.count, 0) AS comments_count,
 			EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS liked_by_user
 		FROM posts p
 		LEFT JOIN communities c ON p.community_id = c.id
@@ -151,6 +159,11 @@ func (store *DBPostStore) GetPostByID(ctx context.Context, userID int32, id uint
 			FROM post_likes
 			GROUP BY post_id
 		) likes ON likes.post_id = p.id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) AS count
+			FROM comments
+			GROUP BY post_id
+		) comments ON comments.post_id = p.id
 		WHERE p.id = $1
 	`
 
@@ -169,6 +182,7 @@ func (store *DBPostStore) GetPostByID(ctx context.Context, userID int32, id uint
 		&commName,
 		&commAvatar,
 		&post.LikeCount,
+		&post.CommentsCount,
 		&post.IsLiked,
 	)
 
@@ -355,6 +369,7 @@ func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int32, c
 			c.name as community_name,
 			c.avatar_path as community_avatar,
 			COALESCE(likes.count, 0) AS likes_count,
+			COALESCE(comments.count, 0) AS comments_count,
 			EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS liked_by_user
 		FROM posts p
 		LEFT JOIN communities c ON p.community_id = c.id
@@ -363,6 +378,11 @@ func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int32, c
 			FROM post_likes
 			GROUP BY post_id
 		) likes ON likes.post_id = p.id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) AS count
+			FROM comments
+			GROUP BY post_id
+		) comments ON comments.post_id = p.id
 		WHERE p.community_id = $1
 		ORDER BY p.created_at DESC
 		LIMIT $3 OFFSET $4
@@ -392,6 +412,7 @@ func (store *DBPostStore) GetCommunityPosts(ctx context.Context, userID int32, c
 			&commName,
 			&commAvatar,
 			&post.LikeCount,
+			&post.CommentsCount,
 			&post.IsLiked,
 		)
 		if err != nil {
@@ -510,6 +531,7 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, selfUserID int32, 
 			c.name as community_name,
 			c.avatar_path as community_avatar,
 			COALESCE(likes.count, 0) AS likes_count,
+			COALESCE(comments.count, 0) AS comments_count,
 			EXISTS (SELECT 1 FROM post_likes pl WHERE pl.post_id = p.id AND pl.user_id = $2) AS liked_by_user
 		FROM posts p
 		LEFT JOIN communities c ON p.community_id = c.id
@@ -518,6 +540,11 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, selfUserID int32, 
 			FROM post_likes
 			GROUP BY post_id
 		) likes ON likes.post_id = p.id
+		LEFT JOIN (
+			SELECT post_id, COUNT(*) AS count
+			FROM comments
+			GROUP BY post_id
+		) comments ON comments.post_id = p.id
 		WHERE p.author_id = $1 AND p.community_id IS NULL
 		ORDER BY p.created_at DESC
 		LIMIT $3 OFFSET $4
@@ -547,6 +574,7 @@ func (store *DBPostStore) GetPostsByUser(ctx context.Context, selfUserID int32, 
 			&commName,
 			&commAvatar,
 			&post.LikeCount,
+			&post.CommentsCount,
 			&post.IsLiked,
 		)
 		if err != nil {

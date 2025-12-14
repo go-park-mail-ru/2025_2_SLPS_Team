@@ -651,6 +651,269 @@ const docTemplate = `{
                 }
             }
         },
+        "/comments": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Создает новый комментарий к посту",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Создать комментарий",
+                "parameters": [
+                    {
+                        "description": "Данные для создания комментария",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Комментарий успешно создан",
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentView"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пост не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/comments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о комментарии по его идентификатору",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Получить комментарий по ID",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID комментария",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Комментарий найден",
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentView"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID комментария",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Комментарий не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Обновляет существующий комментарий (только автор)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Обновить комментарий",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID комментария",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новые данные комментария",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Комментарий успешно обновлен",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен (не автор комментария)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Комментарий не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Удаляет комментарий (только автор)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Удалить комментарий",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID комментария",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Комментарий успешно удален",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID комментария",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен (не автор комментария)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Комментарий не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/communities": {
             "post": {
                 "security": [
@@ -2625,6 +2888,130 @@ const docTemplate = `{
                 }
             }
         },
+        "/posts/{postID}/comments": {
+            "get": {
+                "description": "Возвращает список комментариев к указанному посту с пагинацией",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Получить комментарии поста",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID поста",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Количество комментариев на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешный ответ с комментариями",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.CommentView"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пост не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{postID}/comments/count": {
+            "get": {
+                "description": "Возвращает общее количество комментариев к указанному посту",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Получить количество комментариев поста",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID поста",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Количество комментариев",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer",
+                                "format": "int32"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID поста",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/profile": {
             "put": {
                 "security": [
@@ -3004,6 +3391,57 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.CommentCreateRequest": {
+            "type": "object",
+            "properties": {
+                "postID": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CommentUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CommentView": {
+            "type": "object",
+            "properties": {
+                "authorAvatar": {
+                    "type": "string"
+                },
+                "authorID": {
+                    "type": "integer"
+                },
+                "authorName": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "parentID": {
+                    "type": "integer"
+                },
+                "postID": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "domain.CommunityForMyCommunity": {
             "type": "object",
             "properties": {
@@ -3165,6 +3603,9 @@ const docTemplate = `{
                 },
                 "authorName": {
                     "type": "string"
+                },
+                "commentsCount": {
+                    "type": "integer"
                 },
                 "communityAvatar": {
                     "type": "string"

@@ -465,13 +465,13 @@ func (s *PostService) enrichPostsWithProfiles(ctx context.Context, postsDB []dom
 			Attachments:     postDB.Attachments,
 			Photos:          postDB.Photos,
 			LikeCount:       postDB.LikeCount,
+			CommentsCount:   postDB.CommentsCount,
 			IsLiked:         postDB.IsLiked,
 			CreatedAt:       postDB.CreatedAt,
 			IsCommunityPost: postDB.CommunityID != nil,
 			CommunityName:   postDB.CommunityName,
 			CommunityAvatar: postDB.CommunityAvatar,
 		}
-
 		// Заполняем данные автора из профиля
 		if profile, exists := profilesMap[int32(postDB.AuthorID)]; exists {
 			postView.AuthorName = profile.FullName
@@ -507,6 +507,7 @@ func (s *PostService) enrichPostWithProfile(ctx context.Context, postDB *domain.
 		Attachments:     postDB.Attachments,
 		Photos:          postDB.Photos,
 		LikeCount:       postDB.LikeCount,
+		CommentsCount:   postDB.CommentsCount,
 		IsLiked:         postDB.IsLiked,
 		CreatedAt:       postDB.CreatedAt,
 		IsCommunityPost: postDB.CommunityID != nil,

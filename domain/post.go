@@ -32,6 +32,7 @@ type PostView struct {
 	Attachments     []string  `json:"attachments"`
 	Photos          []string  `json:"photos"`
 	LikeCount       int32     `json:"likeCount"`
+	CommentsCount    int32     `json:"commentsCount"`
 	IsLiked         bool      `json:"isLiked"`
 	CreatedAt       time.Time `json:"createdAt"`
 	IsCommunityPost bool      `json:"isCommunityPost"`
@@ -47,6 +48,7 @@ type PostDB struct {
 	CommunityName   *string   `json:"communityName,omitempty"`
 	CommunityAvatar *string   `json:"communityAvatar,omitempty"`
 	LikeCount       int32     `json:"likeCount"`
+	CommentsCount    int32     `json:"commentsCount"`
 	IsLiked         bool      `json:"isLiked"`
 	Attachments     []string  `json:"attachments"`
 	Photos          []string  `json:"photos"`
