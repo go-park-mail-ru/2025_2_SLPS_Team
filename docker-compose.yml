@@ -274,29 +274,41 @@ services:
     networks:
       - network
 
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - ./nginx/certs:/etc/letsencrypt
-      - ./certbot-webroot:/var/www/certbot
-    entrypoint: ["/bin/sh", "-c"]
-    command: |
-      sleep 5
-      if [ ! -f /etc/letsencrypt/live/unitesm.ru/fullchain.pem ]; then
-        certbot certonly --webroot -w /var/www/certbot -d unitesm.ru \
-          --email mr.loshkariov@yandex.ru --agree-tos --non-interactive \
-          --config-dir /etc/letsencrypt
-      fi
-      while true; do
-        certbot renew --config-dir /etc/letsencrypt
-        sleep 12h
-      done
-    depends_on:
-      - nginx
-    restart: unless-stopped
-    networks:
-      - network
+certbot:
+  image: certbot/certbot
+  container_name: certbot
+  volumes:
+    - ./nginx/certs:/etc/letsencrypt
+    - ./certbot-webroot:/var/www/certbot
+  entrypoint: ["/bin/sh", "-c"]
+  command: |
+    # Ждем запуска nginx (только число для BusyBox)
+    sleep 10
+    
+    # ПРИНУДИТЕЛЬНО получаем новый сертификат
+    echo "Получаем реальный SSL сертификат от Let's Encrypt..."
+    certbot certonly \
+      --webroot \
+      -w /var/www/certbot \
+      -d unitesm.ru \
+      --email mr.loshkariov@yandex.ru \
+      --agree-tos \
+      --non-interactive \
+      --force-renewal
+    
+    echo "Запускаем автоматическое обновление..."
+    while :; do
+      echo "Проверяем необходимость обновления..."
+      certbot renew
+      echo "Следующая проверка через 12 часов..."
+      # 12 часов = 43200 секунд (только число для BusyBox)
+      sleep 43200
+    done
+  depends_on:
+    - nginx
+  restart: unless-stopped
+  networks:
+    - network
 
 
 
