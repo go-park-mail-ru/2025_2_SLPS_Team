@@ -5,12 +5,15 @@ on:
     branches:
       - main
       - develop
+      - feature/messaging
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx]
+      max-parallel: 3  # ограничиваем параллельность для безопасности
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
