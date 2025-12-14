@@ -274,27 +274,27 @@ services:
     networks:
       - network
 
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - ./nginx/certs:/etc/letsencrypt
-      - ./certbot-webroot:/var/www/certbot
-    command: >
-      /bin/sh -c '
-      sleep 10s;
-      certbot certonly --webroot -w /var/www/certbot -d unitesm.ru
-        --email mr.loshkariov@yandex.ru --agree-tos --non-interactive
-        --force-renewal;
+certbot:
+  image: certbot/certbot
+  container_name: certbot
+  volumes:
+    - ./nginx/certs:/etc/letsencrypt
+    - ./certbot-webroot:/var/www/certbot
+  command:
+    - /bin/sh
+    - -c
+    - |
+      sleep 10
+      certbot certonly --webroot -w /var/www/certbot -d unitesm.ru --email mr.loshkariov@yandex.ru --agree-tos --non-interactive --force-renewal
       while true; do
-        sleep 12h;
-        certbot renew;
-      done'
-    depends_on:
-      - nginx
-    restart: unless-stopped
-    networks:
-      - network
+        sleep 43200
+        certbot renew
+      done
+  depends_on:
+    - nginx
+  restart: unless-stopped
+  networks:
+    - network
 
 
 
