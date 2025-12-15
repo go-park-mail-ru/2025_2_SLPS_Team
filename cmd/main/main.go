@@ -39,6 +39,7 @@ func NewApiRouter(logger *zap.Logger,
 
 	chatStore := db.NewDBChatStore(dbConn)
 	messageStore := db.NewDBMessageStore(dbConn)
+	stickerStore := db.NewDBStickerStore(dbConn)
 	postStore := db.NewDBPostStore(dbConn)
 	commentStore := db.NewDBCommentStore(dbConn)
 	applicationStore := db.NewDBApplicationStore(dbConn)
@@ -56,10 +57,12 @@ func NewApiRouter(logger *zap.Logger,
 	chat := handler.NewChatHandler(chatService)
 	postService := service.NewPostService(postStore, authClient, communityStore, profileClient)
 	commentService := service.NewCommentService(commentStore, authClient, profileClient, postStore)
+	stickerService := service.NewStickerService(stickerStore)
 	middleware := handler.NewMiddlewareHandler(config)
 	posts := handler.NewPostsHandler(postService)
 	commentHandler := handler.NewCommentHandler(commentService)
 	community := handler.NewCommunityHandler(communityService)
+	sticker := handler.NewStickerHandler(stickerService)
 	wshandler := handler.NewWSHandler(wsHub)
 	friend := handler.NewFriendHandler(friendClient)
 
@@ -98,6 +101,12 @@ func NewApiRouter(logger *zap.Logger,
 	chatRouter.HandleFunc("/{id:[0-9]+}/messages", chat.GetMessagesByChatId).Methods("GET")
 	chatRouter.HandleFunc("/{id:[0-9]+}/last-read", chat.UpdateLastReadMessage).Methods("PUT", "OPTIONS")
 
+	// Stickers routes (стикеры)
+	stickerRouter := apiRouter.PathPrefix("/sticker-packs").Subrouter()
+	stickerRouter.Use(auth.AuthMiddleware) // или можно без авторизации, если стикеры публичные
+	stickerRouter.HandleFunc("", sticker.GetStickerPacks).Methods("GET")
+	stickerRouter.HandleFunc("/{packID:[0-9]+}/stickers", sticker.GetStickersByPackID).Methods("GET")
+
 	appRouter := apiRouter.PathPrefix("/applications").Subrouter()
 	appRouter.HandleFunc("", application.CreateApplication).Methods("POST", "OPTIONS")
 	appRouter.HandleFunc("", application.GetApplications).Methods("GET")
@@ -126,7 +135,7 @@ func NewApiRouter(logger *zap.Logger,
 	commentRouter.HandleFunc("/{id:[0-9]+}", commentHandler.DeleteComment).Methods("DELETE", "OPTIONS")
 	apiRouter.HandleFunc("/posts/{postID:[0-9]+}/comments", commentHandler.GetPostComments).Methods("GET")
 	apiRouter.HandleFunc("/posts/{postID:[0-9]+}/comments/count", commentHandler.GetPostCommentsCount).Methods("GET")
-	
+
 	friendRouter := apiRouter.PathPrefix("/friends").Subrouter()
 	friendRouter.Use(auth.AuthMiddleware)
 	friendRouter.HandleFunc("", friend.GetFriends).Methods("GET")
