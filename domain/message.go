@@ -10,6 +10,7 @@ type Message struct {
 	AuthorID    int32     `json:"authorID"`
 	ChatID      int32     `json:"chatID"`
 	Text        string    `json:"text"`
+	StickerID   *int32    `json:"stickerID,omitempty"`
 	CreatedAt   time.Time `json:"createdAt"`
 	Attachments []string  `json:"attachments,omitempty"`
 	//IsEdited bool `json:"isEdited"`
@@ -24,4 +25,5 @@ type MessageStore interface {
 	GetMessagesByChatId(ctx context.Context, chatID int32, limit int32, offset int32) ([]Message, error)
 	GetMessageAttachments(ctx context.Context, messageID int32) ([]string, error)
 	SaveMessageAttachments(ctx context.Context, messageID int32, attachments []string) error
+	GetStickerPath(ctx context.Context, stickerID int32) (string, error)
 }

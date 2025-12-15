@@ -106,69 +106,87 @@ type MessageIDResponse struct {
 }
 
 // CreateMessage создает новое сообщение в чате
-// @Summary Создать сообщение (текст + файлы)
-// @Description Создает новое сообщение в указанном чате с возможностью прикрепления файлов
+// @Summary Создать сообщение (текст, файлы или стикер)
+// @Description Создает новое сообщение в указанном чате. Можно отправить:
+// 1. Текст (можно с вложениями)
+// 2. Только вложения (без текста)
+// 3. Только стикер (без текста и вложений)
+// НЕЛЬЗЯ: текст со стикером или вложения со стикером
 // @Tags messages
 // @Accept multipart/form-data
 // @Produce json
 // @Param id path int32 true "ID чата"
-// @Param text formData string true "Текст сообщения"
+// @Param text formData string false "Текст сообщения (обязателен, если нет вложений и стикера)"
 // @Param attachments formData []file false "Вложения к сообщению" collectionFormat(multi)
+// @Param sticker_id formData int32 false "ID стикера (если отправляется стикер, то нельзя отправлять текст и вложения)"
 // @Success 200 {object} MessageIDResponse "Сообщение успешно создано"
 // @Failure 400 {object} JSONResponse "Неверные данные запроса"
 // @Failure 401 {object} JSONResponse "Пользователь не авторизован"
 // @Failure 403 {object} JSONResponse "Доступ запрещен (не участник чата)"
-// @Failure 404 {object} JSONResponse "Чат не найден"
+// @Failure 404 {object} JSONResponse "Чат или стикер не найден"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Security ApiKeyAuth
 // @Router /chats/{id}/message [post]
 func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	chatIDStr := vars["id"]
-	chatID, err := strconv.Atoi(chatIDStr)
-	if err != nil {
-		sendJSONResponse(w, "Invalid chat ID", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse chat ID", zap.Error(err))
-		return
-	}
+    vars := mux.Vars(r)
+    chatIDStr := vars["id"]
+    chatID, err := strconv.Atoi(chatIDStr)
+    if err != nil {
+        sendJSONResponse(w, "Invalid chat ID", http.StatusBadRequest)
+        domain.FromContext(r.Context()).Error("Failed to parse chat ID", zap.Error(err))
+        return
+    }
 
-	// Парсим multipart форму (максимум 50MB)
-	err = r.ParseMultipartForm(50 << 20)
-	if err != nil {
-		sendJSONResponse(w, "Can't parse multipart form", http.StatusBadRequest)
-		domain.Error(r.Context(), "Failed to parse multipart form", err)
-		return
-	}
+    // Парсим multipart форму (максимум 50MB)
+    err = r.ParseMultipartForm(50 << 20)
+    if err != nil {
+        sendJSONResponse(w, "Can't parse multipart form", http.StatusBadRequest)
+        domain.Error(r.Context(), "Failed to parse multipart form", err)
+        return
+    }
 
-	text := r.FormValue("text")
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+    text := r.FormValue("text")
+    userID, ok := r.Context().Value(domain.UserIDKey).(int32)
+    if !ok {
+        sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
+        domain.Warn(r.Context(), "User ID not found in context")
+        return
+    }
 
-	// Обрабатываем вложения
-	var attachmentFiles []*domain.File
-	if attachments, ok := r.MultipartForm.File["attachments"]; ok {
-		attachmentFiles, err = domain.MultipartListToFiles(attachments)
-		if err != nil {
-			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
-			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
-			return
-		}
-	}
+    // Получаем sticker_id из формы, если есть
+    var stickerID *int32
+    if stickerIDStr := r.FormValue("sticker_id"); stickerIDStr != "" {
+        id, err := strconv.Atoi(stickerIDStr)
+        if err != nil {
+            sendJSONResponse(w, "Invalid sticker ID", http.StatusBadRequest)
+            domain.FromContext(r.Context()).Error("Failed to parse sticker ID", zap.Error(err))
+            return
+        }
+        stickerIDValue := int32(id)
+        stickerID = &stickerIDValue
+    }
 
-	// Создаем сообщение
-	messageID, err := api.chatService.CreateMessage(r.Context(), userID, int32(chatID), text, attachmentFiles)
-	if err != nil {
-		sendJSONError(w, err)
-		return
-	}
+    // Обрабатываем вложения
+    var attachmentFiles []*domain.File
+    if attachments, ok := r.MultipartForm.File["attachments"]; ok {
+        attachmentFiles, err = domain.MultipartListToFiles(attachments)
+        if err != nil {
+            sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
+            domain.Error(r.Context(), "Failed to parse multipart form to files", err)
+            return
+        }
+    }
 
-	if err := sendJSONData(r.Context(), w, MessageIDResponse{MessageID: messageID}); err != nil {
-		return
-	}
+    // Создаем сообщение
+    messageID, err := api.chatService.CreateMessage(r.Context(), userID, int32(chatID), text, attachmentFiles, stickerID)
+    if err != nil {
+        sendJSONError(w, err)
+        return
+    }
+
+    if err := sendJSONData(r.Context(), w, MessageIDResponse{MessageID: messageID}); err != nil {
+        return
+    }
 }
 
 // GetUserChats получает список чатов для текущего пользователя,

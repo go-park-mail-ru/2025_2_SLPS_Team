@@ -540,7 +540,7 @@ const docTemplate = `{
                         "ApiKeyAuth": []
                     }
                 ],
-                "description": "Создает новое сообщение в указанном чате с возможностью прикрепления файлов",
+                "description": "Создает новое сообщение в указанном чате. Можно отправить:",
                 "consumes": [
                     "multipart/form-data"
                 ],
@@ -550,7 +550,7 @@ const docTemplate = `{
                 "tags": [
                     "messages"
                 ],
-                "summary": "Создать сообщение (текст + файлы)",
+                "summary": "Создать сообщение (текст, файлы или стикер)",
                 "parameters": [
                     {
                         "type": "integer",
@@ -562,10 +562,9 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Текст сообщения",
+                        "description": "Текст сообщения (обязателен, если нет вложений и стикера)",
                         "name": "text",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "array",
@@ -575,6 +574,13 @@ const docTemplate = `{
                         "collectionFormat": "multi",
                         "description": "Вложения к сообщению",
                         "name": "attachments",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID стикера (если отправляется стикер, то нельзя отправлять текст и вложения)",
+                        "name": "sticker_id",
                         "in": "formData"
                     }
                 ],
@@ -604,7 +610,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Чат не найден",
+                        "description": "Чат или стикер не найден",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -3275,6 +3281,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/sticker-packs": {
+            "get": {
+                "description": "Возвращает список всех доступных стикерпаков",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stickers"
+                ],
+                "summary": "Получить список стикерпаков",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.StickerPack"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sticker-packs/{packID}/stickers": {
+            "get": {
+                "description": "Возвращает все стикеры из указанного стикерпака",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stickers"
+                ],
+                "summary": "Получить стикеры из пака",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID стикерпака",
+                        "name": "packID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Sticker"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{userID}/posts": {
             "get": {
                 "description": "Возвращает посты конкретного пользователя с пагинацией",
@@ -3600,6 +3686,9 @@ const docTemplate = `{
                 "id": {
                     "type": "integer"
                 },
+                "stickerID": {
+                    "type": "integer"
+                },
                 "text": {
                     "type": "string"
                 }
@@ -3778,6 +3867,40 @@ const docTemplate = `{
                 },
                 "userID": {
                     "type": "integer"
+                }
+            }
+        },
+        "domain.Sticker": {
+            "type": "object",
+            "properties": {
+                "filePath": {
+                    "description": "путь к картинке стикера",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "packID": {
+                    "type": "integer"
+                },
+                "position": {
+                    "description": "порядковый номер в пачке",
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.StickerPack": {
+            "type": "object",
+            "properties": {
+                "coverPath": {
+                    "description": "путь к обложке (первый стикер в пачке)",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },

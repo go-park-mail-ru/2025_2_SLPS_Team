@@ -5,6 +5,7 @@ import (
 	"project/domain"
 	"project/shared/mapper/generated"
 	"project/shared/pb"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -95,11 +96,14 @@ func (api *ChatService) GetMessagesByChatId(ctx context.Context, params domain.P
 	return &messagesWithAuthors, nil
 }
 
-func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID int32, text string, attachmentFiles []*domain.File) (int32, error) {
-	// Валидация текста
-	if text == "" && len(attachmentFiles) == 0 {
-		domain.FromContext(ctx).Warn("Message must have text or attachments")
-		return 0, domain.ErrInvalidInput
+func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID int32, text string, attachmentFiles []*domain.File, stickerID *int32) (int32, error) {
+	// Валидация содержания сообщения
+	if err := validateMessageContent(text, len(attachmentFiles), stickerID); err != nil {
+		domain.FromContext(ctx).Warn("Invalid message content",
+			zap.String("text", text),
+			zap.Int("attachments", len(attachmentFiles)),
+			zap.Any("stickerID", stickerID))
+		return 0, err
 	}
 
 	// Проверяем существование чата
@@ -125,9 +129,9 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 		return 0, domain.ErrAccessDenied
 	}
 
-	// Обработка вложений
+	// Обработка вложений (только если нет стикера)
 	var attachmentPaths []string
-	if len(attachmentFiles) > 0 {
+	if len(attachmentFiles) > 0 && stickerID == nil {
 		attachmentPaths, err = UploadFiles(attachmentFiles)
 		if err != nil {
 			domain.FromContext(ctx).Error("Failed to upload attachments", zap.Error(err))
@@ -139,7 +143,8 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 	message := domain.Message{
 		AuthorID:    userID,
 		ChatID:      chatID,
-		Text:        text,
+		Text:        text, // Может быть пустым для стикера или только вложений
+		StickerID:   stickerID,
 		Attachments: attachmentPaths,
 	}
 
@@ -204,6 +209,8 @@ func (api *ChatService) CreateMessage(ctx context.Context, userID int32, chatID 
 	domain.FromContext(ctx).Info("Message created successfully",
 		zap.Int32("messageID", messageID),
 		zap.Int32("chatID", chatID),
+		zap.Any("stickerID", stickerID),
+		zap.Bool("hasText", text != ""),
 		zap.Int("attachmentsCount", len(attachmentPaths)))
 
 	return messageID, nil
@@ -248,4 +255,25 @@ func (api *ChatService) UpdateLastReadMessage(ctx context.Context, userID, chatI
 
 	domain.FromContext(ctx).Info("last read message updated")
 	return nil
+}
+
+func validateMessageContent(text string, attachmentsCount int, stickerID *int32) error {
+	if stickerID != nil {
+		// Сообщение со стикером
+		trimmedText := strings.TrimSpace(text)
+		if trimmedText != "" {
+			return domain.ErrInvalidInput
+		}
+		if attachmentsCount > 0 {
+			return domain.ErrInvalidInput
+		}
+		return nil
+	} else {
+		// Сообщение без стикера
+		trimmedText := strings.TrimSpace(text)
+		if trimmedText == "" && attachmentsCount == 0 {
+			return domain.ErrInvalidInput
+		}
+		return nil
+	}
 }

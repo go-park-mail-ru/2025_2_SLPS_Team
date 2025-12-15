@@ -146,6 +146,8 @@ definitions:
         type: string
       id:
         type: integer
+      stickerID:
+        type: integer
       text:
         type: string
     type: object
@@ -265,6 +267,29 @@ definitions:
         type: string
       userID:
         type: integer
+    type: object
+  domain.Sticker:
+    properties:
+      filePath:
+        description: путь к картинке стикера
+        type: string
+      id:
+        type: integer
+      packID:
+        type: integer
+      position:
+        description: порядковый номер в пачке
+        type: integer
+    type: object
+  domain.StickerPack:
+    properties:
+      coverPath:
+        description: путь к обложке (первый стикер в пачке)
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
     type: object
   domain.User:
     properties:
@@ -675,8 +700,7 @@ paths:
     post:
       consumes:
       - multipart/form-data
-      description: Создает новое сообщение в указанном чате с возможностью прикрепления
-        файлов
+      description: 'Создает новое сообщение в указанном чате. Можно отправить:'
       parameters:
       - description: ID чата
         format: int32
@@ -684,10 +708,9 @@ paths:
         name: id
         required: true
         type: integer
-      - description: Текст сообщения
+      - description: Текст сообщения (обязателен, если нет вложений и стикера)
         in: formData
         name: text
-        required: true
         type: string
       - collectionFormat: multi
         description: Вложения к сообщению
@@ -696,6 +719,12 @@ paths:
           type: file
         name: attachments
         type: array
+      - description: ID стикера (если отправляется стикер, то нельзя отправлять текст
+          и вложения)
+        format: int32
+        in: formData
+        name: sticker_id
+        type: integer
       produces:
       - application/json
       responses:
@@ -716,7 +745,7 @@ paths:
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "404":
-          description: Чат не найден
+          description: Чат или стикер не найден
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
@@ -725,7 +754,7 @@ paths:
             $ref: '#/definitions/handler.JSONResponse'
       security:
       - ApiKeyAuth: []
-      summary: Создать сообщение (текст + файлы)
+      summary: Создать сообщение (текст, файлы или стикер)
       tags:
       - messages
   /chats/{id}/messages:
@@ -2535,6 +2564,59 @@ paths:
       summary: Обновление header
       tags:
       - profile
+  /sticker-packs:
+    get:
+      description: Возвращает список всех доступных стикерпаков
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.StickerPack'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить список стикерпаков
+      tags:
+      - stickers
+  /sticker-packs/{packID}/stickers:
+    get:
+      description: Возвращает все стикеры из указанного стикерпака
+      parameters:
+      - description: ID стикерпака
+        format: int32
+        in: path
+        name: packID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Sticker'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить стикеры из пака
+      tags:
+      - stickers
   /users/{userID}/posts:
     get:
       consumes:

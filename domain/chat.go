@@ -28,7 +28,7 @@ type MemberWithLastReadMessage struct {
 type ChatService interface {
 	GetOrCreateChatWithUser(ctx context.Context, selfUserID int32, userID int32) (int32, error)
 	GetMessagesByChatId(ctx context.Context, params PaginateQueryParams, userID int32, chatID int32) (*MessagesWithAuthors, error)
-	CreateMessage(ctx context.Context, userID int32, chatID int32, text string, attachmentFiles []*File) (int32, error)
+	CreateMessage(ctx context.Context, userID int32, chatID int32, text string, attachmentFiles []*File, stickerID *int32) (int32, error)
 	GetUserChats(ctx context.Context, userID int32, params PaginateQueryParams) ([]FullChat, error)
 	UpdateLastReadMessage(ctx context.Context, userID, chatID, lastReadMessageID int32) error
 }
