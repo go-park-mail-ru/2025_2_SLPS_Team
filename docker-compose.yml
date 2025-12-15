@@ -304,6 +304,7 @@ services:
     restart: unless-stopped
 
   volume-init:
+    image: ${VOLUME_IMAGE:-local/volume:latest}
     build:
       context: .
       dockerfile: Dockerfile.volume

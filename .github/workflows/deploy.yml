@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx]
+        image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx, init-volume]
 
     steps:
       - name: Checkout code
@@ -24,6 +24,7 @@ jobs:
           case "${{ matrix.image }}" in
             myapp-elasticsearch) BUILD_DOCKERFILE="Dockerfile.elasticsearch" ;;
             nginx) BUILD_DOCKERFILE="Dockerfile.nginx" ;;
+            init-volume) BUILD_DOCKERFILE="Dockerfile.volume" ;;
             migrations) BUILD_DOCKERFILE="Dockerfile.migrations" ;;
           esac
           echo "DOCKERFILE=$BUILD_DOCKERFILE" >> $GITHUB_ENV
@@ -91,6 +92,7 @@ jobs:
             echo "FRIEND_IMAGE=ghcr.io/${{ github.repository_owner }}/friend:latest" >> /home/ubuntu/myapp/.env
             echo "ELASTIC_IMAGE=ghcr.io/${{ github.repository_owner }}/myapp-elasticsearch:latest" >> /home/ubuntu/myapp/.env
             echo "NGINX_IMAGE=ghcr.io/${{ github.repository_owner }}/nginx:latest" >> /home/ubuntu/myapp/.env
+            echo "VOLUME_IMAGE=ghcr.io/${{ github.repository_owner }}/volume:latest" >> /home/ubuntu/myapp/.env
             
             cd /home/ubuntu/myapp
             docker-compose down -v || true
