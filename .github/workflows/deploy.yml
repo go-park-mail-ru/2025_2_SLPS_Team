@@ -24,7 +24,7 @@ jobs:
           case "${{ matrix.image }}" in
             myapp-elasticsearch) BUILD_DOCKERFILE="Dockerfile.elasticsearch" ;;
             nginx) BUILD_DOCKERFILE="Dockerfile.nginx" ;;
-            init-volume) BUILD_DOCKERFILE="Dockerfile.volume" ;;
+            volume) BUILD_DOCKERFILE="Dockerfile.volume" ;;
             migrations) BUILD_DOCKERFILE="Dockerfile.migrations" ;;
           esac
           echo "DOCKERFILE=$BUILD_DOCKERFILE" >> $GITHUB_ENV
