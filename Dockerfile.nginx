@@ -16,6 +16,7 @@ RUN openssl req -x509 -nodes -days 1 -newkey rsa:2048 \
 
 # Экспонируем порты
 EXPOSE 80 443
-
+COPY nginx/watch-certs.sh /watch-certs.sh
+RUN chmod +x /watch-certs.sh
 # Старт Nginx в foreground
 CMD ["nginx", "-g", "daemon off;"]
