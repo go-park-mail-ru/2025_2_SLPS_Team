@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx, init-volume]
+        image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx, volume]
 
     steps:
       - name: Checkout code
