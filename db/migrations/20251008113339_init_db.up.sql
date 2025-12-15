@@ -282,3 +282,20 @@ $$
     END
 $$;
 
+-- Добавляем стикерпак
+DO $$
+DECLARE
+    memes_pack_id INTEGER;
+BEGIN
+    -- Добавляем стикерпак
+    INSERT INTO sticker_packs (name, cover_path) 
+    VALUES ('Funny Memes', '/uploads/stickers/memes/meme1.jpg')
+    RETURNING id INTO memes_pack_id;
+    
+    -- Добавляем стикеры
+    INSERT INTO stickers (pack_id, file_path, position) VALUES
+    (memes_pack_id, '/uploads/stickers/memes/meme1.jpg', 1),
+    (memes_pack_id, '/uploads/stickers/memes/meme2.jpg', 2),
+    (memes_pack_id, '/uploads/stickers/memes/meme3.jpg', 3),
+    (memes_pack_id, '/uploads/stickers/memes/meme4.jpg', 4);
+END $$;
