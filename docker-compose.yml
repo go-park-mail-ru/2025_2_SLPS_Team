@@ -259,7 +259,10 @@ services:
 
 
   nginx:
-    image: nginx:1.25-alpine
+    image: ${NGINX_IMAGE:-local/nginx:latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.nginx
     container_name: nginx
     ports:
       - "80:80"
