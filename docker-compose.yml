@@ -303,6 +303,12 @@ services:
       done"
     restart: unless-stopped
 
+  volume-init:
+    build:
+      context: .
+      dockerfile: Dockerfile.volume
+    volumes:
+      - shared_uploads:/shared
 
 
 

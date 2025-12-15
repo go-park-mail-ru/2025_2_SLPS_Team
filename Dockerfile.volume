@@ -1,0 +1,4 @@
+FROM alpine
+COPY uploads/stickers /preload/stickers
+COPY init-shared-volume.sh /init.sh
+ENTRYPOINT ["/bin/sh", "/init.sh"]
