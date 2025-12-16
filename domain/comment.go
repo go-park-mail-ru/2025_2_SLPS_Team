@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//easyjson:json
 type Comment struct {
 	ID        int32     `json:"id"`
 	PostID    int32     `json:"postID"`
@@ -15,7 +16,7 @@ type Comment struct {
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
-// CommentView - комментарий с дополнительной информацией для отображения
+//easyjson:json
 type CommentView struct {
 	ID           int32     `json:"id"`
 	PostID       int32     `json:"postID"`
@@ -28,13 +29,13 @@ type CommentView struct {
 	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
-// CommentCreateRequest - запрос на создание комментария
+//easyjson:json
 type CommentCreateRequest struct {
 	PostID int32  `json:"postID" valid:"required"`
 	Text   string `json:"text" valid:"required,length(1|4096)"`
 }
 
-// CommentUpdateRequest - запрос на обновление комментария
+//easyjson:json
 type CommentUpdateRequest struct {
 	Text string `json:"text" valid:"required,length(1|4096)"`
 }

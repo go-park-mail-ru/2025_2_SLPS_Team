@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//easyjson:json
 type Community struct {
 	ID               int32     `json:"id"`
 	Name             string    `json:"name"`
@@ -17,7 +18,7 @@ type Community struct {
 	SubscribersCount int32     `json:"subscribersCount"`
 }
 
-// Надо для вкладки Подписки/Рекомендации
+//easyjson:json
 type ShortCommunity struct {
 	ID               int32   `json:"id"`
 	Name             string  `json:"name"`
@@ -26,7 +27,7 @@ type ShortCommunity struct {
 	SubscribersCount int32   `json:"subscribersCount"`
 }
 
-// Надо когда юзер заходит на сообщество, но тут не хватает состояния подписан ли ты или нет
+//easyjson:json
 type ShortCommunityWithCoverPathAndCreatedAt struct {
 	ID               int32     `json:"id"`
 	Name             string    `json:"name"`
@@ -37,13 +38,14 @@ type ShortCommunityWithCoverPathAndCreatedAt struct {
 	SubscribersCount int32     `json:"subscribersCount"`
 }
 
+//easyjson:json
 type CommunityForMyCommunity struct {
 	ID         int32   `json:"id"`
 	Name       string  `json:"name"`
 	AvatarPath *string `json:"avatarPath"`
 }
 
-// Надо когда юзер заходит на сообщество
+//easyjson:json
 type CommunityForView struct {
 	ID               int32     `json:"id"`
 	Name             string    `json:"name"`
@@ -56,7 +58,7 @@ type CommunityForView struct {
 	IsSubscribed     bool      `json:"isSubscribed"`
 }
 
-// Структура для подписчика сообщества
+//easyjson:json
 type CommunitySubscriber struct {
 	UserID     int32   `json:"userID"`
 	FullName   string  `json:"fullName"`
@@ -70,6 +72,7 @@ const (
 	Owned       CommunityType = "owned"
 )
 
+//easyjson:json
 type CommunityRequest struct {
 	Name        string `json:"name" valid:"required,length(3|48)"`
 	Description string `json:"description" valid:"optional,length(0|512)"`

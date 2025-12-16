@@ -3,11 +3,6 @@ package handler
 import (
 	"net/http"
 	"project/domain"
-	"strconv"
-
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
-	"go.uber.org/zap"
 )
 
 type PostsHandler struct {
@@ -46,10 +41,9 @@ type PostsResponse struct {
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts [get]
 func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
@@ -61,9 +55,7 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, posts); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, posts)
 }
 
 // GetPost возвращает пост по ID
@@ -79,23 +71,21 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts/{id} [get]
 func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	postID, err := strconv.ParseUint(vars["id"], 10, 32)
+	postID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid post ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
+		sendJSONError(w, err)
 		return
 	}
+
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
 	post, err := h.postService.GetPost(r.Context(), userID, uint(postID))
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, post); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, post)
 }
 
 // CreatePost - создание нового поста с файлами
@@ -115,51 +105,31 @@ func (h *PostsHandler) GetPost(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /posts [post]
 func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(50 << 20)
+	err := ParseMultipart(r)
 	if err != nil {
-		sendJSONResponse(w, "Can't parse multipart form", http.StatusBadRequest)
-		domain.Error(r.Context(), "Failed to parse multipart form", err)
+		sendJSONError(w, err)
 		return
 	}
 
 	text := r.FormValue("text")
-	communityIDStr := r.FormValue("communityID")
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
+	attachmentFiles, err := domain.MultipartFiles(r, "attachments")
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
-	var attachmentFiles, photoFiles []*domain.File
-	if attachments, ok := r.MultipartForm.File["attachments"]; ok {
-		attachmentFiles, err = domain.MultipartListToFiles(attachments)
-		if err != nil {
-			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
-			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
-			return
-		}
-	}
-	if photos, ok := r.MultipartForm.File["photos"]; ok {
-		photoFiles, err = domain.MultipartListToFiles(photos)
-		if err != nil {
-			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
-			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
-			return
-		}
+	photoFiles, err := domain.MultipartFiles(r, "photos")
+	if err != nil {
+		sendJSONError(w, err)
+		return
 	}
 
-	var communityID *int32
-	if communityIDStr != "" {
-		id, err := strconv.Atoi(communityIDStr)
-		if err != nil {
-			sendJSONResponse(w, "Invalid community ID", http.StatusBadRequest)
-			domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", communityIDStr))
-			return
-		}
-		cid := int32(id)
-		communityID = &cid
+	communityID, err := parseIntParam(r, "communityID")
+	if err != nil {
+		sendJSONError(w, err)
+		return
 	}
 
 	post, err := h.postService.CreatePost(r.Context(), userID, text, communityID, attachmentFiles, photoFiles)
@@ -173,9 +143,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		"post":    post,
 	}
 
-	if err := sendJSONData(r.Context(), w, response); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, response)
 }
 
 // UpdatePost - обновление поста с файлами
@@ -197,46 +165,32 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /posts/{id} [put]
 func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	postID, err := strconv.ParseUint(vars["id"], 10, 32)
+
+	postID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid post ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	err = r.ParseMultipartForm(50 << 20)
+	err = ParseMultipart(r)
 	if err != nil {
-		sendJSONResponse(w, "Can't parse multipart form", http.StatusBadRequest)
-		domain.Error(r.Context(), "Failed to parse multipart form", err)
+		sendJSONError(w, err)
 		return
 	}
 
 	text := r.FormValue("text")
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, "Unauthorized", http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
+	attachmentFiles, err := domain.MultipartFiles(r, "attachments")
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
-	var attachmentFiles, photoFiles []*domain.File
-	if attachments, ok := r.MultipartForm.File["attachments"]; ok {
-		attachmentFiles, err = domain.MultipartListToFiles(attachments)
-		if err != nil {
-			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
-			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
-			return
-		}
-	}
-	if photos, ok := r.MultipartForm.File["photos"]; ok {
-		photoFiles, err = domain.MultipartListToFiles(photos)
-		if err != nil {
-			sendJSONResponse(w, "Can't parse multipart form to files", http.StatusBadRequest)
-			domain.Error(r.Context(), "Failed to parse multipart form to files", err)
-			return
-		}
+	photoFiles, err := domain.MultipartFiles(r, "photos")
+	if err != nil {
+		sendJSONError(w, err)
+		return
 	}
 
 	err = h.postService.UpdatePost(r.Context(), uint(postID), userID, text, attachmentFiles, photoFiles)
@@ -245,7 +199,7 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSONResponse(w, "Post updated successfully", http.StatusOK)
+	sendJSONSuccess(w, r, "Post updated successfully")
 }
 
 // DeletePost удаляет пост
@@ -264,20 +218,13 @@ func (h *PostsHandler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /posts/{id} [delete]
 func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	postID, err := strconv.ParseUint(vars["id"], 10, 32)
+	postID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid post ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["id"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, "Unauthorized", http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	err = h.postService.DeletePost(r.Context(), uint(postID), userID)
 	if err != nil {
@@ -285,7 +232,7 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSONResponse(w, "Post deleted successfully", http.StatusOK)
+	sendJSONSuccess(w, r, "Post deleted successfully")
 }
 
 // GetUserPosts возвращает посты пользователя
@@ -303,20 +250,18 @@ func (h *PostsHandler) DeletePost(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /users/{userID}/posts [get]
 func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID, err := strconv.ParseUint(vars["userID"], 10, 32)
+	userID, err := PathInt32(r, "userID")
 	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid user ID", zap.String("userID", vars["userID"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
+
 	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	posts, err := h.postService.GetUserPosts(r.Context(), selfUserID, uint(userID), qParams)
 	if err != nil {
@@ -324,9 +269,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, posts); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, posts)
 }
 
 // UpdateLikeOnPost ставит или убирает лайк пользователя на посте.
@@ -343,25 +286,21 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts/{id}/like [put]
 func (h *PostsHandler) UpdateLikeOnPost(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	postIDStr := vars["id"]
-	postID, err := strconv.Atoi(postIDStr)
+	postID, err := PathInt32(r, "ID")
 	if err != nil {
-		sendJSONResponse(w, "invalid postID", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse postID", zap.Error(err))
+		sendJSONError(w, err)
 		return
 	}
 
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	err = h.postService.UpdateLikeOnPostByUserID(r.Context(), userID, int32(postID))
+	err = h.postService.UpdateLikeOnPostByUserID(r.Context(), userID, postID)
 	if err != nil {
-		domain.FromContext(r.Context()).Error("Failed update like on post", zap.Error(err))
+		sendJSONError(w, err)
 		return
 	}
 
-	domain.FromContext(r.Context()).Info("like updated")
-	sendJSONResponse(w, "like updated", http.StatusOK)
+	sendJSONSuccess(w, r, "like updated")
 }
 
 // GetCommunityPosts возвращает посты сообщества
@@ -379,29 +318,24 @@ func (h *PostsHandler) UpdateLikeOnPost(w http.ResponseWriter, r *http.Request) 
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts/communities/{id} [get]
 func (h *PostsHandler) GetCommunityPosts(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	communityID, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		sendJSONResponse(w, "Invalid community ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid community ID", zap.String("communityID", vars["id"]))
-		return
-	}
-
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
-		return
-	}
-
-	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
-	posts, err := h.postService.GetCommunityPosts(r.Context(), userID, int32(communityID), qParams)
+	communityID, err := PathInt32(r, "ID")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, posts); err != nil {
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
+
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+	posts, err := h.postService.GetCommunityPosts(r.Context(), userID, communityID, qParams)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONData(r.Context(), w, posts)
 }

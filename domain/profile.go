@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//easyjson:json
 type Profile struct {
 	UserID         int32               `json:"userID"`
 	FirstName      string              `json:"firstName"`
@@ -18,6 +19,7 @@ type Profile struct {
 	RelationStatus FriendshipStatus    `json:"relationStatus"`
 }
 
+//easyjson:json
 type ShortProfile struct {
 	UserID     int32     `json:"userID"`
 	FullName   string    `json:"fullName"`

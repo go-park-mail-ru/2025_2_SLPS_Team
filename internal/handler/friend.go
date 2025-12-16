@@ -6,10 +6,6 @@ import (
 	"project/shared/mapper/generated"
 	"project/shared/pb"
 
-	"strconv"
-
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
 	"go.uber.org/zap"
 )
 
@@ -21,12 +17,6 @@ func NewFriendHandler(friendService pb.FriendServiceClient) *FriendHandler {
 	return &FriendHandler{
 		friendService: friendService,
 	}
-}
-
-// FriendshipStatusResponse - ответ со статусом дружбы
-// @Description Ответ с текущим статусом дружбы между пользователями
-type FriendshipStatusResponse struct {
-	Status domain.FriendshipStatus `json:"status" example:"pending" enums:"pending,accepted,rejected,blocked"` // Статус дружбы
 }
 
 // SendFriendRequest отправляет запрос в друзья
@@ -44,29 +34,23 @@ type FriendshipStatusResponse struct {
 // @Security ApiKeyAuth
 // @Router /friends/{id} [post]
 func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	friendID, err := strconv.Atoi(vars["id"])
+
+	friendID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	_, err = h.friendService.SendFriendRequest(r.Context(), &pb.SendFriendRequestRequest{ActionUserID: userID, TargetUserID: int32(friendID)})
+	_, err = h.friendService.SendFriendRequest(r.Context(), &pb.SendFriendRequestRequest{ActionUserID: userID, TargetUserID: friendID})
 	if err != nil {
 		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, domain.FriendRequestSent, http.StatusOK)
+	sendJSONSuccess(w, r, domain.FriendRequestSent)
 }
 
 // AcceptFriendRequest принимает запрос в друзья
@@ -83,29 +67,22 @@ func (h *FriendHandler) SendFriendRequest(w http.ResponseWriter, r *http.Request
 // @Security ApiKeyAuth
 // @Router /friends/{id}/accept [put]
 func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	friendID, err := strconv.Atoi(vars["id"])
+	friendID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	_, err = h.friendService.AcceptFriendRequest(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: int32(friendID)})
+	_, err = h.friendService.AcceptFriendRequest(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: friendID})
 	if err != nil {
 		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, domain.FriendRequestAccepted, http.StatusOK)
+	sendJSONSuccess(w, r, domain.FriendRequestAccepted)
 }
 
 // RejectFriendRequest отклоняет запрос в друзья
@@ -122,29 +99,22 @@ func (h *FriendHandler) AcceptFriendRequest(w http.ResponseWriter, r *http.Reque
 // @Security ApiKeyAuth
 // @Router /friends/{id}/reject [put]
 func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	friendID, err := strconv.Atoi(vars["id"])
+	friendID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	_, err = h.friendService.RejectFriendRequest(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: int32(friendID)})
+	_, err = h.friendService.RejectFriendRequest(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: friendID})
 	if err != nil {
 		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, domain.FriendRequestRejected, http.StatusOK)
+	sendJSONSuccess(w, r, domain.FriendRequestRejected)
 }
 
 // RemoveFriend удаляет из друзей
@@ -161,29 +131,22 @@ func (h *FriendHandler) RejectFriendRequest(w http.ResponseWriter, r *http.Reque
 // @Security ApiKeyAuth
 // @Router /friends/{id} [delete]
 func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	friendID, err := strconv.Atoi(vars["id"])
+	friendID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	_, err = h.friendService.RemoveFriend(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: int32(friendID)})
+	_, err = h.friendService.RemoveFriend(r.Context(), &pb.UserIDsPair{UserID: userID, FriendID: friendID})
 	if err != nil {
 		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, domain.FriendRemoved, http.StatusOK)
+	sendJSONSuccess(w, r, domain.FriendRemoved)
 }
 
 // GetFriends получает список друзей
@@ -199,19 +162,13 @@ func (h *FriendHandler) RemoveFriend(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /friends [get]
 func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	friends, err := h.friendService.GetFriends(r.Context(), &pb.GetFriendsRequest{UserID: userID, Page: qParams.Page, Limit: qParams.Limit})
 	if err != nil {
@@ -220,9 +177,7 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, generated.FromPbShortProfileList(friends)); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, generated.FromPbShortProfileList(friends))
 }
 
 // GetAllUsers получает всех пользователей кроме текущего
@@ -238,19 +193,13 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /friends/users/all [get]
 func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	users, err := h.friendService.GetAllUsers(r.Context(), &pb.GetAllUsersRequest{UserID: userID, Limit: qParams.Limit, Page: qParams.Page})
 	if err != nil {
@@ -259,9 +208,7 @@ func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, generated.FromPbShortProfileList(users)); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, generated.FromPbShortProfileList(users))
 }
 
 // GetFriendRequests получает входящие запросы в друзья
@@ -277,19 +224,13 @@ func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /friends/requests [get]
 func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request) {
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	requests, err := h.friendService.GetFriendRequests(r.Context(), &pb.GetFriendRequestsRequest{UserID: userID, Page: qParams.Page, Limit: qParams.Limit})
 	if err != nil {
@@ -298,9 +239,7 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, generated.FromPbShortProfileList(requests)); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, generated.FromPbShortProfileList(requests))
 }
 
 // GetSentRequests получает отправленные запросы в друзья
@@ -316,19 +255,13 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 // @Security ApiKeyAuth
 // @Router /friends/sent [get]
 func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) {
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	requests, err := h.friendService.GetSentRequests(r.Context(), &pb.GetSentRequestsRequest{UserID: userID, Limit: qParams.Limit, Page: qParams.Page})
 	if err != nil {
@@ -337,9 +270,7 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, generated.FromPbShortProfileList(requests)); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, generated.FromPbShortProfileList(requests))
 }
 
 // GetFriendshipStatus получает статус дружбы с пользователем
@@ -354,35 +285,26 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 // @Security ApiKeyAuth
 // @Router /friends/{id}/status [get]
 func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	friendID, err := strconv.Atoi(vars["id"])
+	friendID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid user ID", zap.String("friendID", vars["id"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	status, err := h.friendService.GetFriendshipStatus(r.Context(), &pb.GetFriendshipStatusRequest{UserID: userID, FriendID: int32(friendID)})
+	status, err := h.friendService.GetFriendshipStatus(r.Context(), &pb.GetFriendshipStatusRequest{UserID: userID, FriendID: friendID})
 	if err != nil {
 		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
 
-	response := FriendshipStatusResponse{
+	response := domain.FriendshipStatusResponse{
 		Status: domain.FriendshipStatus(status.Status),
 	}
 
-	if err := sendJSONData(r.Context(), w, response); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, response)
 }
 
 // CountUserRelations получает количество отношений пользователя по типу
@@ -398,23 +320,21 @@ func (h *FriendHandler) GetFriendshipStatus(w http.ResponseWriter, r *http.Reque
 // @Security ApiKeyAuth
 // @Router /friends/{id}/count [get]
 func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userID, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid user ID", zap.String("userID", vars["id"]))
-		return
-	}
-
-	resp, err := h.friendService.CountUserRelations(r.Context(), &pb.CountUserRelationsRequest{UserID: int32(userID)})
+	userID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
-	count := domain.UserRelationsCounts{Pending: resp.Pending, Accepted: resp.Accepted, Sent: resp.Sent, Blocked: resp.Blocked}
-	if err := sendJSONData(r.Context(), w, count); err != nil {
+
+	resp, err := h.friendService.CountUserRelations(r.Context(), &pb.CountUserRelationsRequest{UserID: userID})
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
+
+	count := domain.UserRelationsCounts{Pending: resp.Pending, Accepted: resp.Accepted, Sent: resp.Sent, Blocked: resp.Blocked}
+
+	sendJSONData(r.Context(), w, count)
 }
 
 // SearchProfilesByFullName ищет профили по имени.
@@ -432,13 +352,13 @@ func (h *FriendHandler) CountUserRelations(w http.ResponseWriter, r *http.Reques
 // @Failure 498 {string} string "Server error"
 // @Router /friends/search [get]
 func (api *FriendHandler) SearchProfilesByFullName(w http.ResponseWriter, r *http.Request) {
-
 	fullName := r.URL.Query().Get("full_name")
 	if fullName == "" {
 		sendJSONResponse(w, "Missing full_name query parameter", http.StatusBadRequest)
 		domain.FromContext(r.Context()).Warn("full_name query parameter is missing")
 		return
 	}
+
 	fTypeStr := r.URL.Query().Get("type")
 	if fTypeStr == "" {
 		fTypeStr = string(domain.CountAccepted) // значение по умолчанию
@@ -446,24 +366,22 @@ func (api *FriendHandler) SearchProfilesByFullName(w http.ResponseWriter, r *htt
 
 	fType := domain.FriendshipCountType(fTypeStr)
 
-	var qParams domain.PaginateQueryParams
-	decoder := schema.NewDecoder()
-	decoder.IgnoreUnknownKeys(true)
-	if err := decoder.Decode(&qParams, r.URL.Query()); err != nil {
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
 		sendJSONError(w, err)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
 		return
 	}
+
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
 	resp, err := api.friendService.SearchShortProfilesByFullNameAndRelationType(r.Context(), &pb.SearchProfilesRequest{FullName: fullName, UserID: userID, Limit: qParams.Limit, Page: qParams.Page, Type: string(fType)})
 	if err != nil {
 		sendJSONError(w, err)
 		domain.FromContext(r.Context()).Error("Fail search profiles by full name", zap.Error(err))
 		return
 	}
+
 	profiles := generated.FromPbShortProfileList(resp)
-	err = sendJSONData(r.Context(), w, profiles)
-	if err == nil {
-		domain.FromContext(r.Context()).Info("Profiles returned successfully")
-	}
+
+	sendJSONData(r.Context(), w, profiles)
 }

@@ -1,14 +1,8 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"project/domain"
-	"strconv"
-
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
-	"go.uber.org/zap"
 )
 
 type CommentHandler struct {
@@ -36,19 +30,14 @@ func NewCommentHandler(commentService domain.CommentService) *CommentHandler {
 // @Security ApiKeyAuth
 // @Router /comments [post]
 func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
-	var req domain.CommentCreateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid JSON in request", zap.Error(err))
+
+	req, err := DecodeJSONBody[domain.CommentCreateRequest](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	comment, err := h.commentService.CreateComment(r.Context(), userID, req)
 	if err != nil {
@@ -62,9 +51,7 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 		"comment": comment,
 	}
 
-	if err := sendJSONData(r.Context(), w, response); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, response)
 }
 
 // GetComment возвращает комментарий по ID
@@ -81,25 +68,22 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /comments/{id} [get]
 func (h *CommentHandler) GetComment(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	commentID, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		sendJSONResponse(w, "Invalid comment ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid comment ID", zap.String("commentID", vars["id"]))
-		return
-	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
-
-	comment, err := h.commentService.GetComment(r.Context(), userID, int32(commentID))
+	commentID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, comment); err != nil {
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	comment, err := h.commentService.GetComment(r.Context(), userID, commentID)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
+
+	sendJSONData(r.Context(), w, comment)
 }
 
 // GetPostComments возвращает комментарии поста
@@ -117,18 +101,15 @@ func (h *CommentHandler) GetComment(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts/{postID}/comments [get]
 func (h *CommentHandler) GetPostComments(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	postID, err := strconv.Atoi(vars["postID"])
+	postID, err := PathInt32(r, "postID")
 	if err != nil {
-		sendJSONResponse(w, "Invalid post ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["postID"]))
+		sendJSONError(w, err)
 		return
 	}
 
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid query parameters", zap.Error(err))
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
@@ -140,9 +121,7 @@ func (h *CommentHandler) GetPostComments(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := sendJSONData(r.Context(), w, comments); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, comments)
 }
 
 // UpdateComment обновляет комментарий
@@ -162,35 +141,27 @@ func (h *CommentHandler) GetPostComments(w http.ResponseWriter, r *http.Request)
 // @Security ApiKeyAuth
 // @Router /comments/{id} [put]
 func (h *CommentHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	commentID, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		sendJSONResponse(w, "Invalid comment ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid comment ID", zap.String("commentID", vars["id"]))
-		return
-	}
-
-	var req domain.CommentUpdateRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid JSON in request", zap.Error(err))
-		return
-	}
-
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
-
-	err = h.commentService.UpdateComment(r.Context(), int32(commentID), userID, req.Text)
+	commentID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, "Comment updated successfully", http.StatusOK)
+	req, err := DecodeJSONBody[domain.CommentUpdateRequest](r)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	err = h.commentService.UpdateComment(r.Context(), commentID, userID, req.Text)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONSuccess(w, r, "Comment updated successfully")
 }
 
 // DeleteComment удаляет комментарий
@@ -209,28 +180,21 @@ func (h *CommentHandler) UpdateComment(w http.ResponseWriter, r *http.Request) {
 // @Security ApiKeyAuth
 // @Router /comments/{id} [delete]
 func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	commentID, err := strconv.Atoi(vars["id"])
-	if err != nil {
-		sendJSONResponse(w, "Invalid comment ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid comment ID", zap.String("commentID", vars["id"]))
-		return
-	}
-
-	userID, ok := r.Context().Value(domain.UserIDKey).(int32)
-	if !ok {
-		sendJSONResponse(w, domain.Unauthorized, http.StatusUnauthorized)
-		domain.Warn(r.Context(), "User ID not found in context")
-		return
-	}
-
-	err = h.commentService.DeleteComment(r.Context(), int32(commentID), userID)
+	commentID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, "Comment deleted successfully", http.StatusOK)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	err = h.commentService.DeleteComment(r.Context(), commentID, userID)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONSuccess(w, r, "Comment deleted successfully")
 }
 
 // GetPostCommentsCount возвращает количество комментариев поста
@@ -245,11 +209,9 @@ func (h *CommentHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts/{postID}/comments/count [get]
 func (h *CommentHandler) GetPostCommentsCount(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	postID, err := strconv.Atoi(vars["postID"])
+	postID, err := PathInt32(r, "postID")
 	if err != nil {
-		sendJSONResponse(w, "Invalid post ID", http.StatusBadRequest)
-		domain.Warn(r.Context(), "Invalid post ID", zap.String("postID", vars["postID"]))
+		sendJSONError(w, err)
 		return
 	}
 
@@ -263,7 +225,5 @@ func (h *CommentHandler) GetPostCommentsCount(w http.ResponseWriter, r *http.Req
 		"count": count,
 	}
 
-	if err := sendJSONData(r.Context(), w, response); err != nil {
-		return
-	}
+	sendJSONData(r.Context(), w, response)
 }

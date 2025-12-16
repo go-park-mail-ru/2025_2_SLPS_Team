@@ -34,6 +34,7 @@ type UserRelationsCounts struct {
 	Blocked  int32 `json:"CountBlocked"`
 }
 
+//easyjson:json
 type Friendship struct {
 	ID           int32            `json:"id"`
 	FirstUserID  int32            `json:"firstUserID"`
@@ -44,7 +45,7 @@ type Friendship struct {
 	UpdatedAt    time.Time        `json:"updatedAt"`
 }
 
-// FriendResponse - ответ для API с информацией о друге
+//easyjson:json
 type FriendResponse struct {
 	UserID     int32            `json:"userID"`
 	FirstName  string           `json:"firstName"`
@@ -54,12 +55,17 @@ type FriendResponse struct {
 	CreatedAt  time.Time        `json:"createdAt,omitempty"`
 }
 
+//easyjson:json
 type FriendsCountResponse struct {
 	UserID    int32               `json:"userID"`
 	Count     int32               `json:"count"`
 	CountType FriendshipCountType `json:"countType,omitempty"`
 }
 
+//easyjson:json
+type FriendshipStatusResponse struct {
+	Status FriendshipStatus `json:"status" example:"pending" enums:"pending,accepted,rejected,blocked"` // Статус дружбы
+}
 type FriendService interface {
 	SendFriendRequest(ctx context.Context, actionUserID, targetUserID int32) error
 	AcceptFriendRequest(ctx context.Context, userID, friendID int32) error

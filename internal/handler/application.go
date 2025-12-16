@@ -1,16 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"project/domain"
-	"strconv"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
-	"go.uber.org/zap"
 )
 
 type ApplicationHandler struct {
@@ -21,10 +16,6 @@ func NewApplicationHandler(ApplicationService domain.ApplicationService) *Applic
 	return &ApplicationHandler{
 		applicationService: ApplicationService,
 	}
-}
-
-type ApplicationIDResponse struct {
-	ApplicationID int32 `json:"applicationID"`
 }
 
 // CreateApplication
@@ -39,13 +30,13 @@ type ApplicationIDResponse struct {
 // @Failure 500 {object} JSONResponse "Internal server error"
 // @Router /applications [post]
 func (api *ApplicationHandler) CreateApplication(w http.ResponseWriter, r *http.Request) {
-	var req domain.Application
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
+	req, err := DecodeJSONBody[domain.Application](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
+
 	TempSessionInfo, _ := r.Context().Value(domain.TempSessionCtxKey).(*domain.TempSessionInfo)
 	if TempSessionInfo == nil {
 		TempSessionInfo = &domain.TempSessionInfo{}
@@ -69,7 +60,8 @@ func (api *ApplicationHandler) CreateApplication(w http.ResponseWriter, r *http.
 		sendJSONError(w, err)
 		return
 	}
-	err = sendJSONData(r.Context(), w, ApplicationIDResponse{ApplicationID: id})
+
+	sendJSONData(r.Context(), w, domain.ApplicationIDResponse{ApplicationID: id})
 }
 
 // GetApplications
@@ -85,21 +77,20 @@ func (api *ApplicationHandler) CreateApplication(w http.ResponseWriter, r *http.
 // @Failure 500 {object} JSONResponse "Internal server error"
 // @Router /applications [get]
 func (h *ApplicationHandler) GetApplications(w http.ResponseWriter, r *http.Request) {
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
+
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
 
 	apps, err := h.applicationService.GetApplications(r.Context(), qParams)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		sendJSONError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(apps)
+	sendJSONData(r.Context(), w, apps)
 }
 
 type updateTextRequest struct {
@@ -119,26 +110,25 @@ type updateTextRequest struct {
 // @Failure 500 {object} JSONResponse "Internal server error"
 // @Router /applications/{id}/text [put]
 func (h *ApplicationHandler) UpdateApplicationText(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	idStr := vars["id"]
-	id, err := strconv.Atoi(idStr)
+
+	id, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	var req updateTextRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req, err := DecodeJSONBody[updateTextRequest](r)
+	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	if err := h.applicationService.UpdateApplicationText(r.Context(), int32(id), req.Text); err != nil {
+	if err := h.applicationService.UpdateApplicationText(r.Context(), id, req.Text); err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, "main updated", http.StatusOK)
+	sendJSONSuccess(w, r, "main updated")
 }
 
 type updateStatusRequest struct {
@@ -158,16 +148,15 @@ type updateStatusRequest struct {
 // @Failure 500 {object} JSONResponse "Internal server error"
 // @Router /applications/{id}/status [put]
 func (h *ApplicationHandler) UpdateApplicationStatus(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	idStr := vars["id"]
-	id, err := strconv.Atoi(idStr)
+
+	id, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	var req updateStatusRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	req, err := DecodeJSONBody[updateStatusRequest](r)
+	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
@@ -176,5 +165,6 @@ func (h *ApplicationHandler) UpdateApplicationStatus(w http.ResponseWriter, r *h
 		sendJSONError(w, err)
 		return
 	}
-	sendJSONResponse(w, "main updated", http.StatusOK)
+
+	sendJSONSuccess(w, r, "main updated")
 }

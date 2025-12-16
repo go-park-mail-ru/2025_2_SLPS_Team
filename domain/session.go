@@ -2,11 +2,13 @@ package domain
 
 import "context"
 
+//easyjson:json
 type Session struct {
 	UserID    int32  `json:"userID"`
 	CSRFToken string `json:"CSRFToken"`
 }
 
+//easyjson:json
 type SIDAndSCRFToken struct {
 	CSRFToken string `json:"CSRFToken"`
 	SID       string `json:"SID"`

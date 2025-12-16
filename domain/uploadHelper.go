@@ -3,6 +3,9 @@ package domain
 import (
 	"io"
 	"mime/multipart"
+	"net/http"
+
+	"go.uber.org/zap"
 )
 
 type File struct {
@@ -41,4 +44,25 @@ func MultipartListToFiles(headers []*multipart.FileHeader) ([]*File, error) {
 	}
 
 	return files, nil
+}
+
+func MultipartFiles(r *http.Request, field string) ([]*File, error) {
+
+	form := r.MultipartForm
+	if form == nil || form.File == nil {
+		return nil, nil
+	}
+
+	files, ok := form.File[field]
+	if !ok || len(files) == 0 {
+		return nil, nil
+	}
+
+	result, err := MultipartListToFiles(files)
+	if err != nil {
+		FromContext(r.Context()).Error("Failed to parse multipart form to files", zap.Error(err))
+		return nil, ErrInvalidParams
+	}
+
+	return result, nil
 }

@@ -9,6 +9,8 @@ import (
 
 type Status string
 type Category string
+
+//easyjson:json
 type Application struct {
 	ID            int32     `json:"id"`
 	Status        Status    `json:"status" example:"open"`
@@ -22,11 +24,16 @@ type Application struct {
 	EmailFeedBack string    `json:"emailFeedBack"`
 }
 
+//easyjson:json
 type TempSessionInfo struct {
 	UserID        *int32
 	TempSessionID *uuid.UUID
 }
 
+//easyjson:json
+type ApplicationIDResponse struct {
+	ApplicationID int32 `json:"applicationID"`
+}
 type ApplicationService interface {
 	GetApplications(ctx context.Context, params PaginateQueryParams) ([]Application, error)
 	UpdateApplicationText(ctx context.Context, id int32, newText string) error

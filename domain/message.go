@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//easyjson:json
 type Message struct {
 	ID          int32     `json:"id"`
 	AuthorID    int32     `json:"authorID"`
@@ -15,6 +16,8 @@ type Message struct {
 	Attachments []string  `json:"attachments,omitempty"`
 	//IsEdited bool `json:"isEdited"`
 }
+
+//easyjson:json
 type MessagesWithAuthors struct {
 	Messages []Message
 	Authors  map[int32]ShortProfile

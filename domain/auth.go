@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//easyjson:json
 type RegisterRequest struct {
 	FirstName       string    `json:"firstName" valid:"required"`
 	LastName        string    `json:"lastName" valid:"required"`
@@ -15,6 +16,11 @@ type RegisterRequest struct {
 	Gender          string    `json:"gender" valid:"-"`
 }
 
+//easyjson:json
+type IsLoggedInResponse struct {
+	UserID int32  `json:"userID"`
+	Role   string `json:"role"`
+}
 type AuthService interface {
 	IsLoggedIn(ctx context.Context, sessionCookie string) (*Session, error)
 	AddSession(ctx context.Context, userID int32) (*SIDAndSCRFToken, error)

@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+//easyjson:json
 type Post struct {
 	ID          uint      `json:"id"`       //в БД табличка posts называется
 	AuthorID    uint      `json:"authorID"` //в БД табличка posts называется
@@ -19,7 +20,7 @@ type Post struct {
 	IsLiked     bool     `json:"isLiked"`
 }
 
-// Унифицированная структура для отображения поста
+//easyjson:json
 type PostView struct {
 	ID              uint      `json:"id"`
 	AuthorID        uint      `json:"authorID"` // ID пользователя-создателя
@@ -32,13 +33,13 @@ type PostView struct {
 	Attachments     []string  `json:"attachments"`
 	Photos          []string  `json:"photos"`
 	LikeCount       int32     `json:"likeCount"`
-	CommentsCount    int32     `json:"commentsCount"`
+	CommentsCount   int32     `json:"commentsCount"`
 	IsLiked         bool      `json:"isLiked"`
 	CreatedAt       time.Time `json:"createdAt"`
 	IsCommunityPost bool      `json:"isCommunityPost"`
 }
 
-// Структура для данных из БД без информации о профиле
+//easyjson:json
 type PostDB struct {
 	ID              uint      `json:"id"`
 	AuthorID        uint      `json:"authorID"`
@@ -48,19 +49,20 @@ type PostDB struct {
 	CommunityName   *string   `json:"communityName,omitempty"`
 	CommunityAvatar *string   `json:"communityAvatar,omitempty"`
 	LikeCount       int32     `json:"likeCount"`
-	CommentsCount    int32     `json:"commentsCount"`
+	CommentsCount   int32     `json:"commentsCount"`
 	IsLiked         bool      `json:"isLiked"`
 	Attachments     []string  `json:"attachments"`
 	Photos          []string  `json:"photos"`
 }
 
+//easyjson:json
 type PostWithAuthor struct {
 	Post      Post         `json:"post"`
 	Author    ShortProfile `json:"author"`
 	Community *Community   `json:"community,omitempty"` // Информация о сообществе для постов в сообществах
 }
 
-// PostCreateRequest - запрос на создание поста для валидации
+//easyjson:json
 type PostCreateRequest struct {
 	Text        string   `json:"text" valid:"optional,length(0|4096)"`
 	CommunityID *int32   `json:"communityID" valid:"optional"` // Новое поле
@@ -68,14 +70,14 @@ type PostCreateRequest struct {
 	Photos      []string `json:"photos" valid:"optional"`
 }
 
-// PostUpdateRequest - запрос на обновление поста для валидации
+//easyjson:json
 type PostUpdateRequest struct {
 	Text        string   `json:"text" valid:"optional,length(0|4096)"`
 	Attachments []string `json:"attachments" valid:"optional"`
 	Photos      []string `json:"photos" valid:"optional"`
 }
 
-// PostFeedItem - элемент ленты, который может быть от пользователя или сообщества
+//easyjson:json
 type PostFeedItem struct {
 	Post        Post          `json:"post"`
 	Author      *ShortProfile `json:"author,omitempty"`    // Для постов пользователей

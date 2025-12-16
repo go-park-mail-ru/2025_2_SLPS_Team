@@ -2,11 +2,13 @@ package domain
 
 import "context"
 
+//easyjson:json
 type Chat struct {
 	ID      int32 `json:"id"`
 	Members []ShortProfile
 }
 
+//easyjson:json
 type FullChat struct {
 	ID                int32        `json:"id"`
 	IsGroup           bool         `json:"isGroup"`
@@ -19,10 +21,26 @@ type FullChat struct {
 	UnreadCounts      int32        `json:"unReadCounts"`
 }
 
+//easyjson:json
 type MemberWithLastReadMessage struct {
 	MemberID          int32 `json:"memeberID"`
 	LastReadMessageID int32 `json:"lastReadMessageID"`
 	UnreadCounts      int32 `json:"unReadCounts"`
+}
+
+//easyjson:json
+type ChatIDResponse struct {
+	ChatID int32 `json:"chatID"`
+}
+
+//easyjson:json
+type MessageIDResponse struct {
+	MessageID int32 `json:"messageID"`
+}
+
+//easyjson:json
+type UpdateLastReadRequest struct {
+	LastReadMessageID int32 `json:"lastReadMessageID"`
 }
 
 type ChatService interface {

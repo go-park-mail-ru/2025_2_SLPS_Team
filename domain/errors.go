@@ -19,6 +19,7 @@ var (
 	ErrDB            = errors.New("dbconn error")
 	ErrAlreadyExists = errors.New("already exist")
 	ErrService       = errors.New("service error") //Какая-то внутренняя ошибк
+	ErrInvalidParams = errors.New("invalid params")
 )
 
 // Ошибки для ПОСТОВ
@@ -75,6 +76,9 @@ func MapErrorToHTTP(err error) (int32, string) {
 		return http.StatusConflict, AleradyExist
 	case errors.Is(err, ErrDB):
 		return http.StatusInternalServerError, ServerErr
+	case errors.Is(err, ErrInvalidParams):
+		return http.StatusBadRequest, InvalidParams
+
 	default:
 		return http.StatusInternalServerError, ServerErr
 	}
