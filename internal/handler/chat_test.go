@@ -1,8 +1,10 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"project/domain"
@@ -19,13 +21,45 @@ func contextWithUserID(ctx context.Context, userID int32) context.Context {
 	return context.WithValue(ctx, domain.UserIDKey, userID)
 }
 
+type MultipartData struct {
+	Fields map[string]string // Текстовые поля
+	Files  map[string][]byte // имя_файла -> содержимое
+}
+
 func newRequestWithVarsAndCtx(method, url string, vars map[string]string, userID int32, body interface{}, t *testing.T) *http.Request {
 	var req *http.Request
-	if body != nil {
-		req = httptest.NewRequest(method, url, JSONReader(t, body))
-	} else {
+
+	switch v := body.(type) {
+	case nil:
 		req = httptest.NewRequest(method, url, nil)
+
+	case *MultipartData:
+		// Создаем multipart тело
+		bodyBuf := &bytes.Buffer{}
+		writer := multipart.NewWriter(bodyBuf)
+
+		// Добавляем текстовые поля
+		for key, value := range v.Fields {
+			writer.WriteField(key, value)
+		}
+
+		// Добавляем файлы
+		for filename, content := range v.Files {
+			part, _ := writer.CreateFormFile("file", filename)
+			part.Write(content)
+		}
+
+		writer.Close()
+
+		req = httptest.NewRequest(method, url, bodyBuf)
+		// ВАЖНО: Установить правильный Content-Type!
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	default: // Для JSON
+		req = httptest.NewRequest(method, url, JSONReader(t, body))
+		req.Header.Set("Content-Type", "application/json")
 	}
+
 	if vars != nil {
 		req = mux.SetURLVars(req, vars)
 	}
@@ -33,7 +67,19 @@ func newRequestWithVarsAndCtx(method, url string, vars map[string]string, userID
 		ctx := contextWithUserID(req.Context(), userID)
 		req = req.WithContext(ctx)
 	}
+
 	return req
+}
+func MulpipartBody(formData map[string]string) *bytes.Buffer {
+	body := &bytes.Buffer{}
+	writer := multipart.NewWriter(body)
+
+	for key, value := range formData {
+		writer.WriteField(key, value)
+	}
+
+	writer.Close()
+	return body
 }
 
 func TestChatHandler_GetOrCreateChatWithUser(t *testing.T) {
@@ -53,7 +99,7 @@ func TestChatHandler_GetOrCreateChatWithUser(t *testing.T) {
 		w := httptest.NewRecorder()
 		handler.GetOrCreateChatWithUser(w, req)
 
-		var res ChatIDResponse
+		var res domain.ChatIDResponse
 		err := json.NewDecoder(w.Body).Decode(&res)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
@@ -112,15 +158,20 @@ func TestChatHandler_CreateMessage(t *testing.T) {
 	t.Run("Success test", func(t *testing.T) {
 		chatID := int32(1)
 		userID := int32(2)
-		message := domain.Message{Text: "Hello"}
 		messageID := int32(10)
-		mockChatService.EXPECT().CreateMessage(gomock.Any(), userID, chatID, message).Return(messageID, nil)
-
-		req := newRequestWithVarsAndCtx(http.MethodPost, "/chats/1/message", map[string]string{"id": "1"}, userID, message, t)
+		text := "Hello world"
+		mockChatService.EXPECT().CreateMessage(gomock.Any(), userID, chatID, text, nil, nil).Return(messageID, nil)
+		body := &MultipartData{
+			Fields: map[string]string{
+				"text": text,
+			},
+			Files: map[string][]byte{},
+		}
+		req := newRequestWithVarsAndCtx(http.MethodPost, "/chats/1/message", map[string]string{"id": "1"}, userID, body, t)
 		w := httptest.NewRecorder()
 		handler.CreateMessage(w, req)
 
-		var res MessageIDResponse
+		var res domain.MessageIDResponse
 		err := json.NewDecoder(w.Body).Decode(&res)
 		assert.NoError(t, err)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
@@ -188,10 +239,10 @@ func TestChatHandler_UpdateLastReadMessage(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response JSONResponse
+		var response domain.JSONResponse
 		err := json.NewDecoder(w.Body).Decode(&response)
 		require.NoError(t, err)
-		assert.Equal(t, "last read message updated", response.Message)
+		assert.Equal(t, "Last read message updated", response.Message)
 	})
 
 	t.Run("Invalid chat ID", func(t *testing.T) {

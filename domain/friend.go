@@ -63,6 +63,9 @@ type FriendsCountResponse struct {
 }
 
 //easyjson:json
+type ShortProfileList []ShortProfile
+
+//easyjson:json
 type FriendshipStatusResponse struct {
 	Status FriendshipStatus `json:"status" example:"pending" enums:"pending,accepted,rejected,blocked"` // Статус дружбы
 }

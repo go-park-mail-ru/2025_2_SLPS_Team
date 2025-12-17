@@ -28,6 +28,24 @@ type ShortCommunity struct {
 }
 
 //easyjson:json
+type CommunityResponse struct {
+	Message   string     `json:"message"`
+	Community *Community `json:"community"`
+}
+
+//easyjson:json
+type ShortCommunityList []ShortCommunity
+
+//easyjson:json
+type CommunityForMyCommunityList []CommunityForMyCommunity
+
+//easyjson:json
+type CommunitySubscriberList []CommunitySubscriber
+
+//easyjson:json
+type Int32List []int32
+
+//easyjson:json
 type ShortCommunityWithCoverPathAndCreatedAt struct {
 	ID               int32     `json:"id"`
 	Name             string    `json:"name"`

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"log"
 	"net/http"
 	"project/domain"
 )
@@ -122,6 +123,7 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 
 	stickerID, err := parseIntParam(r, "sticker_id")
 	if err != nil {
+		log.Println(3)
 		sendJSONError(w, err)
 		return
 	}
@@ -173,7 +175,7 @@ func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSONData(r.Context(), w, chats)
+	sendJSONData(r.Context(), w, domain.FullChats(chats))
 }
 
 // UpdateLastReadMessage обновляет ID последнего прочитанного сообщения пользователя в чате.
@@ -196,13 +198,13 @@ func (api *ChatHandler) UpdateLastReadMessage(w http.ResponseWriter, r *http.Req
 		sendJSONError(w, err)
 		return
 	}
-
 	req, err := DecodeJSONBody[domain.UpdateLastReadRequest](r)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
+	log.Println(req.LastReadMessageID)
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	err = api.chatService.UpdateLastReadMessage(r.Context(), userID, chatID, req.LastReadMessageID)

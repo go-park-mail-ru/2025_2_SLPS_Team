@@ -36,6 +36,20 @@ type CommentCreateRequest struct {
 }
 
 //easyjson:json
+type CommentResponse struct {
+	Message string       `json:"message"`
+	Comment *CommentView `json:"comment"`
+}
+
+//easyjson:json
+type CommentCountResponse struct {
+	Count int32 `json:"count"`
+}
+
+//easyjson:json
+type CommentViews []CommentView
+
+//easyjson:json
 type CommentUpdateRequest struct {
 	Text string `json:"text" valid:"required,length(1|4096)"`
 }

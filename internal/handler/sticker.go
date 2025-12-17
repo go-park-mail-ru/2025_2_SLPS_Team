@@ -30,7 +30,7 @@ func (h *StickerHandler) GetStickerPacks(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sendJSONData(r.Context(), w, packs)
+	sendJSONData(r.Context(), w, domain.StickerPackList(packs))
 }
 
 // GetStickersByPackID возвращает стикеры из указанного пака
@@ -53,5 +53,5 @@ func (h *StickerHandler) GetStickersByPackID(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	sendJSONData(r.Context(), w, stickers)
+	sendJSONData(r.Context(), w, domain.StickerList(stickers))
 }

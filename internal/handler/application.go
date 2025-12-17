@@ -90,7 +90,7 @@ func (h *ApplicationHandler) GetApplications(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	sendJSONData(r.Context(), w, apps)
+	sendJSONData(r.Context(), w, domain.Applications(apps))
 }
 
 type updateTextRequest struct {

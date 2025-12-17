@@ -70,12 +70,7 @@ func (h *CommunityHandler) CreateCommunity(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	// Используем sendJSONData для возврата структуры с сообщением
-	response := map[string]interface{}{
-		"message":   "Community created successfully",
-		"community": community,
-	}
-
+	response := domain.CommunityResponse{Message: "Community created successfully", Community: community}
 	sendJSONData(r.Context(), w, response)
 }
 
@@ -231,7 +226,7 @@ func (h *CommunityHandler) GetUserCommunities(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	sendJSONData(r.Context(), w, communities)
+	sendJSONData(r.Context(), w, domain.ShortCommunityList(communities))
 }
 
 // GetOtherCommunities возвращает сообщества, на которые пользователь не подписан
@@ -261,7 +256,7 @@ func (h *CommunityHandler) GetOtherCommunities(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	sendJSONData(r.Context(), w, communities)
+	sendJSONData(r.Context(), w, domain.ShortCommunityList(communities))
 }
 
 // GetUserCommunitiesByID возвращает сообщества, на которые подписан указанный пользователь
@@ -297,7 +292,7 @@ func (h *CommunityHandler) GetUserCommunitiesByID(w http.ResponseWriter, r *http
 		return
 	}
 
-	sendJSONData(r.Context(), w, communities)
+	sendJSONData(r.Context(), w, domain.ShortCommunityList(communities))
 }
 
 // GetUserSubscribedCommunityIDs возвращает ID сообществ, на которые подписан указанный пользователь
@@ -325,7 +320,7 @@ func (h *CommunityHandler) GetUserSubscribedCommunityIDs(w http.ResponseWriter, 
 		return
 	}
 
-	sendJSONData(r.Context(), w, communityIDs)
+	sendJSONData(r.Context(), w, domain.Int32List(communityIDs))
 }
 
 // GetCreatedCommunities возвращает сообщества, созданные пользователем
@@ -357,7 +352,7 @@ func (h *CommunityHandler) GetCreatedCommunities(w http.ResponseWriter, r *http.
 		return
 	}
 
-	sendJSONData(r.Context(), w, communities)
+	sendJSONData(r.Context(), w, domain.CommunityForMyCommunityList(communities))
 }
 
 // GetCommunitySubscribers возвращает список подписчиков сообщества
@@ -393,7 +388,7 @@ func (h *CommunityHandler) GetCommunitySubscribers(w http.ResponseWriter, r *htt
 		return
 	}
 
-	sendJSONData(r.Context(), w, subscribers)
+	sendJSONData(r.Context(), w, domain.CommunitySubscriberList(subscribers))
 }
 
 // Subscribe подписывает пользователя на сообщество
@@ -511,5 +506,5 @@ func (api *CommunityHandler) SearchCommunityByName(w http.ResponseWriter, r *htt
 		return
 	}
 
-	sendJSONData(r.Context(), w, com)
+	sendJSONData(r.Context(), w, domain.ShortCommunityList(com))
 }

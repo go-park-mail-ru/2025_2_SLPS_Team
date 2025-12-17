@@ -31,6 +31,9 @@ type TempSessionInfo struct {
 }
 
 //easyjson:json
+type Applications []Application
+
+//easyjson:json
 type ApplicationIDResponse struct {
 	ApplicationID int32 `json:"applicationID"`
 }

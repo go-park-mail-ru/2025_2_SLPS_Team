@@ -36,18 +36,18 @@ func (m *MockChatService) EXPECT() *MockChatServiceMockRecorder {
 }
 
 // CreateMessage mocks base method.
-func (m *MockChatService) CreateMessage(ctx context.Context, userID, chatID int32, message domain.Message) (int32, error) {
+func (m *MockChatService) CreateMessage(ctx context.Context, userID, chatID int32, text string, attachmentFiles []*domain.File, stickerID *int32) (int32, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateMessage", ctx, userID, chatID, message)
+	ret := m.ctrl.Call(m, "CreateMessage", ctx, userID, chatID, text, attachmentFiles, stickerID)
 	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreateMessage indicates an expected call of CreateMessage.
-func (mr *MockChatServiceMockRecorder) CreateMessage(ctx, userID, chatID, message interface{}) *gomock.Call {
+func (mr *MockChatServiceMockRecorder) CreateMessage(ctx, userID, chatID, text, attachmentFiles, stickerID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessage", reflect.TypeOf((*MockChatService)(nil).CreateMessage), ctx, userID, chatID, message)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessage", reflect.TypeOf((*MockChatService)(nil).CreateMessage), ctx, userID, chatID, text, attachmentFiles, stickerID)
 }
 
 // GetMessagesByChatId mocks base method.

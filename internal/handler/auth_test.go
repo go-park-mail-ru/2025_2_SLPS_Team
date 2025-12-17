@@ -76,7 +76,7 @@ func TestAuthHandler_Login(t *testing.T) {
 		r, w := newJSONRequest(http.MethodPost, "/api/auth/login", user, t)
 		handler.Login(w, r)
 
-		res := decodeResponse[JSONResponse](t, w)
+		res := decodeResponse[domain.JSONResponse](t, w)
 		session, csrf := getCookies(w.Result())
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
@@ -96,9 +96,9 @@ func TestAuthHandler_Login(t *testing.T) {
 		r, w := newJSONRequest(http.MethodPost, "/api/auth/login", user, t)
 		handler.Login(w, r)
 
-		res := decodeResponse[JSONResponse](t, w)
+		res := decodeResponse[domain.JSONResponse](t, w)
 		assert.Equal(t, http.StatusBadRequest, w.Result().StatusCode)
-		assert.Contains(t, res.Message, "invalid")
+		assert.Contains(t, res.Message, "Invalid data")
 	})
 
 	t.Run("HandlerAddSession send err", func(t *testing.T) {
@@ -133,12 +133,15 @@ func TestAuthHandler_IsLoggedInHandler(t *testing.T) {
 		mockAuthService.EXPECT().
 			IsLoggedIn(gomock.Any(), &pb.SessionCookieRequest{SessionCookie: "session123"}).
 			Return(&pb.SessionResponse{UserId: 1, CsrfToken: "csrf123"}, nil)
+		mockAuthService.EXPECT().
+			GetUserRole(gomock.Any(), &pb.UserIDRequest{UserId: 1}).
+			Return(&pb.UserRoleResponse{Role: "admin"}, nil)
 
 		r, w := newJSONRequest(http.MethodGet, "/auth/isloggedin", nil, t)
 		r.AddCookie(cookie)
 		handler.IsLoggedInHandler(w, r)
 
-		res := decodeResponse[IsLoggedInResponse](t, w)
+		res := decodeResponse[domain.IsLoggedInResponse](t, w)
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 		assert.Equal(t, int32(1), res.UserID)
 	})
@@ -239,11 +242,11 @@ func TestAuthHandler_Register(t *testing.T) {
 		r, w := newJSONRequest(http.MethodPost, "/auth/register", req, t)
 		handler.Register(w, r)
 
-		res := decodeResponse[JSONResponse](t, w)
+		res := decodeResponse[domain.JSONResponse](t, w)
 		session, csrf := getCookies(w.Result())
 
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-		assert.Equal(t, "User created", res.Message)
+		assert.Equal(t, "User created, registration complete", res.Message)
 		assert.Equal(t, "session123", session.Value)
 		assert.Equal(t, "csrf123", csrf.Value)
 	})

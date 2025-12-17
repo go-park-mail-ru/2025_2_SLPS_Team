@@ -17,6 +17,12 @@ type Sticker struct {
 	Position int32  `json:"position"` // порядковый номер в пачке
 }
 
+//easyjson:json
+type StickerPackList []StickerPack
+
+//easyjson:json
+type StickerList []Sticker
+
 // StickerService - интерфейс сервиса стикеров
 type StickerService interface {
 	GetStickerPacks(ctx context.Context) ([]StickerPack, error)

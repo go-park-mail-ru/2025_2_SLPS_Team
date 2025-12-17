@@ -177,7 +177,7 @@ func (h *FriendHandler) GetFriends(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSONData(r.Context(), w, generated.FromPbShortProfileList(friends))
+	sendJSONData(r.Context(), w, domain.ShortProfileList(generated.FromPbShortProfileList(friends)))
 }
 
 // GetAllUsers получает всех пользователей кроме текущего
@@ -208,7 +208,7 @@ func (h *FriendHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSONData(r.Context(), w, generated.FromPbShortProfileList(users))
+	sendJSONData(r.Context(), w, domain.ShortProfileList(generated.FromPbShortProfileList(users)))
 }
 
 // GetFriendRequests получает входящие запросы в друзья
@@ -239,7 +239,7 @@ func (h *FriendHandler) GetFriendRequests(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	sendJSONData(r.Context(), w, generated.FromPbShortProfileList(requests))
+	sendJSONData(r.Context(), w, domain.ShortProfileList(generated.FromPbShortProfileList(requests)))
 }
 
 // GetSentRequests получает отправленные запросы в друзья
@@ -270,7 +270,7 @@ func (h *FriendHandler) GetSentRequests(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	sendJSONData(r.Context(), w, generated.FromPbShortProfileList(requests))
+	sendJSONData(r.Context(), w, domain.ShortProfileList(generated.FromPbShortProfileList(requests)))
 }
 
 // GetFriendshipStatus получает статус дружбы с пользователем
@@ -383,5 +383,5 @@ func (api *FriendHandler) SearchProfilesByFullName(w http.ResponseWriter, r *htt
 
 	profiles := generated.FromPbShortProfileList(resp)
 
-	sendJSONData(r.Context(), w, profiles)
+	sendJSONData(r.Context(), w, domain.ShortProfileList(profiles))
 }

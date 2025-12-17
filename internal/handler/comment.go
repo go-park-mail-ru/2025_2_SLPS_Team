@@ -46,11 +46,8 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Используем sendJSONData для возврата структуры
-	response := map[string]interface{}{
-		"message": "Comment created successfully",
-		"comment": comment,
-	}
 
+	response := domain.CommentResponse{Message: "Comment created successfully", Comment: comment}
 	sendJSONData(r.Context(), w, response)
 }
 
@@ -121,7 +118,7 @@ func (h *CommentHandler) GetPostComments(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sendJSONData(r.Context(), w, comments)
+	sendJSONData(r.Context(), w, domain.CommentViews(comments))
 }
 
 // UpdateComment обновляет комментарий
@@ -221,9 +218,6 @@ func (h *CommentHandler) GetPostCommentsCount(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	response := map[string]int32{
-		"count": count,
-	}
-
+	response := domain.CommentCountResponse{Count: count}
 	sendJSONData(r.Context(), w, response)
 }

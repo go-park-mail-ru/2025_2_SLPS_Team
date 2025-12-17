@@ -187,7 +187,7 @@ func TestPostsHandler_CreatePost(t *testing.T) {
 
 		assert.Equal(t, http.StatusCreated, w.Code)
 
-		var response JSONResponse
+		var response domain.JSONResponse
 		err := json.Unmarshal(w.Body.Bytes(), &response)
 		assert.NoError(t, err)
 		assert.Equal(t, "Post created successfully", response.Message)

@@ -55,7 +55,7 @@ func (h *PostsHandler) PostsPaginate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSONData(r.Context(), w, posts)
+	sendJSONData(r.Context(), w, domain.PostViewList(posts))
 }
 
 // GetPost возвращает пост по ID
@@ -138,11 +138,7 @@ func (h *PostsHandler) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := map[string]interface{}{
-		"message": "Post created successfully",
-		"post":    post,
-	}
-
+	response := domain.PostCreateResponse{Message: "Post created successfully", Post: post}
 	sendJSONData(r.Context(), w, response)
 }
 
@@ -269,7 +265,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSONData(r.Context(), w, posts)
+	sendJSONData(r.Context(), w, domain.PostViewList(posts))
 }
 
 // UpdateLikeOnPost ставит или убирает лайк пользователя на посте.
@@ -337,5 +333,5 @@ func (h *PostsHandler) GetCommunityPosts(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	sendJSONData(r.Context(), w, posts)
+	sendJSONData(r.Context(), w, domain.PostViewList(posts))
 }

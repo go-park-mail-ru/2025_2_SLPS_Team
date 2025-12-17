@@ -22,6 +22,9 @@ type FullChat struct {
 }
 
 //easyjson:json
+type FullChats []FullChat
+
+//easyjson:json
 type MemberWithLastReadMessage struct {
 	MemberID          int32 `json:"memeberID"`
 	LastReadMessageID int32 `json:"lastReadMessageID"`

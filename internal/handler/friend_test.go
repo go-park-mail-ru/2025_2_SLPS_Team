@@ -74,7 +74,7 @@ func TestFriendHandler_SendFriendRequest(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response JSONResponse
+		var response domain.JSONResponse
 		err := json.NewDecoder(w.Body).Decode(&response)
 		assert.NoError(t, err)
 		assert.Equal(t, domain.FriendRequestSent, response.Message)
@@ -158,7 +158,7 @@ func TestFriendHandler_AcceptFriendRequest(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response JSONResponse
+		var response domain.JSONResponse
 		err := json.NewDecoder(w.Body).Decode(&response)
 		assert.NoError(t, err)
 		assert.Equal(t, domain.FriendRequestAccepted, response.Message)
@@ -242,7 +242,7 @@ func TestFriendHandler_RejectFriendRequest(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response JSONResponse
+		var response domain.JSONResponse
 		err := json.NewDecoder(w.Body).Decode(&response)
 		assert.NoError(t, err)
 		assert.Equal(t, domain.FriendRequestRejected, response.Message)
@@ -326,7 +326,7 @@ func TestFriendHandler_RemoveFriend(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response JSONResponse
+		var response domain.JSONResponse
 		err := json.NewDecoder(w.Body).Decode(&response)
 		assert.NoError(t, err)
 		assert.Equal(t, domain.FriendRemoved, response.Message)
@@ -411,7 +411,7 @@ func TestFriendHandler_GetFriendshipStatus(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var res FriendshipStatusResponse
+		var res domain.FriendshipStatusResponse
 		err := json.NewDecoder(w.Body).Decode(&res)
 		assert.NoError(t, err)
 		assert.Equal(t, domain.FriendshipAccepted, res.Status)

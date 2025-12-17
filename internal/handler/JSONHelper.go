@@ -40,26 +40,14 @@ func sendJSONError(w http.ResponseWriter, err error) {
 	sendJSONResponse(w, msg, code)
 }
 
-func sendJSONData(ctx context.Context, w http.ResponseWriter, data any) {
+func sendJSONData(ctx context.Context, w http.ResponseWriter, data easyjson.Marshaler) {
 	w.Header().Set("Content-Type", "application/json")
-
-	var jsonData []byte
-	var err error
-
-	// Проверяем, реализует ли data easyjson.Marshaler
-	if marshaler, ok := data.(easyjson.Marshaler); ok {
-		jsonData, err = easyjson.Marshal(marshaler)
-	}
-	//} else {
-	//    // Используем стандартный encoding/json для остальных типов
-	//    jsonData, err = json.Marshal(data)
-	//}
-
+	jsonData, err := easyjson.Marshal(data)
 	if err != nil {
 		domain.FromContext(ctx).Error(
 			domain.FailToEncode,
 			zap.Error(err),
-			zap.String("type", fmt.Sprintf("%T", data)),
+			zap.String("struct", domain.StructName(data)),
 		)
 		w.WriteHeader(http.StatusInternalServerError)
 		return

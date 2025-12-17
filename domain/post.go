@@ -56,6 +56,15 @@ type PostDB struct {
 }
 
 //easyjson:json
+type PostCreateResponse struct {
+	Message string `json:"message"`
+	Post    *Post  `json:"post"`
+}
+
+//easyjson:json
+type PostViewList []PostView
+
+//easyjson:json
 type PostWithAuthor struct {
 	Post      Post         `json:"post"`
 	Author    ShortProfile `json:"author"`
