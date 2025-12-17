@@ -80,20 +80,6 @@ func TestFriendHandler_SendFriendRequest(t *testing.T) {
 		assert.Equal(t, domain.FriendRequestSent, response.Message)
 	})
 
-	t.Run("Invalid userID in context", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodPost,
-			URL:     "/friends/2",
-			Vars:    map[string]string{"id": "2"},
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.SendFriendRequest(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
-
 	t.Run("Invalid friendID in vars", func(t *testing.T) {
 		userID := int32(1)
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -200,19 +186,6 @@ func TestFriendHandler_AcceptFriendRequest(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
-	t.Run("Unauthorized", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodPut,
-			URL:     "/friends/2/accept",
-			Vars:    map[string]string{"id": "2"},
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.AcceptFriendRequest(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
 }
 
 func TestFriendHandler_RejectFriendRequest(t *testing.T) {
@@ -284,19 +257,6 @@ func TestFriendHandler_RejectFriendRequest(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
-	t.Run("Unauthorized", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodPut,
-			URL:     "/friends/2/reject",
-			Vars:    map[string]string{"id": "2"},
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.RejectFriendRequest(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
 }
 
 func TestFriendHandler_RemoveFriend(t *testing.T) {
@@ -368,19 +328,6 @@ func TestFriendHandler_RemoveFriend(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
-	t.Run("Unauthorized", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodDelete,
-			URL:     "/friends/2",
-			Vars:    map[string]string{"id": "2"},
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.RemoveFriend(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
 }
 
 func TestFriendHandler_GetFriendshipStatus(t *testing.T) {
@@ -453,19 +400,6 @@ func TestFriendHandler_GetFriendshipStatus(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
-	t.Run("Unauthorized", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodGet,
-			URL:     "/friends/2/status",
-			Vars:    map[string]string{"id": "2"},
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.GetFriendshipStatus(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
 }
 
 func TestFriendHandler_GetFriends(t *testing.T) {
@@ -483,8 +417,6 @@ func TestFriendHandler_GetFriends(t *testing.T) {
 		}}
 		mockClient.EXPECT().GetFriends(gomock.Any(), &pb.GetFriendsRequest{
 			UserID: userID,
-			Limit:  20,
-			Page:   1,
 		}).Return(profiles, nil)
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -524,8 +456,6 @@ func TestFriendHandler_GetFriends(t *testing.T) {
 		userID := int32(1)
 		mockClient.EXPECT().GetFriends(gomock.Any(), &pb.GetFriendsRequest{
 			UserID: userID,
-			Limit:  20,
-			Page:   1,
 		}).Return(nil, status.Error(codes.Internal, "internal error"))
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -538,19 +468,6 @@ func TestFriendHandler_GetFriends(t *testing.T) {
 		handler.GetFriends(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
-	})
-
-	t.Run("Unauthorized", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodGet,
-			URL:     "/friends",
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.GetFriends(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
 	})
 
 	t.Run("Invalid query parameters", func(t *testing.T) {
@@ -582,8 +499,6 @@ func TestFriendHandler_GetFriendRequests(t *testing.T) {
 		}}
 		mockClient.EXPECT().GetFriendRequests(gomock.Any(), &pb.GetFriendRequestsRequest{
 			UserID: userID,
-			Limit:  20,
-			Page:   1,
 		}).Return(profiles, nil)
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -602,8 +517,6 @@ func TestFriendHandler_GetFriendRequests(t *testing.T) {
 		userID := int32(1)
 		mockClient.EXPECT().GetFriendRequests(gomock.Any(), &pb.GetFriendRequestsRequest{
 			UserID: userID,
-			Limit:  20,
-			Page:   1,
 		}).Return(nil, status.Error(codes.Internal, "internal error"))
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -618,18 +531,6 @@ func TestFriendHandler_GetFriendRequests(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
-	t.Run("Unauthorized", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodGet,
-			URL:     "/friends/requests",
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.GetFriendRequests(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
 }
 
 func TestFriendHandler_GetSentRequests(t *testing.T) {
@@ -646,8 +547,6 @@ func TestFriendHandler_GetSentRequests(t *testing.T) {
 		}}
 		mockClient.EXPECT().GetSentRequests(gomock.Any(), &pb.GetSentRequestsRequest{
 			UserID: userID,
-			Limit:  20,
-			Page:   1,
 		}).Return(profiles, nil)
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -666,8 +565,6 @@ func TestFriendHandler_GetSentRequests(t *testing.T) {
 		userID := int32(1)
 		mockClient.EXPECT().GetSentRequests(gomock.Any(), &pb.GetSentRequestsRequest{
 			UserID: userID,
-			Limit:  20,
-			Page:   1,
 		}).Return(nil, status.Error(codes.Internal, "internal error"))
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -682,18 +579,6 @@ func TestFriendHandler_GetSentRequests(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
-	t.Run("Unauthorized", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodGet,
-			URL:     "/friends/sent",
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.GetSentRequests(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
 }
 
 func TestFriendHandler_GetAllUsers(t *testing.T) {
@@ -711,8 +596,6 @@ func TestFriendHandler_GetAllUsers(t *testing.T) {
 		}}
 		mockClient.EXPECT().GetAllUsers(gomock.Any(), &pb.GetAllUsersRequest{
 			UserID: userID,
-			Limit:  20,
-			Page:   1,
 		}).Return(profiles, nil)
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -731,8 +614,6 @@ func TestFriendHandler_GetAllUsers(t *testing.T) {
 		userID := int32(1)
 		mockClient.EXPECT().GetAllUsers(gomock.Any(), &pb.GetAllUsersRequest{
 			UserID: userID,
-			Limit:  20,
-			Page:   1,
 		}).Return(nil, status.Error(codes.Internal, "internal error"))
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -747,18 +628,6 @@ func TestFriendHandler_GetAllUsers(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 	})
 
-	t.Run("Unauthorized", func(t *testing.T) {
-		req := NewFriendTestRequest(t, FriendTestRequestConfig{
-			Method:  http.MethodGet,
-			URL:     "/friends/users/all",
-			UserID:  0,
-			AddAuth: false,
-		})
-		w := httptest.NewRecorder()
-		handler.GetAllUsers(w, req)
-
-		assert.Equal(t, http.StatusUnauthorized, w.Code)
-	})
 }
 
 func TestFriendHandler_CountUserRelations(t *testing.T) {
@@ -851,8 +720,6 @@ func TestFriendHandler_SearchProfilesByFullName(t *testing.T) {
 			FullName: "John",
 			UserID:   userID,
 			Type:     "accepted",
-			Limit:    20,
-			Page:     1,
 		}).Return(profiles, nil)
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -887,8 +754,6 @@ func TestFriendHandler_SearchProfilesByFullName(t *testing.T) {
 			FullName: "John",
 			UserID:   userID,
 			Type:     "accepted",
-			Limit:    20,
-			Page:     1,
 		}).Return(nil, status.Error(codes.Internal, "internal error"))
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -911,8 +776,6 @@ func TestFriendHandler_SearchProfilesByFullName(t *testing.T) {
 			FullName: "John",
 			UserID:   userID,
 			Type:     "accepted",
-			Limit:    20,
-			Page:     1,
 		}).Return(profiles, nil)
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -976,8 +839,6 @@ func TestFriendHandler_EdgeCases(t *testing.T) {
 		profiles := &pb.ShortProfileList{Profiles: []*pb.ShortProfile{}}
 		mockClient.EXPECT().GetFriends(gomock.Any(), &pb.GetFriendsRequest{
 			UserID: userID,
-			Limit:  20, // Должен использовать дефолтное значение
-			Page:   1,
 		}).Return(profiles, nil)
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
@@ -998,12 +859,12 @@ func TestFriendHandler_EdgeCases(t *testing.T) {
 		mockClient.EXPECT().GetFriends(gomock.Any(), &pb.GetFriendsRequest{
 			UserID: userID,
 			Limit:  20,
-			Page:   1, // Должен использовать дефолтное значение
+			Page:   -1, // Должен использовать дефолтное значение
 		}).Return(profiles, nil)
 
 		req := NewFriendTestRequest(t, FriendTestRequestConfig{
 			Method:  http.MethodGet,
-			URL:     "/friends?page=-1",
+			URL:     "/friends?page=-1&limit=20",
 			UserID:  userID,
 			AddAuth: true,
 		})

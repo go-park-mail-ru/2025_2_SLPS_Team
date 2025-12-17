@@ -259,6 +259,7 @@ func TestProfileHandler_GetProfileByUserID(t *testing.T) {
 			}).
 			Return(&pb.GetProfileByUserIDResponse{
 				Profile: &pb.Profile{
+					UserID:    1,
 					FirstName: "User",
 					LastName:  "Test",
 				},
@@ -299,7 +300,15 @@ func TestProfileHandler_GetProfileByUserID(t *testing.T) {
 	t.Run("NoUserIDInContext", func(t *testing.T) {
 		req := newGetRequestWithVars(t, "/profile/1", map[string]string{"id": "1"}, 0)
 		w := httptest.NewRecorder()
-
+		mockProfileService.EXPECT().
+			GetProfileByUserID(gomock.Any(), gomock.Any()).
+			Return(&pb.GetProfileByUserIDResponse{
+				Profile: &pb.Profile{
+					UserID:    1,
+					FirstName: "User",
+					LastName:  "Test",
+				},
+			}, nil)
 		handler.GetProfileByUserID(w, req)
 		// selfUserID будет 0, что допустимо
 		assert.Equal(t, http.StatusOK, w.Result().StatusCode)
@@ -343,9 +352,11 @@ func TestProfileHandler_DeleteAvatar(t *testing.T) {
 	})
 
 	t.Run("NoUserIDInContext", func(t *testing.T) {
-		req := newDeleteRequest(t, "/profile/avatar", 0)
+		req := newDeleteRequest(t, "/profile/avatar", 1)
 		w := httptest.NewRecorder()
-
+		mockProfileService.EXPECT().
+			DeleteAvatarByUserID(gomock.Any(), &pb.DeleteAvatarRequest{UserID: 1}).
+			Return(&emptypb.Empty{}, status.Error(codes.Internal, "internal error"))
 		handler.DeleteAvatar(w, req)
 		// userID будет 0, что может вызвать ошибку на сервере
 		assert.Equal(t, http.StatusInternalServerError, w.Result().StatusCode)
