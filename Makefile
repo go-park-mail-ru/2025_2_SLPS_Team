@@ -54,9 +54,8 @@ test-coverage:
 	@rm -f coverage.out coverage_filtered.out
 	go clean -testcache
 	go test -v -coverprofile=coverage.out -coverpkg=./... ./...
-	grep -v -E "(docs|fill\.go|mock.*\.go|generate\.go|test_utils\.go)" coverage.out > coverage_filtered.out || true
+	grep -v -E "(docs|fill\.go|mock.*\.go|generate\.go|test_utils\.go|\.pb\.go|.*_easyjson\.go|.*_gen\.go)" coverage.out > coverage_filtered.out || true
 	go tool cover -func=coverage_filtered.out | grep total
-
 test-coverage-html: test-coverage
 	go tool cover -html=coverage_filtered.out -o coverage.html
 
