@@ -31,7 +31,8 @@ generate-mocks:
 	mockgen -source=domain/post.go -destination=internal/service/mocks/mock_post.go -package=mocks
 	mockgen -source=domain/friend.go -destination=internal/service/mocks/mock_friend.go -package=mocks
 	mockgen -source=domain/community.go -destination=internal/service/mocks/mock_community.go -package=mocks CommunityStore
-	
+	mockgen -source=domain/comment.go -destination=internal/service/mocks/mock_comment.go -package=mocks
+
 	# gRPC clients (для использования в сервисах)
 	mockgen -source=shared/pb/auth_grpc.pb.go -destination=internal/service/mocks/mock_auth_grpc.go -package=mocks
 	mockgen -source=shared/pb/profile_grpc.pb.go -destination=internal/service/mocks/mock_profile_grpc.go -package=mocks ProfileServiceClient
@@ -49,7 +50,8 @@ generate-mocks:
 	mockgen -source=domain/user.go -destination=internal/repository/mocks/mock_user.go -package=mocks
 	mockgen -source=domain/post.go -destination=internal/repository/mocks/mock_post.go -package=mocks
 	mockgen -source=domain/friend.go -destination=internal/repository/mocks/mock_friend.go -package=mocks
-	mockgen -source=domain/community.go -destination=internal/repository/mocks/mock_community.go -package=mocks
+	mockgen -source=domain/friend.go -destination=internal/repository/mocks/mock_friend.go -package=mocks
+	mockgen -source=domain/comment.go -destination=internal/repository/mocks/mock_comment.go -package=mocks
 test-coverage:
 	@rm -f coverage.out coverage_filtered.out
 	go clean -testcache
