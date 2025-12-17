@@ -111,14 +111,6 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Парсим multipart форму (максимум 50MB)
-	err = r.ParseMultipartForm(50 << 20)
-	if err != nil {
-		sendJSONResponse(w, "Can't parse multipart form", http.StatusBadRequest)
-		domain.Error(r.Context(), "Failed to parse multipart form", err)
-		return
-	}
-
 	err = ParseMultipart(r)
 	if err != nil {
 		sendJSONError(w, err)

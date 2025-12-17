@@ -55,7 +55,7 @@ func (api *ApplicationHandler) CreateApplication(w http.ResponseWriter, r *http.
 		http.SetCookie(w, sessionCookie)
 	}
 
-	id, err := api.applicationService.CreateApplication(r.Context(), req)
+	id, err := api.applicationService.CreateApplication(r.Context(), *req)
 	if err != nil {
 		sendJSONError(w, err)
 		return

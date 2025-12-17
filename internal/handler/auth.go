@@ -208,7 +208,7 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := api.authService.Register(r.Context(), generated.RegisterRequestToProto(req))
+	resp, err := api.authService.Register(r.Context(), generated.RegisterRequestToProto(*req))
 	if err != nil {
 		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)

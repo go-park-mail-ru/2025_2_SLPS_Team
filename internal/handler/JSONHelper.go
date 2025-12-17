@@ -2,8 +2,8 @@ package handler
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"project/domain"
@@ -11,25 +11,28 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/schema"
+	"github.com/mailru/easyjson"
+	"github.com/mailru/easyjson/jlexer"
 	"go.uber.org/zap"
 )
-
-type JSONResponse struct {
-	Message string `json:"message"`
-	Code    int32  `json:"code"`
-}
 
 const DefaultMultipartMaxSize = 50 << 20 // 50 MB
 func sendJSONResponse(w http.ResponseWriter, message string, statusCode int32) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(int(statusCode))
-
-	if err := json.NewEncoder(w).Encode(JSONResponse{
+	resp := domain.JSONResponse{
 		Message: message,
-		Code:    statusCode,
-	}); err != nil {
+		Code:    statusCode}
+	data, err := easyjson.Marshal(resp)
+	if err != nil {
 		log.Printf("failed to write JSON response: %v", err)
 	}
+
+	_, err = w.Write(data)
+	if err != nil {
+		log.Printf("failed to write JSON response: %v", err)
+	}
+
 }
 
 func sendJSONError(w http.ResponseWriter, err error) {
@@ -37,11 +40,37 @@ func sendJSONError(w http.ResponseWriter, err error) {
 	sendJSONResponse(w, msg, code)
 }
 
-func sendJSONData(ctx context.Context, w http.ResponseWriter, data interface{}) {
+func sendJSONData(ctx context.Context, w http.ResponseWriter, data any) {
 	w.Header().Set("Content-Type", "application/json")
 
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		domain.FromContext(ctx).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", domain.StructName(data)))
+	var jsonData []byte
+	var err error
+
+	// Проверяем, реализует ли data easyjson.Marshaler
+	if marshaler, ok := data.(easyjson.Marshaler); ok {
+		jsonData, err = easyjson.Marshal(marshaler)
+	}
+	//} else {
+	//    // Используем стандартный encoding/json для остальных типов
+	//    jsonData, err = json.Marshal(data)
+	//}
+
+	if err != nil {
+		domain.FromContext(ctx).Error(
+			domain.FailToEncode,
+			zap.Error(err),
+			zap.String("type", fmt.Sprintf("%T", data)),
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	_, err = w.Write(jsonData)
+	if err != nil {
+		domain.FromContext(ctx).Error(
+			domain.InvalidParams,
+			zap.Error(err),
+		)
 	}
 }
 
@@ -92,16 +121,32 @@ func DecodeQueryParams[T any](r *http.Request) (T, error) {
 	return q, nil
 }
 
-func DecodeJSONBody[T any](r *http.Request) (T, error) {
-	var req T
+func DecodeJSONBody[T any](r *http.Request) (*T, error) {
+	body, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, domain.ErrInvalidParams
+	}
+	defer r.Body.Close()
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	lexer := jlexer.Lexer{Data: body}
+
+	// Создаем указатель на T
+	var req = new(T)
+
+	unmarshaler, ok := any(req).(easyjson.Unmarshaler)
+	if !ok {
+		return nil, domain.ErrInvalidParams
+	}
+
+	unmarshaler.UnmarshalEasyJSON(&lexer)
+
+	if lexer.Error() != nil {
 		domain.FromContext(r.Context()).Error(
 			domain.InvalidJSON,
-			zap.String("struct", domain.StructName(req)),
-			zap.Error(err),
+			zap.String("struct", domain.StructName(*req)),
+			zap.Error(lexer.Error()),
 		)
-		return req, domain.ErrInvalidParams
+		return nil, domain.ErrInvalidParams
 	}
 
 	return req, nil

@@ -39,7 +39,7 @@ func (h *CommentHandler) CreateComment(w http.ResponseWriter, r *http.Request) {
 
 	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	comment, err := h.commentService.CreateComment(r.Context(), userID, req)
+	comment, err := h.commentService.CreateComment(r.Context(), userID, *req)
 	if err != nil {
 		sendJSONError(w, err)
 		return

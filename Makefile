@@ -59,3 +59,9 @@ test-coverage:
 
 test-coverage-html: test-coverage
 	go tool cover -html=coverage_filtered.out -o coverage.html
+
+generate-easyjson:
+	easyjson -all -pkg ./domain/
+
+
+

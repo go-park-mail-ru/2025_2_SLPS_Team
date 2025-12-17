@@ -9,6 +9,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+//easyjson:json
+type JSONResponse struct {
+	Message string `json:"message"`
+	Code    int32  `json:"code"`
+}
+
 // общие ошибки на уровне сервиса и бд
 // Общие доменные ошибки
 var (
