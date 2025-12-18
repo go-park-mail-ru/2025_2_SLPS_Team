@@ -3,9 +3,6 @@ package handler
 import (
 	"net/http"
 	"project/domain"
-
-	"github.com/gorilla/schema"
-	"go.uber.org/zap"
 )
 
 type CommunityHandler struct {
@@ -482,15 +479,6 @@ func (api *CommunityHandler) SearchCommunityByName(w http.ResponseWriter, r *htt
 	}
 
 	cType := domain.CommunityType(cTypeStr)
-
-	var qParams domain.PaginateQueryParams
-	decoder := schema.NewDecoder()
-	decoder.IgnoreUnknownKeys(true)
-	if err := decoder.Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONError(w, err)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
-		return
-	}
 
 	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
 	if err != nil {
