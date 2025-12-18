@@ -282,7 +282,7 @@ func (h *PostsHandler) GetUserPosts(w http.ResponseWriter, r *http.Request) {
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts/{id}/like [put]
 func (h *PostsHandler) UpdateLikeOnPost(w http.ResponseWriter, r *http.Request) {
-	postID, err := PathInt32(r, "ID")
+	postID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
@@ -314,7 +314,7 @@ func (h *PostsHandler) UpdateLikeOnPost(w http.ResponseWriter, r *http.Request) 
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /posts/communities/{id} [get]
 func (h *PostsHandler) GetCommunityPosts(w http.ResponseWriter, r *http.Request) {
-	communityID, err := PathInt32(r, "ID")
+	communityID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
