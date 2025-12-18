@@ -1,3 +1,4 @@
+CREATE EXTENSION IF NOT EXISTS pg_stat_statements;
 CREATE TYPE friendship_status_enum AS ENUM ('pending', 'accepted', 'rejected', 'blocked');
 CREATE TYPE role_enum AS ENUM ('admin', 'moderator', 'member', 'owner');
 CREATE TYPE attachment_obj_type_enum AS ENUM ('message', 'comment', 'profile', 'community');

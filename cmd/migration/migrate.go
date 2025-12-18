@@ -104,7 +104,8 @@ func main() {
 	if config.Debug {
 		log.Println("Debug mode enabled")
 	}
-
+	log.Println(config.MigrationsPath)
+	log.Println(config.PostgresURL)
 	m, err := migrate.New(
 		config.MigrationsPath,
 		config.PostgresURL,

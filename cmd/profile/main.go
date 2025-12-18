@@ -21,7 +21,7 @@ func main() {
 	cfg := config.NewConfig()
 	profileMetrics := metrics.NewGRPCMetrics("profile-service")
 
-	dbConn := dbconn.NewPostgres(cfg.PostgresURL)
+	dbConn := dbconn.NewPostgres(cfg.PostgresURLProfile)
 	elasticConn := dbconn.NewElastic(cfg)
 
 	profileStore := db.NewDBProfileStore(dbConn)

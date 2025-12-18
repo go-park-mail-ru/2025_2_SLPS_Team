@@ -23,7 +23,7 @@ func main() {
 	cfg := config.NewConfig()
 	friendMetrics := metrics.NewGRPCMetrics("friend-service")
 
-	dbConn := dbconn.NewPostgres(cfg.PostgresURL)
+	dbConn := dbconn.NewPostgres(cfg.PostgresURLFriend)
 	elasticConn := dbconn.NewElastic(cfg)
 
 	friendStore := db.NewDBFriendStore(dbConn)
