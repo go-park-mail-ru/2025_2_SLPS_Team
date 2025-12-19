@@ -20,121 +20,121 @@ func NewDBMessageStore(db *sql.DB) domain.MessageStore {
 }
 
 func (store *DBMessageStore) GetMessagesByChatId(ctx context.Context, chatID int32, limit int32, offset int32) ([]domain.Message, error) {
-    start := time.Now()
-    dblogger := domain.DBLogger(ctx, "messageStore")
-    dbloggerCopy := dblogger
-    dbloggerCopy.Info("DB start GetMessagesByChatId")
-    defer func() {
-        duration := time.Since(start)
-        dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
-    }()
-    
-    var messages []domain.Message
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "messageStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetMessagesByChatId")
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
 
-    // Обновляем запрос чтобы выбирать sticker_id
-    query := `SELECT id, author_id, chat_id, text, sticker_id, created_at
+	var messages []domain.Message
+
+	// Обновляем запрос чтобы выбирать sticker_id
+	query := `SELECT id, author_id, chat_id, text, sticker_id, created_at
               FROM messages
               WHERE chat_id = $1
               ORDER BY created_at DESC
               LIMIT $2 OFFSET $3`
-    
-    dblogger = dblogger.With(zap.Int32("chatID", chatID), zap.String("query", query))
-    rows, err := store.db.Query(query, chatID, limit, offset)
-    if err != nil {
-        dblogger.Error("Failed to find messages by chat", zap.Error(err))
-        return nil, err
-    }
-    defer rows.Close()
 
-    for rows.Next() {
-        var msg domain.Message
-        var stickerID *int32
-        err := rows.Scan(
-            &msg.ID,
-            &msg.AuthorID,
-            &msg.ChatID,
-            &msg.Text,
-            &stickerID,
-            &msg.CreatedAt,
-        )
-        msg.StickerID = stickerID
-        if err != nil {
-            dblogger.Error("Failed to read message rows", zap.Error(err))
-            return nil, err
-        }
-        
-        // Загружаем вложения для каждого сообщения (только если это не стикер)
-        if stickerID == nil {
-            attachments, err := store.GetMessageAttachments(ctx, msg.ID)
-            if err != nil {
-                dblogger.Error("Failed to get message attachments", zap.Error(err), zap.Int32("messageID", msg.ID))
-                // Продолжаем без вложений
-            } else {
-                msg.Attachments = attachments
-            }
-        }
-        
-        messages = append(messages, msg)
-    }
+	dblogger = dblogger.With(zap.Int32("chatID", chatID), zap.String("query", query))
+	rows, err := store.db.QueryContext(ctx, query, chatID, limit, offset)
+	if err != nil {
+		dblogger.Error("Failed to find messages by chat", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
 
-    if err := rows.Err(); err != nil {
-        dblogger.Error("Failed to read message rows", zap.Error(err))
-        return nil, err
-    }
+	for rows.Next() {
+		var msg domain.Message
+		var stickerID *int32
+		err := rows.Scan(
+			&msg.ID,
+			&msg.AuthorID,
+			&msg.ChatID,
+			&msg.Text,
+			&stickerID,
+			&msg.CreatedAt,
+		)
+		msg.StickerID = stickerID
+		if err != nil {
+			dblogger.Error("Failed to read message rows", zap.Error(err))
+			return nil, err
+		}
 
-    dblogger.Info("Messages return")
-    return messages, nil
+		// Загружаем вложения для каждого сообщения (только если это не стикер)
+		if stickerID == nil {
+			attachments, err := store.GetMessageAttachments(ctx, msg.ID)
+			if err != nil {
+				dblogger.Error("Failed to get message attachments", zap.Error(err), zap.Int32("messageID", msg.ID))
+				// Продолжаем без вложений
+			} else {
+				msg.Attachments = attachments
+			}
+		}
+
+		messages = append(messages, msg)
+	}
+
+	if err := rows.Err(); err != nil {
+		dblogger.Error("Failed to read message rows", zap.Error(err))
+		return nil, err
+	}
+
+	dblogger.Info("Messages return")
+	return messages, nil
 }
 
 func (store *DBMessageStore) CreateMessage(ctx context.Context, message domain.Message) (int32, error) {
-    start := time.Now()
-    dblogger := domain.DBLogger(ctx, "messageStore")
-    dbloggerCopy := dblogger
-    dbloggerCopy.Info("DB start CreateMessage")
-    defer func() {
-        duration := time.Since(start)
-        dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
-    }()
-    
-    // Начинаем транзакцию
-    tx, err := store.db.BeginTx(ctx, nil)
-    if err != nil {
-        dblogger.Error("Failed to begin transaction", zap.Error(err))
-        return 0, fmt.Errorf("failed to begin transaction: %w", err)
-    }
-    defer func() {
-        if err != nil {
-            tx.Rollback()
-            dblogger.Error("Transaction rolled back", zap.Error(err))
-        }
-    }()
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "messageStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start CreateMessage")
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
 
-    var messageID int32
-    // Обновляем запрос для поддержки sticker_id
-    query := `INSERT INTO messages (author_id, chat_id, text, sticker_id) VALUES ($1, $2, $3, $4) RETURNING id`
-    dblogger = dblogger.With(zap.String("query", query), zap.Int32("chatID", message.ChatID))
-    err = tx.QueryRowContext(ctx, query, message.AuthorID, message.ChatID, message.Text, message.StickerID).Scan(&messageID)
-    if err != nil {
-        dblogger.Error("Failed to create message", zap.Error(err))
-        return 0, fmt.Errorf("failed to create message: %w", err)
-    }
+	// Начинаем транзакцию
+	tx, err := store.db.BeginTx(ctx, nil)
+	if err != nil {
+		dblogger.Error("Failed to begin transaction", zap.Error(err))
+		return 0, fmt.Errorf("failed to begin transaction: %w", err)
+	}
+	defer func() {
+		if err != nil {
+			tx.Rollback()
+			dblogger.Error("Transaction rolled back", zap.Error(err))
+		}
+	}()
 
-    // Сохраняем вложения, если они есть (только если это не стикер)
-    if len(message.Attachments) > 0 && message.StickerID == nil {
-        if err := store.saveMessageAttachmentsTx(ctx, tx, messageID, message.Attachments); err != nil {
-            dblogger.Error("Failed to save message attachments", zap.Error(err))
-            return 0, fmt.Errorf("failed to save message attachments: %w", err)
-        }
-    }
+	var messageID int32
+	// Обновляем запрос для поддержки sticker_id
+	query := `INSERT INTO messages (author_id, chat_id, text, sticker_id) VALUES ($1, $2, $3, $4) RETURNING id`
+	dblogger = dblogger.With(zap.String("query", query), zap.Int32("chatID", message.ChatID))
+	err = tx.QueryRowContext(ctx, query, message.AuthorID, message.ChatID, message.Text, message.StickerID).Scan(&messageID)
+	if err != nil {
+		dblogger.Error("Failed to create message", zap.Error(err))
+		return 0, fmt.Errorf("failed to create message: %w", err)
+	}
 
-    // Фиксируем транзакцию
-    if err := tx.Commit(); err != nil {
-        dblogger.Error("Failed to commit transaction", zap.Error(err))
-        return 0, fmt.Errorf("failed to commit transaction: %w", err)
-    }
+	// Сохраняем вложения, если они есть (только если это не стикер)
+	if len(message.Attachments) > 0 && message.StickerID == nil {
+		if err := store.saveMessageAttachmentsTx(ctx, tx, messageID, message.Attachments); err != nil {
+			dblogger.Error("Failed to save message attachments", zap.Error(err))
+			return 0, fmt.Errorf("failed to save message attachments: %w", err)
+		}
+	}
 
-    dblogger.Info("Message Created", zap.Int32("messageID", messageID))
-    return messageID, nil
+	// Фиксируем транзакцию
+	if err := tx.Commit(); err != nil {
+		dblogger.Error("Failed to commit transaction", zap.Error(err))
+		return 0, fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	dblogger.Info("Message Created", zap.Int32("messageID", messageID))
+	return messageID, nil
 }
 
 // GetMessageAttachments возвращает вложения сообщения
@@ -262,30 +262,30 @@ func (store *DBMessageStore) saveMessageAttachmentsTx(ctx context.Context, tx *s
 }
 
 func (store *DBMessageStore) GetStickerPath(ctx context.Context, stickerID int32) (string, error) {
-    start := time.Now()
-    dblogger := domain.DBLogger(ctx, "messageStore")
-    dbloggerCopy := dblogger
-    dbloggerCopy.Info("DB start GetStickerPath", zap.Int32("stickerID", stickerID))
-    defer func() {
-        duration := time.Since(start)
-        dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
-    }()
-    
-    query := `SELECT file_path FROM stickers WHERE id = $1`
-    
-    var filePath string
-    err := store.db.QueryRowContext(ctx, query, stickerID).Scan(&filePath)
-    dblogger = dblogger.With(zap.String("query", query))
-    
-    if err != nil {
-        if err == sql.ErrNoRows {
-            dblogger.Info("Sticker not found")
-            return "", domain.ErrNotFound
-        }
-        dblogger.Error("Failed to get sticker path", zap.Error(err))
-        return "", fmt.Errorf("failed to get sticker path: %w", err)
-    }
-    
-    dblogger.Info("Sticker path retrieved successfully")
-    return filePath, nil
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "messageStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetStickerPath", zap.Int32("stickerID", stickerID))
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	query := `SELECT file_path FROM stickers WHERE id = $1`
+
+	var filePath string
+	err := store.db.QueryRowContext(ctx, query, stickerID).Scan(&filePath)
+	dblogger = dblogger.With(zap.String("query", query))
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			dblogger.Info("Sticker not found")
+			return "", domain.ErrNotFound
+		}
+		dblogger.Error("Failed to get sticker path", zap.Error(err))
+		return "", fmt.Errorf("failed to get sticker path: %w", err)
+	}
+
+	dblogger.Info("Sticker path retrieved successfully")
+	return filePath, nil
 }
