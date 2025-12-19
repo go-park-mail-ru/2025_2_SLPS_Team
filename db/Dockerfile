@@ -1,11 +1,9 @@
+# Используем официальный образ PostgreSQL
 FROM postgres:16
 
-# Копируем шаблоны и entrypoint внутрь образа
-COPY config/postgresql.conf /etc/postgresql/postgresql.conf.template
-COPY ./init/init.sql.template /docker-entrypoint-initdb.d/init.sql.template
-COPY entrypoint.sh /entrypoint.sh
+# Копируем кастомные конфиги внутрь образа
+COPY ./db/config/postgresql.conf /etc/postgresql/postgresql.conf
+COPY ./db/config/pg_hba.conf /etc/postgresql/pg_hba.conf
 
-RUN chmod +x /entrypoint.sh
-
-ENTRYPOINT ["/entrypoint.sh"]
-CMD ["postgres"]
+# По умолчанию запускаем PostgreSQL с кастомным конфигом
+CMD ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]

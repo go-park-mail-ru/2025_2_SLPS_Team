@@ -6,12 +6,13 @@ on:
       - main
       - develop
       - feature/messaging
+      - bd/dz-3-4
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx, volume]
+        image: [main, auth, friend, profile, migrations, myapp-elasticsearch, nginx, volume, db]
 
     steps:
       - name: Checkout code
@@ -26,6 +27,7 @@ jobs:
             nginx) BUILD_DOCKERFILE="Dockerfile.nginx" ;;
             volume) BUILD_DOCKERFILE="Dockerfile.volume" ;;
             migrations) BUILD_DOCKERFILE="Dockerfile.migrations" ;;
+            db) BUILD_DOCKERFILE="./db/Dockerfile";;
           esac
           echo "DOCKERFILE=$BUILD_DOCKERFILE" >> $GITHUB_ENV
           echo "BUILD_CONTEXT=." >> $GITHUB_ENV
@@ -93,6 +95,7 @@ jobs:
             echo "ELASTIC_IMAGE=ghcr.io/${{ github.repository_owner }}/myapp-elasticsearch:latest" >> /home/ubuntu/myapp/.env
             echo "NGINX_IMAGE=ghcr.io/${{ github.repository_owner }}/nginx:latest" >> /home/ubuntu/myapp/.env
             echo "VOLUME_IMAGE=ghcr.io/${{ github.repository_owner }}/volume:latest" >> /home/ubuntu/myapp/.env
+            echo "PG_IMAGE=ghcr.io/${{ github.repository_owner }}/pg:latest" >> /home/ubuntu/myapp/.env
             cd /home/ubuntu/myapp
             docker-compose down -v || true
             docker-compose pull

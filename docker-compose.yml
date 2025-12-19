@@ -118,7 +118,10 @@ services:
       - shared_uploads:/app/uploads
 
   postgres:
-    image: postgres:15
+    build:
+      context: .
+      dockerfile: db/Dockerfile
+    image: ${PG_IMAGE:-local/pg:latest}
     container_name: vk_postgres
     restart: always
     ports:
@@ -128,12 +131,8 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_NAME}
     volumes:
-      - ./db/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
-      - ./db/config/postgresql.conf:/etc/postgresql/postgresql.conf
       - pg_data:/var/lib/postgresql/data
       - ./pglogs:/var/lib/postgresql/log
-    command: >
-      postgres -c config_file=/etc/postgresql/postgresql.conf
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ${DB_NAME}"]
       interval: 5s
