@@ -128,6 +128,6 @@ func (r *DBApplicationStore) MergeTempSession(ctx context.Context) error {
             temp_session_id = NULL
         WHERE temp_session_id = $2
     `
-	_, err := r.db.Exec(query, TempSessionInfo.UserID, TempSessionInfo.TempSessionID)
+	_, err := r.db.ExecContext(ctx, query, TempSessionInfo.UserID, TempSessionInfo.TempSessionID)
 	return err
 }

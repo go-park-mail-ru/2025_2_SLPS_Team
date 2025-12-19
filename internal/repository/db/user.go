@@ -30,14 +30,14 @@ func (store *DBUserStore) CreateUser(ctx context.Context, user domain.User) (int
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	tx, err := store.db.Begin()
+	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("begin tx: %w", err)
 	}
 
 	var userID int32
 	queryUser := `INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id`
-	err = tx.QueryRow(queryUser, user.Email, user.Password).Scan(&userID)
+	err = tx.QueryRowContext(ctx, queryUser, user.Email, user.Password).Scan(&userID)
 	if err != nil {
 		tx.Rollback()
 		dblogger.Error("Failed to insert user", zap.String("query", queryUser), zap.Error(err))
@@ -68,7 +68,7 @@ func (store *DBUserStore) GetUserByEmail(ctx context.Context, email string) (*do
 	query := `SELECT id, email, password FROM users WHERE email = $1`
 
 	var user domain.User
-	err := store.db.QueryRow(query, email).Scan(&user.ID, &user.Email, &user.Password)
+	err := store.db.QueryRowContext(ctx, query, email).Scan(&user.ID, &user.Email, &user.Password)
 	dblogger = dblogger.With(zap.String("query", query))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -96,7 +96,7 @@ func (store *DBUserStore) GetUserByID(ctx context.Context, userID int32) (domain
 	query := `SELECT id, email, password, role FROM users WHERE id = $1`
 
 	var user domain.User
-	err := store.db.QueryRow(query, userID).Scan(&user.ID, &user.Email, &user.Password, &user.Role)
+	err := store.db.QueryRowContext(ctx, query, userID).Scan(&user.ID, &user.Email, &user.Password, &user.Role)
 	dblogger = dblogger.With(zap.Int32("userID", userID), zap.String("query", query))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -124,7 +124,7 @@ func (store *DBUserStore) IsUserExists(ctx context.Context, userID int32) (bool,
 
 	var exists bool
 	query := "SELECT EXISTS(SELECT 1 FROM users WHERE id = $1)"
-	err := store.db.QueryRow(query, userID).Scan(&exists)
+	err := store.db.QueryRowContext(ctx, query, userID).Scan(&exists)
 	dblogger = dblogger.With(zap.Int32("userID", userID), zap.String("query", query))
 	if err != nil {
 		dblogger.Error("failed to find user", zap.Error(err))
