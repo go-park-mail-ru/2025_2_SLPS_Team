@@ -49,7 +49,7 @@ func (store *DBChatStore) GetOrCreateChatWithUser(ctx context.Context, selfUserI
         HAVING COUNT(*) = 2 AND bool_and(member_id = ANY($1))
         LIMIT 1
     `
-	row := tx.QueryRow(query, pq.Array(ids))
+	row := tx.QueryRowContext(ctx, query, pq.Array(ids))
 	err = row.Scan(&chatID)
 	dblogger = dblogger.With(zap.Int32("userID", userID))
 	if err == nil {
@@ -63,14 +63,14 @@ func (store *DBChatStore) GetOrCreateChatWithUser(ctx context.Context, selfUserI
 	}
 
 	createChat := `INSERT INTO chats DEFAULT VALUES RETURNING id`
-	err = tx.QueryRow(createChat).Scan(&chatID)
+	err = tx.QueryRowContext(ctx, createChat).Scan(&chatID)
 	if err != nil {
 		dblogger.Error("Failed to create chat", zap.String("query", createChat), zap.Error(err))
 		return 0, fmt.Errorf("failed to create chat: %w", err)
 	}
 
 	insertMembers := `INSERT INTO chat_members (chat_id, member_id) VALUES ($1, $2), ($1, $3)`
-	_, err = tx.Exec(insertMembers, chatID, ids[0], ids[1])
+	_, err = tx.ExecContext(ctx, insertMembers, chatID, ids[0], ids[1])
 	if err != nil {
 		dblogger.Error("Failed to add members", zap.String("query", insertMembers), zap.Error(err))
 		return 0, fmt.Errorf("failed to add members: %w", err)
@@ -96,7 +96,7 @@ func (store *DBChatStore) IsMemberOfChat(ctx context.Context, userID int32, chat
 	var success bool
 	query := `SELECT EXISTS(SELECT 1 FROM chat_members WHERE chat_id = $1 and member_id = $2)`
 	dblogger = dblogger.With(zap.Int32("userID", userID), zap.Int32("chatID", chatID), zap.String("query", query))
-	err := store.db.QueryRow(query, chatID, userID).Scan(&success)
+	err := store.db.QueryRowContext(ctx, query, chatID, userID).Scan(&success)
 	if err != nil {
 		dblogger.Error("failed to find member", zap.Error(err))
 		return false, err
@@ -119,7 +119,7 @@ func (store *DBChatStore) IsChatExist(ctx context.Context, chatID int32) (bool, 
 	var exists bool
 	query := `SELECT EXISTS(SELECT 1 FROM chats WHERE id = $1 )`
 	dblogger = dblogger.With(zap.Int32("chatID", chatID), zap.String("query", query))
-	err := store.db.QueryRow(query, chatID).Scan(&exists)
+	err := store.db.QueryRowContext(ctx, query, chatID).Scan(&exists)
 	if err != nil {
 		dblogger.Error("failed to find chat", zap.Error(err))
 		return false, err
@@ -204,7 +204,7 @@ LIMIT $2 OFFSET $3;
 
     `
 
-	rows, err := store.db.Query(query, userID, limit, offset)
+	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
 	dblogger = dblogger.With(zap.String("query", query))
 	if err != nil {
 		dblogger.Error("Failed to find chats by user", zap.Error(err), zap.Int32("limit", limit), zap.Int32("offset", offset))
@@ -283,7 +283,7 @@ WHERE cm.member_id != $1
     AND cm.chat_id = $2
 GROUP BY cm.member_id, cm.last_read_message_id
 	`
-	rows, err := store.db.Query(query, userID, chatID)
+	rows, err := store.db.QueryContext(ctx, query, userID, chatID)
 	dblogger = dblogger.With(zap.String("query", query), zap.Int32("userID", userID), zap.Int32("chatID", chatID))
 	if err != nil {
 		dblogger.Error("Failed to find members of chat")
@@ -360,7 +360,7 @@ WHERE c.id = $1;
 
 	dblogger = dblogger.With(zap.String("query", query))
 
-	row := store.db.QueryRow(query, chatID, userID)
+	row := store.db.QueryRowContext(ctx, query, chatID, userID)
 
 	var c domain.FullChat
 	var m domain.Message

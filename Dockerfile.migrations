@@ -23,13 +23,16 @@ FROM alpine:3.18
 WORKDIR /app
 
 # Устанавливаем зависимости для миграций
-RUN apk add --no-cache postgresql-client bash curl
+RUN apk add --no-cache postgresql-client bash curl gettext
 
 # Копируем бинарь миграций и миграции
 COPY --from=builder /out/migration ./migrate
 COPY --from=builder /app/db/migrations ./db/migrations
+COPY ./db/init/create-roles.template.sql ./db/create-roles.template.sql
+COPY ./elastic/indexes.json ./elastic/indexes.json
+COPY ./db/entrypoint.sh ./entrypoint.sh
 
-# Опционально: можно добавить elastic клиент, если миграции используют ES
+RUN chmod +x entrypoint.sh
 
-# Точка входа: только запуск миграций
-ENTRYPOINT ["./migrate"]
+ENTRYPOINT ["./entrypoint.sh"]
+

@@ -16,7 +16,9 @@ func NewPostgres(dataSourceName string) *sql.DB {
 	if err != nil {
 		log.Fatalf("ошибка подключения к БД: %v", err)
 	}
-
+	db.SetMaxOpenConns(20)
+	db.SetMaxIdleConns(10)
+	db.SetConnMaxLifetime(time.Hour)
 	if err := db.Ping(); err != nil {
 		log.Fatalf("ошибка ping БД: %v", err)
 	}

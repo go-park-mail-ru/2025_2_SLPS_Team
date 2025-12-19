@@ -55,7 +55,7 @@ func (store *DBProfileStore) UpdateProfile(ctx context.Context, profile domain.P
 
 	queryProfile := `UPDATE profiles SET first_name = $2, last_name = $3, gender = $4, dob = $5, about_myself = $6
 WHERE user_id = $1`
-	_, err := store.db.Exec(queryProfile,
+	_, err := store.db.ExecContext(ctx, queryProfile,
 		userID,
 		profile.FirstName,
 		profile.LastName,
@@ -84,7 +84,7 @@ func (store *DBProfileStore) UpdateAvatar(ctx context.Context, avatarPath string
 	}()
 
 	queryProfile := `UPDATE profiles SET  avatar_path = $2 WHERE user_id = $1`
-	_, err := store.db.Exec(queryProfile, userID, avatarPath)
+	_, err := store.db.ExecContext(ctx, queryProfile, userID, avatarPath)
 
 	dblogger = dblogger.With(zap.Int32("userID", userID), zap.String("query", queryProfile))
 	if err != nil {
@@ -108,7 +108,7 @@ func (store *DBProfileStore) UpdateHeader(ctx context.Context, headerPath string
 	}()
 
 	queryProfile := `UPDATE profiles SET  header_path = $2 WHERE user_id = $1`
-	_, err := store.db.Exec(queryProfile, userID, headerPath)
+	_, err := store.db.ExecContext(ctx, queryProfile, userID, headerPath)
 
 	dblogger = dblogger.With(zap.Int32("userID", userID), zap.String("query", queryProfile))
 	if err != nil {
@@ -139,7 +139,7 @@ func (store *DBProfileStore) GetShortProfileMapByUserIDs(ctx context.Context, us
 
 	dblogger = dblogger.With(zap.Int32s("userIDs", userIDs), zap.String("query", query))
 
-	rows, err := store.db.Query(query, pq.Array(userIDs))
+	rows, err := store.db.QueryContext(ctx, query, pq.Array(userIDs))
 	if err != nil {
 		dblogger.Error("Failed to get profiles by user ids", zap.Error(err))
 		return nil, err
@@ -185,7 +185,7 @@ func (store *DBProfileStore) GetShortProfileByUserIDs(ctx context.Context, userI
 
 	dblogger = dblogger.With(zap.Int32s("userIDs", userIDs), zap.String("query", query))
 
-	rows, err := store.db.Query(query, pq.Array(userIDs))
+	rows, err := store.db.QueryContext(ctx, query, pq.Array(userIDs))
 	if err != nil {
 		dblogger.Error("Failed to get profiles by user ids", zap.Error(err))
 		return nil, err
@@ -240,7 +240,7 @@ OFFSET $3;`
 
 	dblogger = dblogger.With(zap.Int32s("userIDs", userIDs), zap.String("query", query))
 
-	rows, err := store.db.Query(query, pq.Array(userIDs), limit, offset)
+	rows, err := store.db.QueryContext(ctx, query, pq.Array(userIDs), limit, offset)
 	if err != nil {
 		dblogger.Error("Failed to get profiles by user ids", zap.Error(err))
 		return nil, err
@@ -283,7 +283,7 @@ func (store *DBProfileStore) GetProfileByUserID(ctx context.Context, userID int3
 	//добавить null проверку легче всего просто добавить указатели на возможные нул поля
 	// можно возвращать указатель на объект так будет проще понять что его нет
 	var profile domain.Profile
-	err := store.db.QueryRow(query, userID).Scan(
+	err := store.db.QueryRowContext(ctx, query, userID).Scan(
 		&profile.UserID,
 		&profile.FirstName,
 		&profile.LastName,
@@ -318,7 +318,7 @@ func (store *DBProfileStore) GetAvatarByUserID(ctx context.Context, userID int32
 	query := `SELECT avatar_path FROM profiles WHERE user_id = $1`
 	dblogger = dblogger.With(zap.Int32("userID", userID), zap.String("query", query))
 	var avatar *string
-	err := store.db.QueryRow(query, userID).Scan(
+	err := store.db.QueryRowContext(ctx, query, userID).Scan(
 		&avatar)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -346,7 +346,7 @@ func (store *DBProfileStore) GetHeaderByUserID(ctx context.Context, userID int32
 	query := `SELECT header_path FROM profiles WHERE user_id = $1`
 	dblogger = dblogger.With(zap.Int32("userID", userID), zap.String("query", query))
 	var header *string
-	err := store.db.QueryRow(query, userID).Scan(
+	err := store.db.QueryRowContext(ctx, query, userID).Scan(
 		&header)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -374,7 +374,7 @@ func (store *DBProfileStore) DeleteAvatarByUserID(ctx context.Context, userID in
 
 	var oldAvatarPath string
 
-	tx, err := store.db.Begin()
+	tx, err := store.db.BeginTx(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -385,7 +385,7 @@ func (store *DBProfileStore) DeleteAvatarByUserID(ctx context.Context, userID in
 	getQuery := `SELECT avatar_path FROM profiles WHERE user_id = $1 FOR UPDATE`
 	dblogger = dblogger.With(zap.Int32("userID", userID), zap.String("query", getQuery))
 
-	if err := tx.QueryRow(getQuery, userID).
+	if err := tx.QueryRowContext(ctx, getQuery, userID).
 		Scan(&oldAvatarPath); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			dblogger.Error("Avatar does not exist", zap.Error(err))
@@ -396,7 +396,7 @@ func (store *DBProfileStore) DeleteAvatarByUserID(ctx context.Context, userID in
 		return nil, err
 	}
 	updateQuery := `UPDATE profiles SET avatar_path = NULL WHERE user_id = $1`
-	if _, err := tx.Exec(updateQuery, userID); err != nil {
+	if _, err := tx.ExecContext(ctx, updateQuery, userID); err != nil {
 		dblogger.Error("Fail to update avatar", zap.Error(err))
 		return nil, err
 	}

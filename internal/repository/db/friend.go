@@ -526,31 +526,61 @@ func (store *DBFriendStore) GetUserIDsByFriendType(ctx context.Context, userID i
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	var statusClause string
+	var query string
+
 	switch fType {
 	case domain.CountNotFriends:
-		statusClause = `1=1`
-	case domain.CountAccepted:
-		statusClause = `fr.status = 'accepted'`
-	case domain.CountPending:
-		statusClause = `(fr.status = 'pending' AND fr.action_user_id != $1) OR (fr.status = 'rejected' AND fr.action_user_id = $1)`
-	case domain.CountSent:
-		statusClause = `(fr.status = 'pending' AND fr.action_user_id = $1) OR (fr.status = 'rejected' AND fr.action_user_id != $1)`
-	case domain.CountBlocked:
-		statusClause = `fr.status = 'blocked'`
-	default:
-		return nil, fmt.Errorf("unknown statusType: %s", fType)
-	}
-
-	query := `
+		query = `
 SELECT CASE
          WHEN fr.first_user_id = $1 THEN fr.second_user_id
          ELSE fr.first_user_id
        END AS related_user_id
 FROM friend_relationships fr
 WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
-  AND (` + statusClause + `)
 `
+	case domain.CountAccepted:
+		query = `
+SELECT CASE
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS related_user_id
+FROM friend_relationships fr
+WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
+  AND fr.status = 'accepted'
+`
+	case domain.CountPending:
+		query = `
+SELECT CASE
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS related_user_id
+FROM friend_relationships fr
+WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
+  AND ((fr.status = 'pending' AND fr.action_user_id != $1) OR (fr.status = 'rejected' AND fr.action_user_id = $1))
+`
+	case domain.CountSent:
+		query = `
+SELECT CASE
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS related_user_id
+FROM friend_relationships fr
+WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
+  AND ((fr.status = 'pending' AND fr.action_user_id = $1) OR (fr.status = 'rejected' AND fr.action_user_id != $1))
+`
+	case domain.CountBlocked:
+		query = `
+SELECT CASE
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS related_user_id
+FROM friend_relationships fr
+WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
+  AND fr.status = 'blocked'
+`
+	default:
+		return nil, fmt.Errorf("unknown statusType: %s", fType)
+	}
 
 	rows, err := store.db.QueryContext(ctx, query, userID)
 	dblogger = dblogger.With(zap.Int32("UserID", userID), zap.String("type", string(fType)))

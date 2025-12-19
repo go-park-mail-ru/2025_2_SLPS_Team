@@ -24,7 +24,7 @@ func main() {
 	cfg := config.NewConfig()
 
 	authMetrics := metrics.NewGRPCMetrics("auth-service")
-	dbConn := dbconn.NewPostgres(cfg.PostgresURL)
+	dbConn := dbconn.NewPostgres(cfg.PostgresURLAuth)
 	redisPool := dbconn.NewRedisPool(cfg.RedisURL)
 	elasticConn := dbconn.NewElastic(cfg)
 

@@ -195,7 +195,7 @@ func main() {
 	}
 	logger := logger.NewLogger(config)
 	defer logger.Sync()
-	dbConn := dbconn.NewPostgres(config.PostgresURL)
+	dbConn := dbconn.NewPostgres(config.PostgresURLMain)
 	defer dbConn.Close()
 
 	redisConn := dbconn.NewRedisPool(config.RedisURL)
