@@ -95,7 +95,7 @@ jobs:
             echo "ELASTIC_IMAGE=ghcr.io/${{ github.repository_owner }}/myapp-elasticsearch:latest" >> /home/ubuntu/myapp/.env
             echo "NGINX_IMAGE=ghcr.io/${{ github.repository_owner }}/nginx:latest" >> /home/ubuntu/myapp/.env
             echo "VOLUME_IMAGE=ghcr.io/${{ github.repository_owner }}/volume:latest" >> /home/ubuntu/myapp/.env
-            echo "PG_IMAGE=ghcr.io/${{ github.repository_owner }}/pg:latest" >> /home/ubuntu/myapp/.env
+            echo "PG_IMAGE=ghcr.io/${{ github.repository_owner }}/db:latest" >> /home/ubuntu/myapp/.env
             cd /home/ubuntu/myapp
             docker-compose down -v || true
             docker-compose pull
