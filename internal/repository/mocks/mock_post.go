@@ -6,7 +6,6 @@ package mocks
 
 import (
 	context "context"
-	multipart "mime/multipart"
 	domain "project/domain"
 	reflect "reflect"
 
@@ -37,22 +36,22 @@ func (m *MockPostService) EXPECT() *MockPostServiceMockRecorder {
 }
 
 // CreatePost mocks base method.
-func (m *MockPostService) CreatePost(ctx context.Context, userID int, text string, attachmentFiles, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
+func (m *MockPostService) CreatePost(ctx context.Context, userID int32, text string, communityID *int32, attachmentFiles, photoFiles []*domain.File) (*domain.Post, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreatePost", ctx, userID, text, attachmentFiles, photoFiles)
+	ret := m.ctrl.Call(m, "CreatePost", ctx, userID, text, communityID, attachmentFiles, photoFiles)
 	ret0, _ := ret[0].(*domain.Post)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // CreatePost indicates an expected call of CreatePost.
-func (mr *MockPostServiceMockRecorder) CreatePost(ctx, userID, text, attachmentFiles, photoFiles interface{}) *gomock.Call {
+func (mr *MockPostServiceMockRecorder) CreatePost(ctx, userID, text, communityID, attachmentFiles, photoFiles interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePost", reflect.TypeOf((*MockPostService)(nil).CreatePost), ctx, userID, text, attachmentFiles, photoFiles)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreatePost", reflect.TypeOf((*MockPostService)(nil).CreatePost), ctx, userID, text, communityID, attachmentFiles, photoFiles)
 }
 
 // DeletePost mocks base method.
-func (m *MockPostService) DeletePost(ctx context.Context, postID uint, userID int) error {
+func (m *MockPostService) DeletePost(ctx context.Context, postID uint, userID int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "DeletePost", ctx, postID, userID)
 	ret0, _ := ret[0].(error)
@@ -65,53 +64,82 @@ func (mr *MockPostServiceMockRecorder) DeletePost(ctx, postID, userID interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePost", reflect.TypeOf((*MockPostService)(nil).DeletePost), ctx, postID, userID)
 }
 
-// GetPost mocks base method.
-func (m *MockPostService) GetPost(ctx context.Context, postID uint) (*domain.Post, error) {
+// GetCommunityPosts mocks base method.
+func (m *MockPostService) GetCommunityPosts(ctx context.Context, userID, communityID int32, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPost", ctx, postID)
-	ret0, _ := ret[0].(*domain.Post)
+	ret := m.ctrl.Call(m, "GetCommunityPosts", ctx, userID, communityID, params)
+	ret0, _ := ret[0].([]domain.PostView)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCommunityPosts indicates an expected call of GetCommunityPosts.
+func (mr *MockPostServiceMockRecorder) GetCommunityPosts(ctx, userID, communityID, params interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommunityPosts", reflect.TypeOf((*MockPostService)(nil).GetCommunityPosts), ctx, userID, communityID, params)
+}
+
+// GetPost mocks base method.
+func (m *MockPostService) GetPost(ctx context.Context, userID int32, postID uint) (*domain.PostView, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPost", ctx, userID, postID)
+	ret0, _ := ret[0].(*domain.PostView)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetPost indicates an expected call of GetPost.
-func (mr *MockPostServiceMockRecorder) GetPost(ctx, postID interface{}) *gomock.Call {
+func (mr *MockPostServiceMockRecorder) GetPost(ctx, userID, postID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPost", reflect.TypeOf((*MockPostService)(nil).GetPost), ctx, postID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPost", reflect.TypeOf((*MockPostService)(nil).GetPost), ctx, userID, postID)
 }
 
 // GetUserPosts mocks base method.
-func (m *MockPostService) GetUserPosts(ctx context.Context, userID uint, params domain.PaginateQueryParams) ([]domain.Post, error) {
+func (m *MockPostService) GetUserPosts(ctx context.Context, selfUserID int32, userID uint, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetUserPosts", ctx, userID, params)
-	ret0, _ := ret[0].([]domain.Post)
+	ret := m.ctrl.Call(m, "GetUserPosts", ctx, selfUserID, userID, params)
+	ret0, _ := ret[0].([]domain.PostView)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetUserPosts indicates an expected call of GetUserPosts.
-func (mr *MockPostServiceMockRecorder) GetUserPosts(ctx, userID, params interface{}) *gomock.Call {
+func (mr *MockPostServiceMockRecorder) GetUserPosts(ctx, selfUserID, userID, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserPosts", reflect.TypeOf((*MockPostService)(nil).GetUserPosts), ctx, userID, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetUserPosts", reflect.TypeOf((*MockPostService)(nil).GetUserPosts), ctx, selfUserID, userID, params)
 }
 
 // PostsPaginate mocks base method.
-func (m *MockPostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.PostWithShortUser, error) {
+func (m *MockPostService) PostsPaginate(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostsPaginate", ctx, params)
-	ret0, _ := ret[0].([]domain.PostWithShortUser)
+	ret := m.ctrl.Call(m, "PostsPaginate", ctx, userID, params)
+	ret0, _ := ret[0].([]domain.PostView)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PostsPaginate indicates an expected call of PostsPaginate.
-func (mr *MockPostServiceMockRecorder) PostsPaginate(ctx, params interface{}) *gomock.Call {
+func (mr *MockPostServiceMockRecorder) PostsPaginate(ctx, userID, params interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostsPaginate", reflect.TypeOf((*MockPostService)(nil).PostsPaginate), ctx, params)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostsPaginate", reflect.TypeOf((*MockPostService)(nil).PostsPaginate), ctx, userID, params)
+}
+
+// UpdateLikeOnPostByUserID mocks base method.
+func (m *MockPostService) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLikeOnPostByUserID", ctx, userID, postID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateLikeOnPostByUserID indicates an expected call of UpdateLikeOnPostByUserID.
+func (mr *MockPostServiceMockRecorder) UpdateLikeOnPostByUserID(ctx, userID, postID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLikeOnPostByUserID", reflect.TypeOf((*MockPostService)(nil).UpdateLikeOnPostByUserID), ctx, userID, postID)
 }
 
 // UpdatePost mocks base method.
-func (m *MockPostService) UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles, photoFiles []*multipart.FileHeader) error {
+func (m *MockPostService) UpdatePost(ctx context.Context, postID uint, userID int32, text string, attachmentFiles, photoFiles []*domain.File) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdatePost", ctx, postID, userID, text, attachmentFiles, photoFiles)
 	ret0, _ := ret[0].(error)
@@ -175,49 +203,78 @@ func (mr *MockPostStoreMockRecorder) DeletePost(ctx, id, authorID interface{}) *
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePost", reflect.TypeOf((*MockPostStore)(nil).DeletePost), ctx, id, authorID)
 }
 
-// GetPostByID mocks base method.
-func (m *MockPostStore) GetPostByID(ctx context.Context, id uint) (*domain.Post, error) {
+// GetCommunityPosts mocks base method.
+func (m *MockPostStore) GetCommunityPosts(ctx context.Context, userID, communityID, limit, offset int32) ([]domain.PostDB, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPostByID", ctx, id)
-	ret0, _ := ret[0].(*domain.Post)
+	ret := m.ctrl.Call(m, "GetCommunityPosts", ctx, userID, communityID, limit, offset)
+	ret0, _ := ret[0].([]domain.PostDB)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetCommunityPosts indicates an expected call of GetCommunityPosts.
+func (mr *MockPostStoreMockRecorder) GetCommunityPosts(ctx, userID, communityID, limit, offset interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommunityPosts", reflect.TypeOf((*MockPostStore)(nil).GetCommunityPosts), ctx, userID, communityID, limit, offset)
+}
+
+// GetPostByID mocks base method.
+func (m *MockPostStore) GetPostByID(ctx context.Context, userID int32, id uint) (*domain.PostDB, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPostByID", ctx, userID, id)
+	ret0, _ := ret[0].(*domain.PostDB)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetPostByID indicates an expected call of GetPostByID.
-func (mr *MockPostStoreMockRecorder) GetPostByID(ctx, id interface{}) *gomock.Call {
+func (mr *MockPostStoreMockRecorder) GetPostByID(ctx, userID, id interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPostByID", reflect.TypeOf((*MockPostStore)(nil).GetPostByID), ctx, id)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPostByID", reflect.TypeOf((*MockPostStore)(nil).GetPostByID), ctx, userID, id)
 }
 
 // GetPostsByUser mocks base method.
-func (m *MockPostStore) GetPostsByUser(ctx context.Context, userID uint, limit, offset int) ([]domain.Post, error) {
+func (m *MockPostStore) GetPostsByUser(ctx context.Context, selfUserID int32, userID uint, limit, offset int32) ([]domain.PostDB, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetPostsByUser", ctx, userID, limit, offset)
-	ret0, _ := ret[0].([]domain.Post)
+	ret := m.ctrl.Call(m, "GetPostsByUser", ctx, selfUserID, userID, limit, offset)
+	ret0, _ := ret[0].([]domain.PostDB)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetPostsByUser indicates an expected call of GetPostsByUser.
-func (mr *MockPostStoreMockRecorder) GetPostsByUser(ctx, userID, limit, offset interface{}) *gomock.Call {
+func (mr *MockPostStoreMockRecorder) GetPostsByUser(ctx, selfUserID, userID, limit, offset interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPostsByUser", reflect.TypeOf((*MockPostStore)(nil).GetPostsByUser), ctx, userID, limit, offset)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPostsByUser", reflect.TypeOf((*MockPostStore)(nil).GetPostsByUser), ctx, selfUserID, userID, limit, offset)
 }
 
 // PostsPaginatedList mocks base method.
-func (m *MockPostStore) PostsPaginatedList(ctx context.Context, limit, offset int) ([]domain.PostWithShortUser, error) {
+func (m *MockPostStore) PostsPaginatedList(ctx context.Context, userID, limit, offset int32) ([]domain.PostDB, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostsPaginatedList", ctx, limit, offset)
-	ret0, _ := ret[0].([]domain.PostWithShortUser)
+	ret := m.ctrl.Call(m, "PostsPaginatedList", ctx, userID, limit, offset)
+	ret0, _ := ret[0].([]domain.PostDB)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // PostsPaginatedList indicates an expected call of PostsPaginatedList.
-func (mr *MockPostStoreMockRecorder) PostsPaginatedList(ctx, limit, offset interface{}) *gomock.Call {
+func (mr *MockPostStoreMockRecorder) PostsPaginatedList(ctx, userID, limit, offset interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostsPaginatedList", reflect.TypeOf((*MockPostStore)(nil).PostsPaginatedList), ctx, limit, offset)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostsPaginatedList", reflect.TypeOf((*MockPostStore)(nil).PostsPaginatedList), ctx, userID, limit, offset)
+}
+
+// UpdateLikeOnPostByUserID mocks base method.
+func (m *MockPostStore) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateLikeOnPostByUserID", ctx, userID, postID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateLikeOnPostByUserID indicates an expected call of UpdateLikeOnPostByUserID.
+func (mr *MockPostStoreMockRecorder) UpdateLikeOnPostByUserID(ctx, userID, postID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateLikeOnPostByUserID", reflect.TypeOf((*MockPostStore)(nil).UpdateLikeOnPostByUserID), ctx, userID, postID)
 }
 
 // UpdatePost mocks base method.

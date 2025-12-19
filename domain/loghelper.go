@@ -39,7 +39,7 @@ func DBLogger(ctx context.Context, repo string) *zap.Logger {
 	base := FromContext(ctx)
 
 	return base.With(
-		zap.String("layer", "db"),
+		zap.String("layer", "dbconn"),
 		zap.String("repo", repo),
 	)
 }

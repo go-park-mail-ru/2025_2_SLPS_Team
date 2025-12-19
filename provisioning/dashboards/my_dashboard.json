@@ -1,0 +1,130 @@
+{
+  "id": null,
+  "uid": "all-services-dashboard",
+  "title": "Full Service Metrics",
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 1,
+  "panels": [
+    {
+      "type": "row",
+      "title": "Hardware Metrics",
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 0}
+    },
+    {
+      "type": "graph",
+      "title": "CPU Usage & Throttling",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "100 - (avg by(instance) (irate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)", "legendFormat": "{{instance}} CPU", "refId": "A"},
+        {"expr": "rate(node_cpu_seconds_total{mode=\"iowait\"}[5m])", "legendFormat": "{{instance}} IO Wait", "refId": "B"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 2}
+    },
+    {
+      "type": "graph",
+      "title": "RAM & Memory Usage",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes", "legendFormat": "{{instance}} used RAM", "refId": "A"},
+        {"expr": "node_memory_MemAvailable_bytes", "legendFormat": "{{instance}} free RAM", "refId": "B"}
+      ],
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 2}
+    },
+    {
+      "type": "graph",
+      "title": "Disk I/O & Network",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "rate(node_disk_read_bytes_total[5m])", "legendFormat": "{{instance}} read bytes/s", "refId": "A"},
+        {"expr": "rate(node_disk_written_bytes_total[5m])", "legendFormat": "{{instance}} write bytes/s", "refId": "B"},
+        {"expr": "rate(node_network_receive_bytes_total[5m])", "legendFormat": "{{instance}} rx bytes/s", "refId": "C"},
+        {"expr": "rate(node_network_transmit_bytes_total[5m])", "legendFormat": "{{instance}} tx bytes/s", "refId": "D"}
+      ],
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 10}
+    },
+    {
+      "type": "row",
+      "title": "Go Runtime Metrics",
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 18}
+    },
+    {
+      "type": "graph",
+      "title": "Goroutines",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "go_goroutines", "legendFormat": "{{instance}} goroutines", "refId": "A"}],
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 20}
+    },
+    {
+      "type": "graph",
+      "title": "Heap Allocation",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "go_memstats_heap_alloc_bytes", "legendFormat": "{{instance}} heap", "refId": "A"}],
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 20}
+    },
+    {
+      "type": "graph",
+      "title": "GC Pause Time",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "go_gc_duration_seconds", "legendFormat": "{{instance}} GC", "refId": "A"}],
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 26}
+    },
+    {
+      "type": "row",
+      "title": "HTTP / gRPC Metrics",
+      "collapsed": false,
+      "gridPos": {"h": 1, "w": 24, "x": 0, "y": 32}
+    },
+    {
+      "type": "graph",
+      "title": "HTTP RPS by Path",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "sum(rate(http_requests_total[1m])) by (path)", "legendFormat": "{{path}}", "refId": "A"}],
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 34}
+    },
+    {
+      "type": "graph",
+      "title": "HTTP Request Duration",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[1m])) by (le,path))", "legendFormat": "{{path}} p95", "refId": "A"}],
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 34}
+    },
+    {
+      "type": "graph",
+      "title": "HTTP Status Codes",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum(rate(http_requests_total{status=~\"2..\"}[1m])) by (status)", "legendFormat": "2xx", "refId": "A"},
+        {"expr": "sum(rate(http_requests_total{status=~\"5..\"}[1m])) by (status)", "legendFormat": "5xx", "refId": "B"}
+      ],
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 40}
+    },
+    {
+      "type": "graph",
+      "title": "gRPC Requests & Errors",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "sum(rate(grpc_requests_total[1m])) by (service, method)", "legendFormat": "{{service}} {{method}}", "refId": "A"},
+        {"expr": "sum(rate(grpc_requests_errors_total[1m])) by (service, method)", "legendFormat": "{{service}} errors", "refId": "B"}
+      ],
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 40}
+    },
+    {
+      "type": "stat",
+      "title": "Service Health Status",
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{"expr": "service_health_status", "legendFormat": "{{service}}", "refId": "A"}],
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 46},
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "center",
+        "orientation": "horizontal",
+        "reduceOptions": {"calcs": ["last"], "fields": "", "values": false},
+        "textMode": "value"
+      }
+    }
+  ]
+}

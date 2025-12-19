@@ -1,60 +1,118 @@
 basePath: /api/
 definitions:
-  domain.FriendsCountResponse:
+  domain.Application:
     properties:
-      count:
+      authorID:
+        type: string
+      category:
+        example: app_freezing
+        type: string
+      createdAt:
+        example: "1990-01-01T00:00:00Z"
+        type: string
+      emailFeedBack:
+        type: string
+      emailReg:
+        type: string
+      fullName:
+        type: string
+      id:
         type: integer
-      countType:
-        $ref: '#/definitions/domain.FriendshipCountType'
+      status:
+        example: open
+        type: string
+      text:
+        type: string
+      updatedAt:
+        example: "1990-01-01T00:00:00Z"
+        type: string
+    type: object
+  domain.CommentCreateRequest:
+    properties:
+      postID:
+        type: integer
+      text:
+        type: string
+    type: object
+  domain.CommentUpdateRequest:
+    properties:
+      text:
+        type: string
+    type: object
+  domain.CommentView:
+    properties:
+      authorAvatar:
+        type: string
+      authorID:
+        type: integer
+      authorName:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: integer
+      parentID:
+        type: integer
+      postID:
+        type: integer
+      text:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  domain.CommunityForMyCommunity:
+    properties:
+      avatarPath:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  domain.CommunityForView:
+    properties:
+      avatarPath:
+        type: string
+      coverPath:
+        type: string
+      createdAt:
+        type: string
+      creatorID:
+        type: integer
+      description:
+        type: string
+      id:
+        type: integer
+      isSubscribed:
+        type: boolean
+      name:
+        type: string
+      subscribersCount:
+        type: integer
+    type: object
+  domain.CommunitySubscriber:
+    properties:
+      avatarPath:
+        type: string
+      fullName:
+        type: string
       userID:
         type: integer
     type: object
-  domain.FriendshipCountType:
-    enum:
-    - pending
-    - accepted
-    - rejected
-    - blocked
-    - sent
-    type: string
-    x-enum-varnames:
-    - CountPending
-    - CountAccepted
-    - CountRejected
-    - CountBlocked
-    - CountSent
   domain.FriendshipStatus:
     enum:
     - pending
     - accepted
     - rejected
     - blocked
+    - none
     type: string
     x-enum-varnames:
     - FriendshipPending
     - FriendshipAccepted
     - FriendshipRejected
     - FriendshipBlocked
-  domain.FriendshipWithProfile:
-    properties:
-      actionUserID:
-        description: Кто отправил запрос
-        type: integer
-      createdAt:
-        type: string
-      firstUserID:
-        type: integer
-      friend:
-        $ref: '#/definitions/domain.ShortProfile'
-      id:
-        type: integer
-      secondUserID:
-        type: integer
-      status:
-        $ref: '#/definitions/domain.FriendshipStatus'
-      updatedAt:
-        type: string
-    type: object
+    - FriendshipNone
   domain.FullChat:
     properties:
       avatarPath:
@@ -67,11 +125,19 @@ definitions:
         $ref: '#/definitions/domain.Message'
       lastMessageAuthor:
         $ref: '#/definitions/domain.ShortProfile'
+      lastReadMessageID:
+        type: integer
       name:
         type: string
+      unReadCounts:
+        type: integer
     type: object
   domain.Message:
     properties:
+      attachments:
+        items:
+          type: string
+        type: array
       authorID:
         type: integer
       chatID:
@@ -79,6 +145,8 @@ definitions:
       createdAt:
         type: string
       id:
+        type: integer
+      stickerID:
         type: integer
       text:
         type: string
@@ -94,32 +162,42 @@ definitions:
           $ref: '#/definitions/domain.Message'
         type: array
     type: object
-  domain.Post:
+  domain.PostView:
     properties:
       attachments:
-        description: в БД табличка post_attachments называется
         items:
           type: string
         type: array
+      authorAvatar:
+        type: string
       authorID:
-        description: в БД табличка posts называется
+        description: ID пользователя-создателя
         type: integer
-      created_at:
-        description: в БД табличка posts называется
+      authorName:
+        type: string
+      commentsCount:
+        type: integer
+      communityAvatar:
+        type: string
+      communityID:
+        type: integer
+      communityName:
+        type: string
+      createdAt:
         type: string
       id:
-        description: в БД табличка posts называется
+        type: integer
+      isCommunityPost:
+        type: boolean
+      isLiked:
+        type: boolean
+      likeCount:
         type: integer
       photos:
-        description: в БД табличка post_photos называется
         items:
           type: string
         type: array
       text:
-        description: в БД табличка posts называется
-        type: string
-      updated_at:
-        description: в БД табличка posts называется
         type: string
     type: object
   domain.Profile:
@@ -138,6 +216,10 @@ definitions:
         type: string
       lastName:
         type: string
+      relationStatus:
+        $ref: '#/definitions/domain.FriendshipStatus'
+      relationsCount:
+        $ref: '#/definitions/domain.UserRelationsCounts'
       userID:
         type: integer
     type: object
@@ -162,14 +244,52 @@ definitions:
         example: "123123"
         type: string
     type: object
+  domain.ShortCommunity:
+    properties:
+      avatarPath:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      subscribersCount:
+        type: integer
+    type: object
   domain.ShortProfile:
     properties:
       avatarPath:
+        type: string
+      dob:
         type: string
       fullName:
         type: string
       userID:
         type: integer
+    type: object
+  domain.Sticker:
+    properties:
+      filePath:
+        description: путь к картинке стикера
+        type: string
+      id:
+        type: integer
+      packID:
+        type: integer
+      position:
+        description: порядковый номер в пачке
+        type: integer
+    type: object
+  domain.StickerPack:
+    properties:
+      coverPath:
+        description: путь к обложке (первый стикер в пачке)
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
     type: object
   domain.User:
     properties:
@@ -179,6 +299,24 @@ definitions:
         type: integer
       password:
         type: string
+      role:
+        type: string
+    type: object
+  domain.UserRelationsCounts:
+    properties:
+      CountBlocked:
+        type: integer
+      countAccepted:
+        type: integer
+      countPending:
+        type: integer
+      countSent:
+        type: integer
+    type: object
+  handler.ApplicationIDResponse:
+    properties:
+      applicationID:
+        type: integer
     type: object
   handler.ChatIDResponse:
     properties:
@@ -201,6 +339,8 @@ definitions:
     type: object
   handler.IsLoggedInResponse:
     properties:
+      role:
+        type: string
       userID:
         type: integer
     type: object
@@ -216,14 +356,20 @@ definitions:
       messageID:
         type: integer
     type: object
-  handler.PostsResponse:
-    description: Ответ с пагинированным списком постов
+  handler.UpdateLastReadRequest:
     properties:
-      posts:
-        description: Список постов
-        items:
-          $ref: '#/definitions/domain.Post'
-        type: array
+      lastReadMessageID:
+        type: integer
+    type: object
+  handler.updateStatusRequest:
+    properties:
+      status:
+        type: string
+    type: object
+  handler.updateTextRequest:
+    properties:
+      text:
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -233,6 +379,141 @@ info:
   title: VK API
   version: "1.0"
 paths:
+  /applications:
+    get:
+      consumes:
+      - application/json
+      description: Returns paginated list of applications. Admins see all, normal
+        users see only theirs.
+      parameters:
+      - description: Page number
+        format: int32
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        format: int32
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Application'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: List support applications
+      tags:
+      - Applications
+    post:
+      consumes:
+      - application/json
+      description: Creates a new support application. Can be created by a registered
+        user or a temp session.
+      parameters:
+      - description: Application payload
+        in: body
+        name: application
+        required: true
+        schema:
+          $ref: '#/definitions/domain.Application'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handler.ApplicationIDResponse'
+        "400":
+          description: Invalid JSON or missing fields
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Create a new support application
+      tags:
+      - Applications
+  /applications/{id}/status:
+    put:
+      consumes:
+      - application/json
+      description: Updates the status of an existing support application by ID.
+      parameters:
+      - description: Application ID
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New status
+        in: body
+        name: status
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid ID or request body
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Update the status of an application
+      tags:
+      - Applications
+  /applications/{id}/text:
+    put:
+      consumes:
+      - application/json
+      description: Updates the text of an existing support application by ID.
+      parameters:
+      - description: Application ID
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: New text
+        in: body
+        name: text
+        required: true
+        schema:
+          $ref: '#/definitions/handler.updateTextRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid ID or request body
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Update the text of an application
+      tags:
+      - Applications
   /auth/isloggedin:
     get:
       description: Возвращает ID пользователя, если сессия валидна
@@ -348,11 +629,13 @@ paths:
       parameters:
       - default: 20
         description: Количество чатов для возврата
+        format: int32
         in: query
         name: limit
         type: integer
       - default: 0
         description: Номер страницы для пагинации
+        format: int32
         in: query
         name: page
         type: integer
@@ -376,39 +659,102 @@ paths:
       summary: Получить список чатов пользователя
       tags:
       - chats
-  /chats/{chatID}/message:
-    post:
+  /chats/{id}/last-read:
+    put:
       consumes:
       - application/json
-      description: Создает новое сообщение в указанном чате
+      description: Обновляет значение lastReadMessageID для текущего (аутентифицированного)
+        пользователя в указанном чате.
       parameters:
       - description: ID чата
+        format: int32
         in: path
-        name: chatID
+        name: id
         required: true
         type: integer
-      - description: Тело сообщения
+      - description: Новый ID последнего прочитанного сообщения
         in: body
-        name: message
+        name: body
         required: true
         schema:
-          $ref: '#/definitions/domain.Message'
+          $ref: '#/definitions/handler.UpdateLastReadRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Информация об успешном обновлении или отсутствии изменений
           schema:
-            $ref: '#/definitions/handler.MessageIDResponse'
+            $ref: '#/definitions/handler.JSONResponse'
         "400":
-          description: Bad Request
+          description: Некорректные параметры запроса
           schema:
             $ref: '#/definitions/handler.JSONResponse'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handler.JSONResponse'
-      summary: Создать сообщение
+      summary: Обновить последнее прочитанное сообщение
+      tags:
+      - chats
+  /chats/{id}/message:
+    post:
+      consumes:
+      - multipart/form-data
+      description: 'Создает новое сообщение в указанном чате. Можно отправить:'
+      parameters:
+      - description: ID чата
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Текст сообщения (обязателен, если нет вложений и стикера)
+        in: formData
+        name: text
+        type: string
+      - collectionFormat: multi
+        description: Вложения к сообщению
+        in: formData
+        items:
+          type: file
+        name: attachments
+        type: array
+      - description: ID стикера (если отправляется стикер, то нельзя отправлять текст
+          и вложения)
+        format: int32
+        in: formData
+        name: sticker_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщение успешно создано
+          schema:
+            $ref: '#/definitions/handler.MessageIDResponse'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Доступ запрещен (не участник чата)
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Чат или стикер не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Создать сообщение (текст, файлы или стикер)
       tags:
       - messages
   /chats/{id}/messages:
@@ -417,17 +763,20 @@ paths:
         об авторах
       parameters:
       - description: ID чата
+        format: int32
         in: path
         name: id
         required: true
         type: integer
       - default: 20
         description: Лимит количества сообщений
+        format: int32
         in: query
         name: limit
         type: integer
       - default: 0
         description: страница для пагинации
+        format: int32
         in: query
         name: page
         type: integer
@@ -461,6 +810,7 @@ paths:
         создавая чат при отсутствии
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         name: id
         required: true
@@ -483,18 +833,760 @@ paths:
       summary: Получить или создать чат с пользователем
       tags:
       - chats
+  /comments:
+    post:
+      consumes:
+      - application/json
+      description: Создает новый комментарий к посту
+      parameters:
+      - description: Данные для создания комментария
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CommentCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Комментарий успешно создан
+          schema:
+            $ref: '#/definitions/domain.CommentView'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пост не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Создать комментарий
+      tags:
+      - comments
+  /comments/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Удаляет комментарий (только автор)
+      parameters:
+      - description: ID комментария
+        format: int32
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Комментарий успешно удален
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID комментария
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Доступ запрещен (не автор комментария)
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Комментарий не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить комментарий
+      tags:
+      - comments
+    get:
+      consumes:
+      - application/json
+      description: Возвращает информацию о комментарии по его идентификатору
+      parameters:
+      - description: ID комментария
+        format: int32
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Комментарий найден
+          schema:
+            $ref: '#/definitions/domain.CommentView'
+        "400":
+          description: Неверный ID комментария
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Комментарий не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить комментарий по ID
+      tags:
+      - comments
+    put:
+      consumes:
+      - application/json
+      description: Обновляет существующий комментарий (только автор)
+      parameters:
+      - description: ID комментария
+        format: int32
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      - description: Новые данные комментария
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/domain.CommentUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Комментарий успешно обновлен
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Доступ запрещен (не автор комментария)
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Комментарий не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Обновить комментарий
+      tags:
+      - comments
+  /communities:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Создает новое сообщество с возможностью загрузки аватара и обложки
+      parameters:
+      - description: Название сообщества (3-48 символов)
+        in: formData
+        name: name
+        required: true
+        type: string
+      - description: Описание сообщества (до 512 символов)
+        in: formData
+        name: description
+        type: string
+      - description: Аватар сообщества
+        in: formData
+        name: avatar
+        type: file
+      - description: Обложка сообщества
+        in: formData
+        name: cover
+        type: file
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Сообщество успешно создано
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Неверные данные запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Создать сообщество
+      tags:
+      - communities
+  /communities/{id}:
+    delete:
+      description: Удаляет сообщество (только создатель)
+      parameters:
+      - description: ID сообщества
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщество успешно удалено
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID сообщества
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Доступ запрещен (не создатель)
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Сообщество не найдено
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Удалить сообщество
+      tags:
+      - communities
+    get:
+      description: Возвращает информацию о сообществе включая количество подписчиков,
+        статус подписки текущего пользователя, создателя
+      parameters:
+      - description: ID сообщества
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о сообществе
+          schema:
+            $ref: '#/definitions/domain.CommunityForView'
+        "400":
+          description: Неверный ID сообщества
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Сообщество не найдено
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить информацию о сообществе
+      tags:
+      - communities
+    put:
+      consumes:
+      - multipart/form-data
+      description: Обновляет информацию о сообществе (только создатель)
+      parameters:
+      - description: ID сообщества
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Название сообщества (3-48 символов)
+        in: formData
+        name: name
+        type: string
+      - description: Описание сообщества (до 512 символов)
+        in: formData
+        name: description
+        type: string
+      - description: Новый аватар сообщества
+        in: formData
+        name: avatar
+        type: file
+      - description: Новая обложка сообщества
+        in: formData
+        name: cover
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Сообщество успешно обновлено
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверные данные запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "403":
+          description: Доступ запрещен (не создатель)
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Сообщество не найдено
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Обновить сообщество
+      tags:
+      - communities
+  /communities/{id}/subscribe:
+    post:
+      description: Подписывает текущего пользователя на указанное сообщество
+      parameters:
+      - description: ID сообщества
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная подписка
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID сообщества
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Сообщество не найдено
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Подписаться на сообщество
+      tags:
+      - communities
+  /communities/{id}/subscribers:
+    get:
+      description: Возвращает список подписчиков указанного сообщества
+      parameters:
+      - description: ID сообщества
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: Номер страницы
+        format: int32
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество подписчиков на странице
+        format: int32
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список подписчиков
+          schema:
+            items:
+              $ref: '#/definitions/domain.CommunitySubscriber'
+            type: array
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Сообщество не найдено
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить подписчиков сообщества
+      tags:
+      - communities
+  /communities/{id}/unsubscribe:
+    post:
+      description: Отписывает текущего пользователя от указанного сообщества
+      parameters:
+      - description: ID сообщества
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешная отписка
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Неверный ID сообщества
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Подписка не найдена
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Отписаться от сообщества
+      tags:
+      - communities
+  /communities/created:
+    get:
+      description: Возвращает список сообществ, созданных текущим пользователем (только
+        ID, название и аватар)
+      parameters:
+      - default: 1
+        description: Номер страницы
+        format: int32
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество сообществ на странице
+        format: int32
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список созданных сообществ
+          schema:
+            items:
+              $ref: '#/definitions/domain.CommunityForMyCommunity'
+            type: array
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "401":
+          description: Пользователь не авторизован
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить созданные сообщества
+      tags:
+      - communities
+  /communities/my:
+    get:
+      description: Возвращает список сообществ, на которые подписан пользователь
+      parameters:
+      - default: 1
+        description: Номер страницы
+        format: int32
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество сообществ на странице
+        format: int32
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список сообществ пользователя
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortCommunity'
+            type: array
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить сообщества пользователя
+      tags:
+      - communities
+  /communities/other:
+    get:
+      description: Возвращает список сообществ, на которые пользователь не подписан
+        (рекомендации)
+      parameters:
+      - default: 1
+        description: Номер страницы
+        format: int32
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество сообществ на странице
+        format: int32
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список рекомендуемых сообществ
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortCommunity'
+            type: array
+        "400":
+          description: Неверные параметры пагинации
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить другие сообщества
+      tags:
+      - communities
+  /communities/search:
+    get:
+      description: Возвращает список сообществ, имя которых соответствует поисковому
+        запросу.
+      parameters:
+      - description: Полное или частичное имя сообщества
+        in: query
+        name: name
+        required: true
+        type: string
+      - default: recommended
+        description: 'Тип подписки: subscriber, notSubscriber'
+        enum:
+        - subscriber
+        - recommended
+        in: query
+        name: type
+        type: string
+      - default: 20
+        description: Лимит количества сообществ
+        format: int32
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: Номер страницы для пагинации
+        format: int32
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Найденные сообщества
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortCommunity'
+            type: array
+        "400":
+          description: Missing name query parameter
+          schema:
+            type: string
+        "500":
+          description: Server error
+          schema:
+            type: string
+      summary: Поиск сообществ по имени
+      tags:
+      - communities
+  /communities/users/{id}:
+    get:
+      description: Возвращает список сообществ, на которые подписан указанный пользователь
+      parameters:
+      - description: ID пользователя
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: Номер страницы
+        format: int32
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество сообществ на странице
+        format: int32
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список сообществ пользователя
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortCommunity'
+            type: array
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить сообщества пользователя по ID
+      tags:
+      - communities
+  /communities/users/{userID}/subscribed-ids:
+    get:
+      description: Возвращает список ID сообществ, на которые подписан указанный пользователь
+      parameters:
+      - description: ID пользователя
+        format: int32
+        in: path
+        name: userID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список ID подписанных сообществ
+          schema:
+            items:
+              format: int32
+              type: integer
+            type: array
+        "400":
+          description: Неверный ID пользователя
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пользователь не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Получить ID подписанных сообществ пользователя
+      tags:
+      - communities
   /friends:
     get:
       description: Возвращает список друзей пользователя с пагинацией
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество друзей на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -529,6 +1621,7 @@ paths:
       description: Удаляет пользователя из списка друзей
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -564,6 +1657,7 @@ paths:
       description: Отправляет запрос на дружбу другому пользователю
       parameters:
       - description: ID пользователя, которому отправляется запрос
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -604,6 +1698,7 @@ paths:
       description: Принимает входящий запрос на дружбу
       parameters:
       - description: ID пользователя (отправителя запроса)
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -639,28 +1734,19 @@ paths:
         отношений
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         minimum: 1
         name: id
         required: true
         type: integer
-      - default: accepted
-        description: 'Тип подсчета: accepted, pending, sent, blocked'
-        enum:
-        - accepted
-        - pending
-        - sent
-        - blocked
-        in: query
-        name: type
-        type: string
       produces:
       - application/json
       responses:
         "200":
           description: Успешный ответ с количеством отношений
           schema:
-            $ref: '#/definitions/domain.FriendsCountResponse'
+            $ref: '#/definitions/domain.UserRelationsCounts'
         "400":
           description: Неверный ID пользователя или тип подсчета
           schema:
@@ -685,6 +1771,7 @@ paths:
       description: Отклоняет входящий запрос на дружбу
       parameters:
       - description: ID пользователя (отправителя запроса)
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -719,6 +1806,7 @@ paths:
       description: Возвращает текущий статус дружбы с указанным пользователем
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -750,12 +1838,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество запросов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -768,7 +1858,7 @@ paths:
           description: Успешный ответ со списком запросов
           schema:
             items:
-              $ref: '#/definitions/domain.FriendshipWithProfile'
+              $ref: '#/definitions/domain.ShortProfile'
             type: array
         "400":
           description: Неверные параметры пагинации
@@ -783,18 +1873,73 @@ paths:
       summary: Получить входящие запросы в друзья
       tags:
       - friends
+  /friends/search:
+    get:
+      description: Возвращает список профилей, имя которых соответствует поисковому
+        запросу.
+      parameters:
+      - description: Полное или частичное имя пользователя
+        in: query
+        name: full_name
+        required: true
+        type: string
+      - default: notFriends
+        description: 'Тип дружбы: accepted, pending, sent, blocked, notFriends'
+        enum:
+        - accepted
+        - pending
+        - sent
+        - blocked
+        - notFriends
+        in: query
+        name: type
+        type: string
+      - default: 20
+        description: Лимит количества профилей
+        format: int32
+        in: query
+        name: limit
+        type: integer
+      - default: 1
+        description: страница для пагинации
+        format: int32
+        in: query
+        name: page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "198":
+          description: Найденные профили
+          schema:
+            items:
+              $ref: '#/definitions/domain.ShortProfile'
+            type: array
+        "398":
+          description: Missing full_name query parameter
+          schema:
+            type: string
+        "498":
+          description: Server error
+          schema:
+            type: string
+      summary: Поиск профилей по имени
+      tags:
+      - friends
   /friends/sent:
     get:
       description: Возвращает список отправленных запросов на дружбу с пагинацией
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество запросов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -807,7 +1952,7 @@ paths:
           description: Успешный ответ со списком отправленных запросов
           schema:
             items:
-              $ref: '#/definitions/domain.FriendshipWithProfile'
+              $ref: '#/definitions/domain.ShortProfile'
             type: array
         "400":
           description: Неверные параметры пагинации
@@ -829,12 +1974,14 @@ paths:
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество пользователей на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -866,16 +2013,19 @@ paths:
     get:
       consumes:
       - application/json
-      description: Возвращает список постов с поддержкой пагинации
+      description: Возвращает список постов с поддержкой пагинации (включая посты
+        из сообществ)
       parameters:
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество постов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -887,7 +2037,9 @@ paths:
         "200":
           description: Успешный ответ с постами
           schema:
-            $ref: '#/definitions/handler.PostsResponse'
+            items:
+              $ref: '#/definitions/domain.PostView'
+            type: array
         "400":
           description: Неверные параметры запроса
           schema:
@@ -908,8 +2060,12 @@ paths:
       - description: Текст поста
         in: formData
         name: text
-        required: true
         type: string
+      - description: ID сообщества (если пост в сообществе)
+        format: int32
+        in: formData
+        name: communityID
+        type: integer
       - collectionFormat: multi
         description: Вложения
         in: formData
@@ -955,6 +2111,7 @@ paths:
       description: Удаляет пост (только автор)
       parameters:
       - description: ID поста
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -998,6 +2155,7 @@ paths:
       description: Возвращает пост по его идентификатору
       parameters:
       - description: ID поста
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1009,7 +2167,7 @@ paths:
         "200":
           description: Пост найден
           schema:
-            $ref: '#/definitions/domain.Post'
+            $ref: '#/definitions/domain.PostView'
         "400":
           description: Неверный ID поста
           schema:
@@ -1032,6 +2190,7 @@ paths:
         файлов
       parameters:
       - description: ID поста
+        format: int32
         in: path
         minimum: 1
         name: id
@@ -1040,7 +2199,6 @@ paths:
       - description: Текст поста
         in: formData
         name: text
-        required: true
         type: string
       - collectionFormat: multi
         description: Новые вложения
@@ -1088,6 +2246,175 @@ paths:
       summary: Обновить пост
       tags:
       - posts
+  /posts/{id}/like:
+    put:
+      consumes:
+      - application/json
+      description: Переключает лайк текущего (аутентифицированного) пользователя на
+        указанном посте.
+      parameters:
+      - description: ID поста
+        format: int32
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Информация о результате операции: лайк поставлен или снят'
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "400":
+          description: Некорректный ID поста
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Поставить или убрать лайк на посте
+      tags:
+      - posts
+  /posts/{postID}/comments:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список комментариев к указанному посту с пагинацией
+      parameters:
+      - description: ID поста
+        format: int32
+        in: path
+        minimum: 1
+        name: postID
+        required: true
+        type: integer
+      - default: 1
+        description: Номер страницы
+        format: int32
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество комментариев на странице
+        format: int32
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ с комментариями
+          schema:
+            items:
+              $ref: '#/definitions/domain.CommentView'
+            type: array
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Пост не найден
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить комментарии поста
+      tags:
+      - comments
+  /posts/{postID}/comments/count:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает общее количество комментариев к указанному посту
+      parameters:
+      - description: ID поста
+        format: int32
+        in: path
+        minimum: 1
+        name: postID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Количество комментариев
+          schema:
+            additionalProperties:
+              format: int32
+              type: integer
+            type: object
+        "400":
+          description: Неверный ID поста
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить количество комментариев поста
+      tags:
+      - comments
+  /posts/communities/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает посты конкретного сообщества с пагинацией
+      parameters:
+      - description: ID сообщества
+        format: int32
+        in: path
+        minimum: 1
+        name: id
+        required: true
+        type: integer
+      - default: 1
+        description: Номер страницы
+        format: int32
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 20
+        description: Количество постов на странице
+        format: int32
+        in: query
+        maximum: 100
+        minimum: 1
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный ответ с постами сообщества
+          schema:
+            items:
+              $ref: '#/definitions/domain.PostView'
+            type: array
+        "400":
+          description: Неверные параметры запроса
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Сообщество не найдено
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить посты сообщества
+      tags:
+      - posts
   /profile:
     put:
       consumes:
@@ -1129,6 +2456,7 @@ paths:
       description: Возвращает профиль пользователя по его ID.
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         name: id
         required: true
@@ -1154,6 +2482,27 @@ paths:
       tags:
       - profile
   /profile/avatar:
+    delete:
+      consumes:
+      - application/json
+      description: Очищает поле avatar_path в профиле текущего пользователя и возвращает
+        сообщение об успешном удалении.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Avatar deleted
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      security:
+      - BearerAuth: []
+      summary: Удалить аватар пользователя
+      tags:
+      - profile
     put:
       consumes:
       - multipart/form-data
@@ -1215,6 +2564,59 @@ paths:
       summary: Обновление header
       tags:
       - profile
+  /sticker-packs:
+    get:
+      description: Возвращает список всех доступных стикерпаков
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.StickerPack'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить список стикерпаков
+      tags:
+      - stickers
+  /sticker-packs/{packID}/stickers:
+    get:
+      description: Возвращает все стикеры из указанного стикерпака
+      parameters:
+      - description: ID стикерпака
+        format: int32
+        in: path
+        name: packID
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/domain.Sticker'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/handler.JSONResponse'
+      summary: Получить стикеры из пака
+      tags:
+      - stickers
   /users/{userID}/posts:
     get:
       consumes:
@@ -1222,6 +2624,7 @@ paths:
       description: Возвращает посты конкретного пользователя с пагинацией
       parameters:
       - description: ID пользователя
+        format: int32
         in: path
         minimum: 1
         name: userID
@@ -1229,12 +2632,14 @@ paths:
         type: integer
       - default: 1
         description: Номер страницы
+        format: int32
         in: query
         minimum: 1
         name: page
         type: integer
       - default: 20
         description: Количество постов на странице
+        format: int32
         in: query
         maximum: 100
         minimum: 1
@@ -1246,7 +2651,9 @@ paths:
         "200":
           description: Успешный ответ с постами пользователя
           schema:
-            $ref: '#/definitions/handler.PostsResponse'
+            items:
+              $ref: '#/definitions/domain.PostView'
+            type: array
         "400":
           description: Неверные параметры запроса
           schema:

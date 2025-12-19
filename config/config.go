@@ -9,13 +9,22 @@ import (
 )
 
 type Config struct {
-	Env            string
-	PostgresURL    string
-	RedisURL       string
-	Debug          bool
-	LogLevel       string
-	FrontendOrigin string
-	MigrationsPath string
+	Env                string
+	PostgresURL        string
+	RedisURL           string
+	ElasticUser        string
+	ElasticPassword    string
+	ElasticPort        string
+	ElasticIndexesPath string
+	Debug              bool
+	LogLevel           string
+	FrontendOrigin     string
+	MigrationsPath     string
+	Origin             string
+	AuthService        string
+	FriendService      string
+	ProfileService     string
+	MainService        string
 }
 
 func NewConfig() *Config {
@@ -34,24 +43,37 @@ func NewConfig() *Config {
 	postgresURL := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		dbUser, dbPassword, dbHost, dbPort, dbName, dbSSLMode,
 	)
-	log.Println(postgresURL)
 	redisHost := os.Getenv("REDIS_HOST")
 	redisPort := os.Getenv("REDIS_PORT")
 	redisPassword := os.Getenv("REDIS_PASSWORD")
 	redisDB := os.Getenv("REDIS_DB")
 	redisURL := fmt.Sprintf("redis://:%s@%s:%s/%s", redisPassword, redisHost, redisPort, redisDB)
+	origin := os.Getenv("ORIGIN")
+	elasticUser := os.Getenv("ELASTIC_USER")
+	elasticPassword := os.Getenv("ELASTIC_PASSWORD")
+	elasticPort := os.Getenv("ELASTIC_PORT")
+	elasticIndexesPath := os.Getenv("ELASTIC_INDEXES_PATH")
 
 	migrationsPath := os.Getenv("MIGRATIONS_PATH")
 	migrationsPath = fmt.Sprintf("file://%s", migrationsPath)
 
 	config := &Config{
-		Env:            os.Getenv("APP_ENV"),
-		PostgresURL:    postgresURL,
-		RedisURL:       redisURL,
-		Debug:          os.Getenv("APP_ENV") != "prod",
-		LogLevel:       os.Getenv("LOG_LEVEL"),
-		FrontendOrigin: os.Getenv("FRONTEND_ORIGIN"),
-		MigrationsPath: migrationsPath,
+		Env:                os.Getenv("APP_ENV"),
+		PostgresURL:        postgresURL,
+		RedisURL:           redisURL,
+		ElasticUser:        elasticUser,
+		ElasticPassword:    elasticPassword,
+		ElasticPort:        elasticPort,
+		ElasticIndexesPath: elasticIndexesPath,
+		Debug:              os.Getenv("APP_ENV") != "prod",
+		LogLevel:           os.Getenv("LOG_LEVEL"),
+		FrontendOrigin:     os.Getenv("FRONTEND_ORIGIN"),
+		MigrationsPath:     migrationsPath,
+		Origin:             origin,
+		ProfileService:     "profile:" + "50050",
+		AuthService:        "auth:" + "50050",
+		FriendService:      "friend:" + "50050",
+		MainService:        "main:" + "50050",
 	}
 	return config
 }

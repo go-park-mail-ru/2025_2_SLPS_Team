@@ -15,21 +15,21 @@ import (
 type Client struct {
 	conn   *websocket.Conn
 	send   chan []byte
-	userID int
+	userID int32
 }
 
 type Hub struct {
-	clients map[int]*Client
+	clients map[int32]*Client
 	mu      sync.RWMutex
 }
 
 func NewHub() domain.WSHub {
 	return &Hub{
-		clients: make(map[int]*Client),
+		clients: make(map[int32]*Client),
 	}
 }
 
-func (h *Hub) AddClient(ctx context.Context, userID int, conn *websocket.Conn) {
+func (h *Hub) AddClient(ctx context.Context, userID int32, conn *websocket.Conn) {
 	client := &Client{
 		conn:   conn,
 		send:   make(chan []byte, 256),
@@ -43,16 +43,16 @@ func (h *Hub) AddClient(ctx context.Context, userID int, conn *websocket.Conn) {
 	go h.writePump(ctx, client)
 	go h.readPump(ctx, client)
 
-	domain.FromContext(ctx).Info("WS client added", zap.Int("userID", userID))
+	domain.FromContext(ctx).Info("WS client added", zap.Int32("userID", userID))
 }
 
-func (h *Hub) RemoveClient(ctx context.Context, userID int) {
+func (h *Hub) RemoveClient(ctx context.Context, userID int32) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
 	client, ok := h.clients[userID]
 	if !ok {
-		domain.FromContext(ctx).Warn("Client does not exist", zap.Int("userID", userID))
+		domain.FromContext(ctx).Warn("Client does not exist", zap.Int32("userID", userID))
 		return
 	}
 
@@ -60,27 +60,27 @@ func (h *Hub) RemoveClient(ctx context.Context, userID int) {
 	close(client.send)
 	delete(h.clients, userID)
 
-	domain.FromContext(ctx).Info("WS client removed successfully", zap.Int("userID", userID))
+	domain.FromContext(ctx).Info("WS client removed successfully", zap.Int32("userID", userID))
 }
 
-func (h *Hub) SendToUser(ctx context.Context, userID int, message []byte) {
+func (h *Hub) SendToUser(ctx context.Context, userID int32, message []byte) {
 	h.mu.RLock()
 	client, ok := h.clients[userID]
 	h.mu.RUnlock()
 	if !ok {
-		domain.FromContext(ctx).Warn("WS client does not exist", zap.Int("userID", userID))
+		domain.FromContext(ctx).Warn("WS client does not exist", zap.Int32("userID", userID))
 		return
 	}
 
 	select {
 	case client.send <- message:
-		domain.FromContext(ctx).Debug("WS message sent", zap.Int("userID", userID))
+		domain.FromContext(ctx).Debug("WS message sent", zap.Int32("userID", userID))
 	default:
-		domain.FromContext(ctx).Warn("WS send channel full — dropping message", zap.Int("userID", userID))
+		domain.FromContext(ctx).Warn("WS send channel full — dropping message", zap.Int32("userID", userID))
 	}
 }
 
-func (h *Hub) SendJSON(ctx context.Context, userID int, eventType string, data interface{}) error {
+func (h *Hub) SendJSON(ctx context.Context, userID int32, eventType string, data interface{}) error {
 	payload, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -88,7 +88,7 @@ func (h *Hub) SendJSON(ctx context.Context, userID int, eventType string, data i
 
 	envelope := Envelope{
 		Type: eventType,
-		Data: payload,
+		Data: json.RawMessage(payload),
 	}
 
 	message, err := json.Marshal(envelope)
@@ -117,7 +117,7 @@ func (hub *Hub) writePump(ctx context.Context, c *Client) {
 	defer func() {
 		ticker.Stop()
 		hub.RemoveClient(ctx, c.userID)
-		domain.FromContext(ctx).Info("WS connection closed", zap.Int("userID", c.userID))
+		domain.FromContext(ctx).Info("WS connection closed", zap.Int32("userID", c.userID))
 	}()
 
 	for {
@@ -152,7 +152,7 @@ func (hub *Hub) readPump(ctx context.Context, c *Client) {
 	defer func() {
 		hub.RemoveClient(ctx, c.userID)
 		_ = c.conn.Close()
-		domain.FromContext(ctx).Info("WS readPump closed", zap.Int("userID", c.userID))
+		domain.FromContext(ctx).Info("WS readPump closed", zap.Int32("userID", c.userID))
 	}()
 
 	_ = c.conn.SetReadDeadline(time.Now().Add(pongWait))

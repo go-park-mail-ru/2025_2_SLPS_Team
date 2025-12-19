@@ -1,0 +1,85 @@
+syntax = "proto3";
+//    protoc --go_out=. --go-grpc_out=. shared/pb/auth.proto
+package auth;
+option go_package = "/shared/pb;pb";
+import "google/protobuf/timestamp.proto";
+import "google/protobuf/empty.proto";
+
+// ----------------------------
+// Messages
+// ----------------------------
+
+message RegisterRequest {
+  string first_name = 1;
+  string last_name = 2;
+  string email = 3;
+  string password = 4;
+  string confirm_password = 5;
+  google.protobuf.Timestamp dob = 6;
+  string gender = 7;
+}
+
+message User {
+  int32 id = 1;
+  string email = 2;
+  string password = 3;
+  string role = 4;
+}
+
+message Session {
+  int32 user_id = 1;
+  string csrf_token = 2;
+}
+
+message SIDAndCSRFToken {
+  string csrf_token = 1;
+  string sid = 2;
+}
+
+// Для Login: возвращаем только userID
+message LoginRequest {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResponse {
+  int32 user_id = 1;
+}
+
+// Для IsLoggedIn: передаем session cookie как строку
+message SessionCookieRequest {
+  string session_cookie = 1;
+}
+
+message SessionResponse {
+  int32 user_id = 1;
+  string csrf_token = 2;
+}
+
+// Для GetUserRole
+message UserIDRequest {
+  int32 user_id = 1;
+}
+
+message UserRoleResponse {
+  string role = 1;
+}
+
+// Для IsUserExists
+message UserExistsResponse {
+  bool exists = 1;
+}
+
+// ----------------------------
+// Service
+// ----------------------------
+
+service AuthService {
+  rpc Register(RegisterRequest) returns (LoginResponse);
+  rpc Login(LoginRequest) returns (LoginResponse);
+  rpc Logout(SessionCookieRequest) returns (google.protobuf.Empty);
+  rpc IsLoggedIn(SessionCookieRequest) returns (SessionResponse);
+  rpc AddSession(UserIDRequest) returns (SIDAndCSRFToken);
+  rpc GetUserRole(UserIDRequest) returns (UserRoleResponse);
+  rpc IsUserExists(UserIDRequest) returns (UserExistsResponse);
+}

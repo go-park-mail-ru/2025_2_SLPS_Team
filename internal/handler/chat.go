@@ -1,14 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
+	"log"
 	"net/http"
 	"project/domain"
-	"strconv"
-
-	"github.com/gorilla/mux"
-	"github.com/gorilla/schema"
-	"go.uber.org/zap"
 )
 
 type ChatHandler struct {
@@ -21,44 +16,33 @@ func NewChatHandler(chatService domain.ChatService) *ChatHandler {
 	}
 }
 
-type ChatIDResponse struct {
-	ChatID int `json:"chatID"`
-}
-
 // GetOrCreateChatWithUser получает или создает чат с указанным пользователем
 // @Summary Получить или создать чат с пользователем
 // @Description Возвращает ID чата между текущим пользователем и указанным userID, создавая чат при отсутствии
 // @Tags chats
 // @Accept json
 // @Produce json
-// @Param id path int true "ID пользователя"
+// @Param id path int32 true "ID пользователя"
 // @Success 200 {object} ChatIDResponse
 // @Failure 400 {object} JSONResponse
 // @Failure 500 {object} JSONResponse
 // @Router /chats/user/{id} [get]
 func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["id"]
-	userID, err := strconv.Atoi(userIDStr)
-	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse user ID", zap.Error(err))
-		return
-	}
-	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int)
-
-	chatID, err := api.chatService.GetOrCreateChatWithUser(r.Context(), selfUserID, userID)
+	userID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	if err := json.NewEncoder(w).Encode(ChatIDResponse{ChatID: chatID}); err != nil {
-		domain.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", domain.StructName(ChatIDResponse{})))
+	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	chatID, err := api.chatService.GetOrCreateChatWithUser(r.Context(), selfUserID, int32(userID))
+	if err != nil {
+		sendJSONError(w, err)
+		return
 	}
 
-	domain.FromContext(r.Context()).Info("Chat created or retrieved", zap.Int("chatID", chatID), zap.Int("chatWithUserID", userID))
+	sendJSONData(r.Context(), w, domain.ChatIDResponse{ChatID: chatID})
 }
 
 // GetMessagesByChatId возвращает список сообщений и краткие профили авторов в чате
@@ -66,90 +50,98 @@ func (api *ChatHandler) GetOrCreateChatWithUser(w http.ResponseWriter, r *http.R
 // @Description Возвращает сообщения из чата с пагинацией и краткую информацию об авторах
 // @Tags messages
 // @Produce json
-// @Param id path int true "ID чата"
-// @Param limit query int false "Лимит количества сообщений" default(20)
-// @Param page query int false "страница для пагинации" default(0)
+// @Param id path int32 true "ID чата"
+// @Param limit query int32 false "Лимит количества сообщений" default(20)
+// @Param page query int32 false "страница для пагинации" default(0)
 // @Success 200 {object} domain.MessagesWithAuthors
 // @Failure 400 {object} JSONResponse
 // @Failure 403 {object} JSONResponse
 // @Failure 500 {object} JSONResponse
 // @Router /chats/{id}/messages [get]
 func (api *ChatHandler) GetMessagesByChatId(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	chatIDStr := vars["id"]
-	chatID, err := strconv.Atoi(chatIDStr)
-	if err != nil {
-		sendJSONResponse(w, "Invalid chat ID", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse chat ID", zap.Error(err))
-		return
-	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
-		return
-	}
-
-	messagesWithAuthors, err := api.chatService.GetMessagesByChatId(r.Context(), qParams, userID, chatID)
+	chatID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
-	}
-
-	if err := json.NewEncoder(w).Encode(messagesWithAuthors); err != nil {
-		domain.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", domain.StructName(messagesWithAuthors)))
 		return
 	}
 
-	domain.FromContext(r.Context()).Info("Messages retrieved successfully", zap.Int("chatID", chatID), zap.Int("limit", qParams.Limit), zap.Int("page", qParams.Page))
-}
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-type MessageIDResponse struct {
-	MessageID int `json:"messageID"`
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	messagesWithAuthors, err := api.chatService.GetMessagesByChatId(r.Context(), qParams, userID, int32(chatID))
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONData(r.Context(), w, messagesWithAuthors)
 }
 
 // CreateMessage создает новое сообщение в чате
-// @Summary Создать сообщение
-// @Description Создает новое сообщение в указанном чате
+// @Summary Создать сообщение (текст, файлы или стикер)
+// @Description Создает новое сообщение в указанном чате. Можно отправить:
+// 1. Текст (можно с вложениями)
+// 2. Только вложения (без текста)
+// 3. Только стикер (без текста и вложений)
+// НЕЛЬЗЯ: текст со стикером или вложения со стикером
 // @Tags messages
-// @Accept json
+// @Accept multipart/form-data
 // @Produce json
-// @Param chatID path int true "ID чата"
-// @Param message body domain.Message true "Тело сообщения"
-// @Success 200 {object} MessageIDResponse
-// @Failure 400 {object} JSONResponse
-// @Failure 500 {object} JSONResponse
-// @Router /chats/{chatID}/message [post]
+// @Param id path int32 true "ID чата"
+// @Param text formData string false "Текст сообщения (обязателен, если нет вложений и стикера)"
+// @Param attachments formData []file false "Вложения к сообщению" collectionFormat(multi)
+// @Param sticker_id formData int32 false "ID стикера (если отправляется стикер, то нельзя отправлять текст и вложения)"
+// @Success 200 {object} MessageIDResponse "Сообщение успешно создано"
+// @Failure 400 {object} JSONResponse "Неверные данные запроса"
+// @Failure 401 {object} JSONResponse "Пользователь не авторизован"
+// @Failure 403 {object} JSONResponse "Доступ запрещен (не участник чата)"
+// @Failure 404 {object} JSONResponse "Чат или стикер не найден"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Security ApiKeyAuth
+// @Router /chats/{id}/message [post]
 func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	chatIDStr := vars["id"]
-	chatID, err := strconv.Atoi(chatIDStr)
-	if err != nil {
-		http.Error(w, "invalid chatID", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse chatID", zap.Error(err))
-		return
-	}
-
-	var message domain.Message
-	if err := json.NewDecoder(r.Body).Decode(&message); err != nil {
-		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(message)))
-		return
-	}
-
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-
-	messageID, err := api.chatService.CreateMessage(r.Context(), userID, chatID, message)
+	chatID, err := PathInt32(r, "id")
 	if err != nil {
 		sendJSONError(w, err)
+		return
 	}
 
-	err = sendJSONData(r.Context(), w, MessageIDResponse{MessageID: messageID})
-	if err == nil {
-		domain.FromContext(r.Context()).Info("Message created successfully", zap.Int("messageID", messageID), zap.Int("chatID", chatID))
+	err = ParseMultipart(r)
+	if err != nil {
+		sendJSONError(w, err)
+		return
 	}
+
+	text := r.FormValue("text")
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	stickerID, err := parseIntParam(r, "sticker_id")
+	if err != nil {
+		log.Println(3)
+		sendJSONError(w, err)
+		return
+	}
+
+	attachmentFiles, err := domain.MultipartFiles(r, "attachments")
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	// Создаем сообщение
+	messageID, err := api.chatService.CreateMessage(r.Context(), userID, int32(chatID), text, attachmentFiles, stickerID)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONData(r.Context(), w, domain.MessageIDResponse{MessageID: messageID})
 }
 
 // GetUserChats получает список чатов для текущего пользователя,
@@ -162,29 +154,64 @@ func (api *ChatHandler) CreateMessage(w http.ResponseWriter, r *http.Request) {
 // @Tags chats
 // @Accept json
 // @Produce json
-// @Param limit query int false "Количество чатов для возврата" default(20)
-// @Param page query int false "Номер страницы для пагинации" default(0)
+// @Param limit query int32 false "Количество чатов для возврата" default(20)
+// @Param page query int32 false "Номер страницы для пагинации" default(0)
 // @Success 200 {array} domain.FullChat "Список чатов"
 // @Failure 400 {object} JSONResponse "Некорректные параметры запроса"
 // @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
 // @Router /chats [get]
 func (api *ChatHandler) GetUserChats(w http.ResponseWriter, r *http.Request) {
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-
-	var qParams domain.PaginateQueryParams
-	if err := schema.NewDecoder().Decode(&qParams, r.URL.Query()); err != nil {
-		sendJSONResponse(w, domain.InvalidParams, http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(qParams)))
+	qParams, err := DecodeQueryParams[domain.PaginateQueryParams](r)
+	if err != nil {
+		sendJSONError(w, err)
 		return
 	}
+
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
 	chats, err := api.chatService.GetUserChats(r.Context(), userID, qParams)
 	if err != nil {
 		sendJSONError(w, err)
+		return
 	}
 
-	err = sendJSONData(r.Context(), w, chats)
-	if err == nil {
-		domain.FromContext(r.Context()).Info("Chats retrieved successfully", zap.Int("limit", qParams.Limit), zap.Int("page", qParams.Page))
+	sendJSONData(r.Context(), w, domain.FullChats(chats))
+}
+
+// UpdateLastReadMessage обновляет ID последнего прочитанного сообщения пользователя в чате.
+//
+// @Summary Обновить последнее прочитанное сообщение
+// @Description Обновляет значение lastReadMessageID для текущего (аутентифицированного) пользователя в указанном чате.
+// Обновление произойдёт только если новое значение больше текущего, чтобы предотвратить откат счётчика непрочитанных сообщений.
+// @Tags chats
+// @Accept json
+// @Produce json
+// @Param id path int32 true "ID чата"
+// @Param body body UpdateLastReadRequest true "Новый ID последнего прочитанного сообщения"
+// @Success 200 {object} JSONResponse "Информация об успешном обновлении или отсутствии изменений"
+// @Failure 400 {object} JSONResponse "Некорректные параметры запроса"
+// @Failure 500 {object} JSONResponse "Внутренняя ошибка сервера"
+// @Router /chats/{id}/last-read [put]
+func (api *ChatHandler) UpdateLastReadMessage(w http.ResponseWriter, r *http.Request) {
+	chatID, err := PathInt32(r, "id")
+	if err != nil {
+		sendJSONError(w, err)
+		return
 	}
+	req, err := DecodeJSONBody[domain.UpdateLastReadRequest](r)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	log.Println(req.LastReadMessageID)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	err = api.chatService.UpdateLastReadMessage(r.Context(), userID, chatID, req.LastReadMessageID)
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONSuccess(w, r, "Last read message updated")
 }

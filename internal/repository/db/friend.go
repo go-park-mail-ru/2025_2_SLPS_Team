@@ -20,7 +20,7 @@ func NewDBFriendStore(db *sql.DB) domain.FriendStore {
 }
 
 // ensureUserOrder гарантирует правильный порядок пользователей
-func ensureUserOrder(userID1, userID2 int) (int, int) {
+func ensureUserOrder(userID1, userID2 int32) (int32, int32) {
 	if userID1 < userID2 {
 		return userID1, userID2
 	}
@@ -28,13 +28,13 @@ func ensureUserOrder(userID1, userID2 int) (int, int) {
 }
 
 // CreateFriendship создает запрос в друзья
-func (store *DBFriendStore) CreateFriendship(ctx context.Context, actionUserID, targetUserID int) error {
+func (store *DBFriendStore) CreateFriendship(ctx context.Context, actionUserID, targetUserID int32) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start CreateFriendship",
-		zap.Int("actionUserID", actionUserID),
-		zap.Int("targetUserID", targetUserID))
+		zap.Int32("actionUserID", actionUserID),
+		zap.Int32("targetUserID", targetUserID))
 
 	defer func() {
 		duration := time.Since(start)
@@ -62,11 +62,11 @@ func (store *DBFriendStore) CreateFriendship(ctx context.Context, actionUserID, 
 }
 
 // GetFriendship получает информацию о дружбе
-func (store *DBFriendStore) GetFriendship(ctx context.Context, userID1, userID2 int) (*domain.Friendship, error) {
+func (store *DBFriendStore) GetFriendship(ctx context.Context, userID1, userID2 int32) (*domain.Friendship, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetFriendship", zap.Int("userID1", userID1), zap.Int("userID2", userID2))
+	dbloggerCopy.Info("DB start GetFriendship", zap.Int32("userID1", userID1), zap.Int32("userID2", userID2))
 
 	defer func() {
 		duration := time.Since(start)
@@ -107,13 +107,13 @@ func (store *DBFriendStore) GetFriendship(ctx context.Context, userID1, userID2 
 }
 
 // UpdateFriendshipStatus обновляет статус дружбы. ТEБЕ кинули pending. Ты можешь accepted, rejected, blocked и ТЫ actionUserID
-func (store *DBFriendStore) UpdateFriendshipStatus(ctx context.Context, actionUserID, targetUserID int, status domain.FriendshipStatus) error {
+func (store *DBFriendStore) UpdateFriendshipStatus(ctx context.Context, actionUserID, targetUserID int32, status domain.FriendshipStatus) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start UpdateFriendshipStatus",
-		zap.Int("actionUserID", actionUserID),
-		zap.Int("targetUserID", targetUserID),
+		zap.Int32("actionUserID", actionUserID),
+		zap.Int32("targetUserID", targetUserID),
 		zap.String("status", string(status)))
 
 	defer func() {
@@ -151,11 +151,11 @@ func (store *DBFriendStore) UpdateFriendshipStatus(ctx context.Context, actionUs
 }
 
 // GetUserFriends получает список друзей пользователя с профилями (с пагинацией)
-func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, limit, offset int) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int32, limit, offset int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start GetUserFriends", zap.Int("userID", userID), zap.Int("offset", offset), zap.Int("limit", limit))
+	dbloggerCopy.Info("DB start GetUserFriends", zap.Int32("userID", userID), zap.Int32("offset", offset), zap.Int32("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
@@ -164,19 +164,15 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, limi
 
 	// Запрос для получения друзей с пагинацией
 	query := `
-		SELECT p.user_id, p.first_name || ' '||p.last_name, p.avatar_path
-		FROM profiles p
-		WHERE p.user_id IN (
-			SELECT CASE 
-				WHEN fr.first_user_id = $1 THEN fr.second_user_id 
-				ELSE fr.first_user_id
-			END as friend_id
-			FROM friend_relationships fr
-			WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
-			AND fr.status = 'accepted'
-		)
-		ORDER BY p.first_name, p.last_name
-		LIMIT $2 OFFSET $3
+SELECT CASE 
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS friend_id
+FROM friend_relationships fr
+WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
+  AND fr.status = 'accepted'
+ORDER BY friend_id
+LIMIT $2 OFFSET $3;
 	`
 
 	dblogger = dblogger.With(zap.String("query", query))
@@ -187,19 +183,17 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, limi
 	}
 	defer rows.Close()
 
-	friends := []domain.ShortProfile{}
+	var friendIDs []int32
 	for rows.Next() {
-		var friend domain.ShortProfile
+		var friendID int32
 		err := rows.Scan(
-			&friend.UserID,
-			&friend.FullName,
-			&friend.AvatarPath,
+			&friendID,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan friend profile", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
-		friends = append(friends, friend)
+		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -208,54 +202,53 @@ func (store *DBFriendStore) GetUserFriends(ctx context.Context, userID int, limi
 	}
 
 	dblogger.Info("User friends retrieved successfully",
-		zap.Int("friendsCount", len(friends)))
+		zap.Int("friendsCount", len(friendIDs)))
 
-	return friends, nil
+	return friendIDs, nil
 }
 
-func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, offset int) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetAllUsers",
-		zap.Int("userID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
-
+		zap.Int32("userID", userID),
+	)
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
+	// Исправленный запрос - убираем условие AND fr.first_user_id IS NULL
 	query := `
-        SELECT user_id, first_name || ' ' || last_name as full_name, avatar_path
-        FROM profiles
-        WHERE user_id != $1
-        ORDER BY user_id
-        LIMIT $2 OFFSET $3
-    `
+SELECT CASE 
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS friend_id
+FROM friend_relationships fr
+    WHERE (fr.first_user_id = $1 or fr.second_user_id = $1)
+ORDER BY friend_id
+	`
 
 	dblogger = dblogger.With(zap.String("query", query))
-	rows, err := store.db.QueryContext(ctx, query, userID, limit, offset)
+	rows, err := store.db.QueryContext(ctx, query, userID)
 	if err != nil {
 		dblogger.Error("Failed to query all users", zap.Error(err))
 		return nil, fmt.Errorf("failed to query all users: %w", err)
 	}
 	defer rows.Close()
 
-	users := []domain.ShortProfile{}
+	var friendIDs []int32
 	for rows.Next() {
-		var user domain.ShortProfile
+		var friendID int32
 		err := rows.Scan(
-			&user.UserID,
-			&user.FullName,
-			&user.AvatarPath,
+			&friendID,
 		)
 		if err != nil {
-			dblogger.Error("Failed to scan user profile", zap.Error(err))
-			return nil, fmt.Errorf("failed to scan user profile: %w", err)
+			dblogger.Error("Failed to scan friend profile", zap.Error(err))
+			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
-		users = append(users, user)
+		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -264,37 +257,34 @@ func (store *DBFriendStore) GetAllUsers(ctx context.Context, userID int, limit, 
 	}
 
 	dblogger.Info("All users retrieved successfully",
-		zap.Int("usersCount", len(users)))
+		zap.Int("usersCount", len(friendIDs)))
 
-	return users, nil
+	return friendIDs, nil
 }
 
-// GetFriendshipRequests получает входящие запросы в друзья с профилями (с пагинацией)
-func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID int, limit, offset int) ([]domain.ShortProfile, error) {
+// GetFriendshipRequests получает входящие запросы в друзья с профилями (с пагинацией) ВОЗРАСТ
+func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID int32, limit, offset int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetFriendshipRequests",
-		zap.Int("userID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
+		zap.Int32("userID", userID),
+		zap.Int32("offset", offset),
+		zap.Int32("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	// Упрощенный запрос - выбираем только данные профиля отправителя
 	query := `
-		SELECT 
-			p.user_id, 
-			COALESCE(p.first_name || ' ' || p.last_name, '') as full_name, 
-			COALESCE(p.avatar_path, '') as avatar_path
+SELECT CASE 
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS friend_id
 		FROM friend_relationships fr
-		JOIN profiles p ON p.user_id = fr.action_user_id
-		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) 
-		AND fr.action_user_id != $1 
-		AND fr.status = 'pending'
+		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) and
+((fr.status = 'pending' AND fr.action_user_id != $1) OR (fr.status = 'rejected' AND fr.action_user_id = $1))
 		ORDER BY fr.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -307,19 +297,17 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	}
 	defer rows.Close()
 
-	friends := []domain.ShortProfile{}
+	var friendIDs []int32
 	for rows.Next() {
-		var friend domain.ShortProfile
+		var friendID int32
 		err := rows.Scan(
-			&friend.UserID,
-			&friend.FullName,
-			&friend.AvatarPath,
+			&friendID,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan friend profile", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
-		friends = append(friends, friend)
+		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -328,20 +316,20 @@ func (store *DBFriendStore) GetFriendshipRequests(ctx context.Context, userID in
 	}
 
 	dblogger.Info("Friendship requests retrieved successfully",
-		zap.Int("requestsCount", len(friends)))
+		zap.Int("requestsCount", len(friendIDs)))
 
-	return friends, nil
+	return friendIDs, nil
 }
 
 // GetSentRequests получает отправленные запросы в друзья (с пагинацией)
-func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, limit, offset int) ([]domain.ShortProfile, error) {
+func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int32, limit, offset int32) ([]int32, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start GetSentRequests",
-		zap.Int("userID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
+		zap.Int32("userID", userID),
+		zap.Int32("offset", offset),
+		zap.Int32("limit", limit))
 
 	defer func() {
 		duration := time.Since(start)
@@ -349,16 +337,13 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, lim
 	}()
 
 	query := `
-		SELECT 
-			p.user_id, 
-			COALESCE(p.first_name || ' ' || p.last_name, '') as full_name, 
-			COALESCE(p.avatar_path, '') as avatar_path
+SELECT CASE 
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS friend_id
 		FROM friend_relationships fr
-		JOIN profiles p ON p.user_id = CASE 
-			WHEN fr.first_user_id = $1 THEN fr.second_user_id 
-			ELSE fr.first_user_id 
-		END
-		WHERE fr.action_user_id = $1 AND fr.status = 'pending'
+		WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1) and
+		((fr.status = 'pending' AND fr.action_user_id = $1) OR (fr.status = 'rejected' AND fr.action_user_id != $1))
 		ORDER BY fr.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
@@ -371,19 +356,17 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, lim
 	}
 	defer rows.Close()
 
-	friends := []domain.ShortProfile{}
+	var friendIDs []int32
 	for rows.Next() {
-		var friend domain.ShortProfile
+		var friendID int32
 		err := rows.Scan(
-			&friend.UserID,
-			&friend.FullName,
-			&friend.AvatarPath,
+			&friendID,
 		)
 		if err != nil {
 			dblogger.Error("Failed to scan friend profile", zap.Error(err))
 			return nil, fmt.Errorf("failed to scan friend profile: %w", err)
 		}
-		friends = append(friends, friend)
+		friendIDs = append(friendIDs, friendID)
 	}
 
 	if err = rows.Err(); err != nil {
@@ -392,17 +375,17 @@ func (store *DBFriendStore) GetSentRequests(ctx context.Context, userID int, lim
 	}
 
 	dblogger.Info("Sent requests retrieved successfully",
-		zap.Int("requestsCount", len(friends)))
+		zap.Int("requestsCount", len(friendIDs)))
 
-	return friends, nil
+	return friendIDs, nil
 }
 
 // DeleteFriendship удаляет запись о дружбе.
-func (store *DBFriendStore) DeleteFriendship(ctx context.Context, userID1, userID2 int) error {
+func (store *DBFriendStore) DeleteFriendship(ctx context.Context, userID1, userID2 int32) error {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start DeleteFriendship", zap.Int("userID1", userID1), zap.Int("userID2", userID2))
+	dbloggerCopy.Info("DB start DeleteFriendship", zap.Int32("userID1", userID1), zap.Int32("userID2", userID2))
 
 	defer func() {
 		duration := time.Since(start)
@@ -439,11 +422,11 @@ func (store *DBFriendStore) DeleteFriendship(ctx context.Context, userID1, userI
 }
 
 // AreFriends проверяет, являются ли пользователи друзьями
-func (store *DBFriendStore) AreFriends(ctx context.Context, userID1, userID2 int) (bool, error) {
+func (store *DBFriendStore) AreFriends(ctx context.Context, userID1, userID2 int32) (bool, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
-	dbloggerCopy.Info("DB start AreFriends", zap.Int("userID1", userID1), zap.Int("userID2", userID2))
+	dbloggerCopy.Info("DB start AreFriends", zap.Int32("userID1", userID1), zap.Int32("userID2", userID2))
 
 	defer func() {
 		duration := time.Since(start)
@@ -472,7 +455,7 @@ func (store *DBFriendStore) AreFriends(ctx context.Context, userID1, userID2 int
 }
 
 // GetFriendshipStatus получает статус дружбы между пользователями
-func (store *DBFriendStore) GetFriendshipStatus(ctx context.Context, userID1, userID2 int) (domain.FriendshipStatus, error) {
+func (store *DBFriendStore) GetFriendshipStatus(ctx context.Context, userID1, userID2 int32) (domain.FriendshipStatus, error) {
 	friendship, err := store.GetFriendship(ctx, userID1, userID2)
 	if err != nil {
 		if errors.Is(err, domain.ErrFriendshipNotFound) {
@@ -484,85 +467,112 @@ func (store *DBFriendStore) GetFriendshipStatus(ctx context.Context, userID1, us
 }
 
 // CountUserRelations подсчитывает количество отношений пользователя по типу
-func (store *DBFriendStore) CountUserRelations(ctx context.Context, userID int, countType domain.FriendshipCountType) (int, error) {
+func (store *DBFriendStore) CountUserRelations(ctx context.Context, userID int32) (*domain.UserRelationsCounts, error) {
 	start := time.Now()
 	dblogger := domain.DBLogger(ctx, "friendStore")
 	dbloggerCopy := dblogger
 	dbloggerCopy.Info("DB start CountUserRelations",
-		zap.Int("userID", userID),
-		zap.String("countType", string(countType)))
+		zap.Int32("userID", userID))
 
 	defer func() {
 		duration := time.Since(start)
 		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
 	}()
 
-	var query string
-	var args []interface{}
-
-	switch countType {
-	case domain.CountAccepted:
-		//Это количество ДРУЗЕЙ
-		query = `
-            SELECT COUNT(*)
-            FROM friend_relationships
-            WHERE (first_user_id = $1 OR second_user_id = $1)
-            AND status = 'accepted'
-        `
-		args = []interface{}{userID}
-
-	case domain.CountPending:
-		// Все pending запросы где пользователь является получателем. Сколько людей хочет добавить тебя в друзья, но ты им еще не ответил ПОДПИСЧИКИ
-		query = `
-        SELECT COUNT(*)
-        FROM friend_relationships
-        WHERE (first_user_id = $1 OR second_user_id = $1)
-        AND (
-            (status = 'pending' AND action_user_id != $1)    -- входящие запросы
-            OR 
-            (status = 'rejected' AND action_user_id = $1)   -- я отклонил запросы. Оставил в подписчиках так сказать
-        )
+	query := `
+WITH counts AS (
+    SELECT 
+        COUNT(*) FILTER (WHERE status = 'accepted') AS accepted_count,
+        COUNT(*) FILTER (WHERE status = 'pending' AND action_user_id != $1) AS pending_count,
+        COUNT(*) FILTER (WHERE status = 'pending' AND action_user_id = $1) AS sent_count,
+        COUNT(*) FILTER (WHERE status = 'rejected' AND action_user_id = $1) AS rejected_by_me_count,
+        COUNT(*) FILTER (WHERE status = 'rejected' AND action_user_id != $1) AS rejected_by_other_count,
+        COUNT(*) FILTER (WHERE status = 'blocked') AS blocked_count
+    FROM friend_relationships
+    WHERE first_user_id = $1 OR second_user_id = $1
+)
+SELECT 
+	accepted_count,
+	pending_count + rejected_by_me_count,
+	sent_count + rejected_by_other_count,
+	blocked_count
+FROM counts;
     `
-		args = []interface{}{userID}
 
-	case domain.CountSent:
-		// Все pending запросы где пользователь является отправителем. Это ПОДПИСКИ, количество людей, на которых ты подписался
-		query = `
-            SELECT COUNT(*)
-            FROM friend_relationships
-            WHERE (first_user_id = $1 OR second_user_id = $1)
-		AND (
-            (status = 'pending' AND action_user_id = $1)    -- исходящие от userID запросы
-            OR 
-            (status = 'rejected' AND action_user_id != $1)   -- отклоненные запросы юзера
-        )	
-        `
-		args = []interface{}{userID}
-
-	case domain.CountBlocked:
-		query = `
-            SELECT COUNT(*)
-            FROM friend_relationships
-            WHERE (first_user_id = $1 OR second_user_id = $1)
-            AND status = 'blocked'
-        `
-		args = []interface{}{userID}
-
-	default:
-		dblogger.Error("Unknown count type", zap.String("countType", string(countType)))
-		return 0, domain.ErrInvalidInput
-	}
-
-	dblogger = dblogger.With(zap.String("query", query))
-	var count int
-	err := store.db.QueryRowContext(ctx, query, args...).Scan(&count)
+	var counts domain.UserRelationsCounts
+	err := store.db.QueryRowContext(ctx, query, userID).Scan(
+		&counts.Accepted,
+		&counts.Pending,
+		&counts.Sent,
+		&counts.Blocked,
+	)
 	if err != nil {
 		dblogger.Error("Failed to count user relations", zap.Error(err))
-		return 0, fmt.Errorf("failed to count user relations: %w", err)
+		return nil, fmt.Errorf("failed to count user relations: %w", err)
 	}
 
-	dblogger.Info("User relations counted successfully",
-		zap.Int("count", count),
-		zap.String("countType", string(countType)))
-	return count, nil
+	dblogger.Info("User relations counted successfully", zap.Any("counts", counts))
+	return &counts, nil
+}
+
+func (store *DBFriendStore) GetUserIDsByFriendType(ctx context.Context, userID int32, fType domain.FriendshipCountType) ([]int32, error) {
+	start := time.Now()
+	dblogger := domain.DBLogger(ctx, "friendStore")
+	dbloggerCopy := dblogger
+	dbloggerCopy.Info("DB start GetShortProfilesBySearchIDSAndFriendType")
+
+	defer func() {
+		duration := time.Since(start)
+		dbloggerCopy.Info("DB operation finished", zap.Duration("duration", duration))
+	}()
+
+	var statusClause string
+	switch fType {
+	case domain.CountNotFriends:
+		statusClause = `1=1`
+	case domain.CountAccepted:
+		statusClause = `fr.status = 'accepted'`
+	case domain.CountPending:
+		statusClause = `(fr.status = 'pending' AND fr.action_user_id != $1) OR (fr.status = 'rejected' AND fr.action_user_id = $1)`
+	case domain.CountSent:
+		statusClause = `(fr.status = 'pending' AND fr.action_user_id = $1) OR (fr.status = 'rejected' AND fr.action_user_id != $1)`
+	case domain.CountBlocked:
+		statusClause = `fr.status = 'blocked'`
+	default:
+		return nil, fmt.Errorf("unknown statusType: %s", fType)
+	}
+
+	query := `
+SELECT CASE
+         WHEN fr.first_user_id = $1 THEN fr.second_user_id
+         ELSE fr.first_user_id
+       END AS related_user_id
+FROM friend_relationships fr
+WHERE (fr.first_user_id = $1 OR fr.second_user_id = $1)
+  AND (` + statusClause + `)
+`
+
+	rows, err := store.db.QueryContext(ctx, query, userID)
+	dblogger = dblogger.With(zap.Int32("UserID", userID), zap.String("type", string(fType)))
+	if err != nil {
+		dblogger.Error("Failed to get rows", zap.Error(err))
+		return nil, err
+	}
+	defer rows.Close()
+
+	var ids []int32
+	for rows.Next() {
+		var id int32
+		if err := rows.Scan(&id); err != nil {
+			dblogger.Error("Failed to scan row", zap.Error(err))
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		dblogger.Error("rows error", zap.Error(err))
+		return nil, err
+	}
+
+	return ids, nil
 }

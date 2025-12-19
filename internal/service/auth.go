@@ -3,8 +3,9 @@ package service
 import (
 	"context"
 	"errors"
-	"net/http"
 	"project/domain"
+	"project/shared/mapper/generated"
+	"project/shared/pb"
 
 	"github.com/asaskevich/govalidator"
 	"go.uber.org/zap"
@@ -12,20 +13,24 @@ import (
 )
 
 type AuthService struct {
-	sessionStore domain.SessionStore
-	userStore    domain.UserStore
+	sessionStore        domain.SessionStore
+	userStore           domain.UserStore
+	profileService      pb.ProfileServiceClient
+	elasticProfileStore domain.ElasticProfileStore
 }
 
-func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore) domain.AuthService {
+func NewAuthService(userStore domain.UserStore, sessionStore domain.SessionStore, elasticProfileStore domain.ElasticProfileStore, profileService pb.ProfileServiceClient) domain.AuthService {
 	return &AuthService{
-		sessionStore: sessionStore,
-		userStore:    userStore,
+		sessionStore:        sessionStore,
+		userStore:           userStore,
+		elasticProfileStore: elasticProfileStore,
+		profileService:      profileService,
 	}
 }
 
-func (api *AuthService) IsLoggedIn(ctx context.Context, sessionCookie *http.Cookie) (*domain.Session, error) {
+func (api *AuthService) IsLoggedIn(ctx context.Context, sessionCookie string) (*domain.Session, error) {
 
-	session, err := api.sessionStore.GetSessionBySessionID(ctx, sessionCookie.Value)
+	session, err := api.sessionStore.GetSessionBySessionID(ctx, sessionCookie)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			domain.FromContext(ctx).Warn("Session not found")
@@ -39,7 +44,7 @@ func (api *AuthService) IsLoggedIn(ctx context.Context, sessionCookie *http.Cook
 	return session, nil
 }
 
-func (api *AuthService) AddSession(ctx context.Context, userID int) (*domain.SIDAndSCRFToken, error) {
+func (api *AuthService) AddSession(ctx context.Context, userID int32) (*domain.SIDAndSCRFToken, error) {
 	tokens, err := api.sessionStore.AddSession(ctx, userID)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to add session", zap.Error(err))
@@ -49,7 +54,7 @@ func (api *AuthService) AddSession(ctx context.Context, userID int) (*domain.SID
 	return tokens, nil
 }
 
-func (api *AuthService) Login(ctx context.Context, req domain.User) (int, error) {
+func (api *AuthService) Login(ctx context.Context, req domain.User) (int32, error) {
 
 	user, err := api.userStore.GetUserByEmail(ctx, req.Email)
 	if err != nil {
@@ -68,13 +73,13 @@ func (api *AuthService) Login(ctx context.Context, req domain.User) (int, error)
 		return 0, domain.ErrInvalidInput
 	}
 
-	domain.FromContext(ctx).Info("User logged in", zap.Int("userID", user.ID))
+	domain.FromContext(ctx).Info("User logged in", zap.Int32("userID", user.ID))
 	return user.ID, nil
 }
 
-func (api *AuthService) Logout(ctx context.Context, session *http.Cookie) error {
+func (api *AuthService) Logout(ctx context.Context, session string) error {
 
-	err := api.sessionStore.DeleteSession(ctx, session.Value)
+	err := api.sessionStore.DeleteSession(ctx, session)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to logout", zap.Error(err))
 		return domain.ErrDB
@@ -84,7 +89,7 @@ func (api *AuthService) Logout(ctx context.Context, session *http.Cookie) error 
 	return nil
 }
 
-func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest) (int, error) {
+func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest) (int32, error) {
 
 	ok, err := govalidator.ValidateStruct(req)
 	if !ok || err != nil {
@@ -123,12 +128,43 @@ func (api *AuthService) Register(ctx context.Context, req domain.RegisterRequest
 		Dob:       req.Dob,
 		Gender:    req.Gender,
 	}
-	userID, err := api.userStore.CreateUser(ctx, user, profile)
+
+	userID, err := api.userStore.CreateUser(ctx, user)
 	if err != nil {
 		domain.FromContext(ctx).Error("Failed to create user", zap.Error(err))
 		return 0, domain.ErrDB
 	}
+	profile.UserID = userID
+	_, err = api.profileService.CreateProfile(ctx, &pb.CreateProfileRequest{Profile: generated.ToProtoProfile(profile)})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
+		return 0, domain.ErrDB
+	}
+	fullName := profile.FirstName + " " + profile.LastName
+	err = api.elasticProfileStore.CreateProfile(ctx, fullName, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
+		return 0, domain.ErrDB
+	}
 
-	domain.FromContext(ctx).Info("User created, registration complete", zap.Int("userID", userID))
+	domain.FromContext(ctx).Info("User created, registration complete", zap.Int32("userID", userID))
 	return userID, nil
+}
+
+func (api *AuthService) GetUserRole(ctx context.Context, userID int32) (string, error) {
+	user, err := api.userStore.GetUserByID(ctx, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
+		return "", domain.ErrDB
+	}
+	return user.Role, nil
+}
+
+func (api *AuthService) IsUserExists(ctx context.Context, userID int32) (bool, error) {
+	isExists, err := api.userStore.IsUserExists(ctx, userID)
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to update profile index in es", zap.Error(err))
+		return false, domain.ErrDB
+	}
+	return isExists, nil
 }

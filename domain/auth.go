@@ -2,10 +2,10 @@ package domain
 
 import (
 	"context"
-	"net/http"
 	"time"
 )
 
+//easyjson:json
 type RegisterRequest struct {
 	FirstName       string    `json:"firstName" valid:"required"`
 	LastName        string    `json:"lastName" valid:"required"`
@@ -16,10 +16,17 @@ type RegisterRequest struct {
 	Gender          string    `json:"gender" valid:"-"`
 }
 
+//easyjson:json
+type IsLoggedInResponse struct {
+	UserID int32  `json:"userID"`
+	Role   string `json:"role"`
+}
 type AuthService interface {
-	IsLoggedIn(ctx context.Context, sessionCookie *http.Cookie) (*Session, error)
-	AddSession(ctx context.Context, userID int) (*SIDAndSCRFToken, error)
-	Login(ctx context.Context, req User) (int, error)
-	Logout(ctx context.Context, session *http.Cookie) error
-	Register(ctx context.Context, req RegisterRequest) (int, error)
+	IsLoggedIn(ctx context.Context, sessionCookie string) (*Session, error)
+	AddSession(ctx context.Context, userID int32) (*SIDAndSCRFToken, error)
+	Login(ctx context.Context, req User) (int32, error)
+	Logout(ctx context.Context, sessionCookie string) error
+	Register(ctx context.Context, req RegisterRequest) (int32, error)
+	GetUserRole(ctx context.Context, userID int32) (string, error)
+	IsUserExists(ctx context.Context, userID int32) (bool, error)
 }

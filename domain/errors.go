@@ -3,7 +3,17 @@ package domain
 import (
 	"errors"
 	"net/http"
+	"strings"
+
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
+
+//easyjson:json
+type JSONResponse struct {
+	Message string `json:"message"`
+	Code    int32  `json:"code"`
+}
 
 // общие ошибки на уровне сервиса и бд
 // Общие доменные ошибки
@@ -12,17 +22,16 @@ var (
 	ErrAccessDenied  = errors.New("access denied")
 	ErrInvalidInput  = errors.New("invalid input")
 	ErrNotExist      = errors.New("not exist")
-	ErrDB            = errors.New("db error")
+	ErrDB            = errors.New("dbconn error")
 	ErrAlreadyExists = errors.New("already exist")
-	ErrService       = errors.New("service error") //Какая-то внутренняя ошибка
+	ErrService       = errors.New("service error") //Какая-то внутренняя ошибк
+	ErrInvalidParams = errors.New("invalid params")
 )
 
 // Ошибки для ПОСТОВ
 var (
 	ErrPostNotFound      = errors.New("post not found")
-	ErrPostTextTooShort  = errors.New("post text too short")
 	ErrPostTextTooLong   = errors.New("post text too long")
-	ErrPostTextEmpty     = errors.New("post text cannot be empty")
 	ErrPostInvalidAuthor = errors.New("invalid author")
 )
 
@@ -57,7 +66,7 @@ const (
 	FriendRemoved         = "Friend removed successfully"
 )
 
-func MapErrorToHTTP(err error) (int, string) {
+func MapErrorToHTTP(err error) (int32, string) {
 	switch {
 	case errors.Is(err, ErrNotFound) || errors.Is(err, ErrPostNotFound):
 		return http.StatusNotFound, NotFound
@@ -73,7 +82,73 @@ func MapErrorToHTTP(err error) (int, string) {
 		return http.StatusConflict, AleradyExist
 	case errors.Is(err, ErrDB):
 		return http.StatusInternalServerError, ServerErr
+	case errors.Is(err, ErrInvalidParams):
+		return http.StatusBadRequest, InvalidParams
+
 	default:
 		return http.StatusInternalServerError, ServerErr
+	}
+}
+func ToGrpcError(err error) error {
+	switch {
+	case errors.Is(err, ErrNotFound), errors.Is(err, ErrNotExist):
+		return status.Error(codes.NotFound, err.Error())
+
+	case errors.Is(err, ErrAccessDenied):
+		return status.Error(codes.PermissionDenied, err.Error())
+
+	case errors.Is(err, ErrInvalidInput):
+		return status.Error(codes.InvalidArgument, err.Error())
+
+	case errors.Is(err, ErrAlreadyExists):
+		return status.Error(codes.AlreadyExists, err.Error())
+
+	case errors.Is(err, ErrDB):
+		return status.Error(codes.Internal, "database error")
+
+	case errors.Is(err, ErrService):
+		return status.Error(codes.Internal, "internal service error")
+
+	default:
+		return status.Error(codes.Unknown, err.Error())
+	}
+}
+func FromGrpcError(err error) error {
+	st, ok := status.FromError(err)
+	if !ok {
+		return ErrService
+	}
+
+	switch st.Code() {
+	case codes.NotFound:
+		return ErrNotFound
+
+	case codes.PermissionDenied:
+		return ErrAccessDenied
+
+	case codes.InvalidArgument:
+		return ErrInvalidInput
+
+	case codes.AlreadyExists:
+		return ErrAlreadyExists
+
+	case codes.Unauthenticated:
+		return ErrAccessDenied
+
+	case codes.FailedPrecondition:
+		return ErrInvalidInput
+
+	case codes.Internal:
+		// различать БД и сервис?
+		if strings.Contains(st.Message(), "database error") {
+			return ErrDB
+		}
+		return ErrService
+
+	case codes.Unavailable:
+		return ErrService
+
+	default:
+		return ErrService
 	}
 }

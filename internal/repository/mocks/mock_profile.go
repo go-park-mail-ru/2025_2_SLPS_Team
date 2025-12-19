@@ -6,7 +6,6 @@ package mocks
 
 import (
 	context "context"
-	multipart "mime/multipart"
 	domain "project/domain"
 	reflect "reflect"
 
@@ -36,23 +35,96 @@ func (m *MockProfileService) EXPECT() *MockProfileServiceMockRecorder {
 	return m.recorder
 }
 
-// GetProfileByUserID mocks base method.
-func (m *MockProfileService) GetProfileByUserID(ctx context.Context, userID int) (*domain.Profile, error) {
+// CreateProfile mocks base method.
+func (m *MockProfileService) CreateProfile(ctx context.Context, profile domain.Profile) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, userID)
+	ret := m.ctrl.Call(m, "CreateProfile", ctx, profile)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateProfile indicates an expected call of CreateProfile.
+func (mr *MockProfileServiceMockRecorder) CreateProfile(ctx, profile interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProfile", reflect.TypeOf((*MockProfileService)(nil).CreateProfile), ctx, profile)
+}
+
+// DeleteAvatarByUserID mocks base method.
+func (m *MockProfileService) DeleteAvatarByUserID(ctx context.Context, userID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAvatarByUserID", ctx, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteAvatarByUserID indicates an expected call of DeleteAvatarByUserID.
+func (mr *MockProfileServiceMockRecorder) DeleteAvatarByUserID(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAvatarByUserID", reflect.TypeOf((*MockProfileService)(nil).DeleteAvatarByUserID), ctx, userID)
+}
+
+// GetOtherShortProfileByUserIDs mocks base method.
+func (m *MockProfileService) GetOtherShortProfileByUserIDs(ctx context.Context, userIDs []int32, limit, offset int32) ([]domain.ShortProfile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOtherShortProfileByUserIDs", ctx, userIDs, limit, offset)
+	ret0, _ := ret[0].([]domain.ShortProfile)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOtherShortProfileByUserIDs indicates an expected call of GetOtherShortProfileByUserIDs.
+func (mr *MockProfileServiceMockRecorder) GetOtherShortProfileByUserIDs(ctx, userIDs, limit, offset interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOtherShortProfileByUserIDs", reflect.TypeOf((*MockProfileService)(nil).GetOtherShortProfileByUserIDs), ctx, userIDs, limit, offset)
+}
+
+// GetProfileByUserID mocks base method.
+func (m *MockProfileService) GetProfileByUserID(ctx context.Context, selfUserID, userID int32) (*domain.Profile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, selfUserID, userID)
 	ret0, _ := ret[0].(*domain.Profile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetProfileByUserID indicates an expected call of GetProfileByUserID.
-func (mr *MockProfileServiceMockRecorder) GetProfileByUserID(ctx, userID interface{}) *gomock.Call {
+func (mr *MockProfileServiceMockRecorder) GetProfileByUserID(ctx, selfUserID, userID interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProfileByUserID", reflect.TypeOf((*MockProfileService)(nil).GetProfileByUserID), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetProfileByUserID", reflect.TypeOf((*MockProfileService)(nil).GetProfileByUserID), ctx, selfUserID, userID)
+}
+
+// GetShortProfileByUserIDs mocks base method.
+func (m *MockProfileService) GetShortProfileByUserIDs(ctx context.Context, userIDs []int32) ([]domain.ShortProfile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShortProfileByUserIDs", ctx, userIDs)
+	ret0, _ := ret[0].([]domain.ShortProfile)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetShortProfileByUserIDs indicates an expected call of GetShortProfileByUserIDs.
+func (mr *MockProfileServiceMockRecorder) GetShortProfileByUserIDs(ctx, userIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortProfileByUserIDs", reflect.TypeOf((*MockProfileService)(nil).GetShortProfileByUserIDs), ctx, userIDs)
+}
+
+// GetShortProfileMapByUserIDs mocks base method.
+func (m *MockProfileService) GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int32) (map[int32]domain.ShortProfile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShortProfileMapByUserIDs", ctx, userIDs)
+	ret0, _ := ret[0].(map[int32]domain.ShortProfile)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetShortProfileMapByUserIDs indicates an expected call of GetShortProfileMapByUserIDs.
+func (mr *MockProfileServiceMockRecorder) GetShortProfileMapByUserIDs(ctx, userIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortProfileMapByUserIDs", reflect.TypeOf((*MockProfileService)(nil).GetShortProfileMapByUserIDs), ctx, userIDs)
 }
 
 // UpdateAvatar mocks base method.
-func (m *MockProfileService) UpdateAvatar(ctx context.Context, userID int, files []*multipart.FileHeader) error {
+func (m *MockProfileService) UpdateAvatar(ctx context.Context, userID int32, files []*domain.File) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAvatar", ctx, userID, files)
 	ret0, _ := ret[0].(error)
@@ -66,7 +138,7 @@ func (mr *MockProfileServiceMockRecorder) UpdateAvatar(ctx, userID, files interf
 }
 
 // UpdateHeader mocks base method.
-func (m *MockProfileService) UpdateHeader(ctx context.Context, userID int, files []*multipart.FileHeader) error {
+func (m *MockProfileService) UpdateHeader(ctx context.Context, userID int32, files []*domain.File) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateHeader", ctx, userID, files)
 	ret0, _ := ret[0].(error)
@@ -80,7 +152,7 @@ func (mr *MockProfileServiceMockRecorder) UpdateHeader(ctx, userID, files interf
 }
 
 // UpdateProfile mocks base method.
-func (m *MockProfileService) UpdateProfile(ctx context.Context, profile domain.Profile, userID int, files []*multipart.FileHeader) error {
+func (m *MockProfileService) UpdateProfile(ctx context.Context, profile domain.Profile, userID int32, files []*domain.File) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateProfile", ctx, profile, userID, files)
 	ret0, _ := ret[0].(error)
@@ -91,6 +163,86 @@ func (m *MockProfileService) UpdateProfile(ctx context.Context, profile domain.P
 func (mr *MockProfileServiceMockRecorder) UpdateProfile(ctx, profile, userID, files interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProfile", reflect.TypeOf((*MockProfileService)(nil).UpdateProfile), ctx, profile, userID, files)
+}
+
+// MockElasticProfileStore is a mock of ElasticProfileStore interface.
+type MockElasticProfileStore struct {
+	ctrl     *gomock.Controller
+	recorder *MockElasticProfileStoreMockRecorder
+}
+
+// MockElasticProfileStoreMockRecorder is the mock recorder for MockElasticProfileStore.
+type MockElasticProfileStoreMockRecorder struct {
+	mock *MockElasticProfileStore
+}
+
+// NewMockElasticProfileStore creates a new mock instance.
+func NewMockElasticProfileStore(ctrl *gomock.Controller) *MockElasticProfileStore {
+	mock := &MockElasticProfileStore{ctrl: ctrl}
+	mock.recorder = &MockElasticProfileStoreMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockElasticProfileStore) EXPECT() *MockElasticProfileStoreMockRecorder {
+	return m.recorder
+}
+
+// CreateProfile mocks base method.
+func (m *MockElasticProfileStore) CreateProfile(ctx context.Context, fullName string, userID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateProfile", ctx, fullName, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateProfile indicates an expected call of CreateProfile.
+func (mr *MockElasticProfileStoreMockRecorder) CreateProfile(ctx, fullName, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProfile", reflect.TypeOf((*MockElasticProfileStore)(nil).CreateProfile), ctx, fullName, userID)
+}
+
+// DeleteProfile mocks base method.
+func (m *MockElasticProfileStore) DeleteProfile(ctx context.Context, userID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteProfile", ctx, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteProfile indicates an expected call of DeleteProfile.
+func (mr *MockElasticProfileStoreMockRecorder) DeleteProfile(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteProfile", reflect.TypeOf((*MockElasticProfileStore)(nil).DeleteProfile), ctx, userID)
+}
+
+// SearchUserIDsByFullNameWithFilter mocks base method.
+func (m *MockElasticProfileStore) SearchUserIDsByFullNameWithFilter(ctx context.Context, fullName string, filterIDs []int32, isTerms bool, limit, offset int32) ([]int32, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SearchUserIDsByFullNameWithFilter", ctx, fullName, filterIDs, isTerms, limit, offset)
+	ret0, _ := ret[0].([]int32)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// SearchUserIDsByFullNameWithFilter indicates an expected call of SearchUserIDsByFullNameWithFilter.
+func (mr *MockElasticProfileStoreMockRecorder) SearchUserIDsByFullNameWithFilter(ctx, fullName, filterIDs, isTerms, limit, offset interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SearchUserIDsByFullNameWithFilter", reflect.TypeOf((*MockElasticProfileStore)(nil).SearchUserIDsByFullNameWithFilter), ctx, fullName, filterIDs, isTerms, limit, offset)
+}
+
+// UpdateProfile mocks base method.
+func (m *MockElasticProfileStore) UpdateProfile(ctx context.Context, fullName string, userID int32) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "UpdateProfile", ctx, fullName, userID)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// UpdateProfile indicates an expected call of UpdateProfile.
+func (mr *MockElasticProfileStoreMockRecorder) UpdateProfile(ctx, fullName, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdateProfile", reflect.TypeOf((*MockElasticProfileStore)(nil).UpdateProfile), ctx, fullName, userID)
 }
 
 // MockProfileStore is a mock of ProfileStore interface.
@@ -116,8 +268,37 @@ func (m *MockProfileStore) EXPECT() *MockProfileStoreMockRecorder {
 	return m.recorder
 }
 
+// CreateProfile mocks base method.
+func (m *MockProfileStore) CreateProfile(ctx context.Context, profile domain.Profile) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateProfile", ctx, profile)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateProfile indicates an expected call of CreateProfile.
+func (mr *MockProfileStoreMockRecorder) CreateProfile(ctx, profile interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateProfile", reflect.TypeOf((*MockProfileStore)(nil).CreateProfile), ctx, profile)
+}
+
+// DeleteAvatarByUserID mocks base method.
+func (m *MockProfileStore) DeleteAvatarByUserID(ctx context.Context, userID int32) (*string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteAvatarByUserID", ctx, userID)
+	ret0, _ := ret[0].(*string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// DeleteAvatarByUserID indicates an expected call of DeleteAvatarByUserID.
+func (mr *MockProfileStoreMockRecorder) DeleteAvatarByUserID(ctx, userID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteAvatarByUserID", reflect.TypeOf((*MockProfileStore)(nil).DeleteAvatarByUserID), ctx, userID)
+}
+
 // GetAvatarByUserID mocks base method.
-func (m *MockProfileStore) GetAvatarByUserID(ctx context.Context, userID int) (*string, error) {
+func (m *MockProfileStore) GetAvatarByUserID(ctx context.Context, userID int32) (*string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetAvatarByUserID", ctx, userID)
 	ret0, _ := ret[0].(*string)
@@ -132,7 +313,7 @@ func (mr *MockProfileStoreMockRecorder) GetAvatarByUserID(ctx, userID interface{
 }
 
 // GetHeaderByUserID mocks base method.
-func (m *MockProfileStore) GetHeaderByUserID(ctx context.Context, userID int) (*string, error) {
+func (m *MockProfileStore) GetHeaderByUserID(ctx context.Context, userID int32) (*string, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetHeaderByUserID", ctx, userID)
 	ret0, _ := ret[0].(*string)
@@ -146,8 +327,23 @@ func (mr *MockProfileStoreMockRecorder) GetHeaderByUserID(ctx, userID interface{
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHeaderByUserID", reflect.TypeOf((*MockProfileStore)(nil).GetHeaderByUserID), ctx, userID)
 }
 
+// GetOtherShortProfileByUserIDs mocks base method.
+func (m *MockProfileStore) GetOtherShortProfileByUserIDs(ctx context.Context, userIDs []int32, limit, offset int32) ([]domain.ShortProfile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetOtherShortProfileByUserIDs", ctx, userIDs, limit, offset)
+	ret0, _ := ret[0].([]domain.ShortProfile)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetOtherShortProfileByUserIDs indicates an expected call of GetOtherShortProfileByUserIDs.
+func (mr *MockProfileStoreMockRecorder) GetOtherShortProfileByUserIDs(ctx, userIDs, limit, offset interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOtherShortProfileByUserIDs", reflect.TypeOf((*MockProfileStore)(nil).GetOtherShortProfileByUserIDs), ctx, userIDs, limit, offset)
+}
+
 // GetProfileByUserID mocks base method.
-func (m *MockProfileStore) GetProfileByUserID(ctx context.Context, userID int) (domain.Profile, error) {
+func (m *MockProfileStore) GetProfileByUserID(ctx context.Context, userID int32) (domain.Profile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetProfileByUserID", ctx, userID)
 	ret0, _ := ret[0].(domain.Profile)
@@ -162,10 +358,10 @@ func (mr *MockProfileStoreMockRecorder) GetProfileByUserID(ctx, userID interface
 }
 
 // GetShortProfileByUserIDs mocks base method.
-func (m *MockProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int) (map[int]domain.ShortProfile, error) {
+func (m *MockProfileStore) GetShortProfileByUserIDs(ctx context.Context, userIDs []int32) ([]domain.ShortProfile, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetShortProfileByUserIDs", ctx, userIDs)
-	ret0, _ := ret[0].(map[int]domain.ShortProfile)
+	ret0, _ := ret[0].([]domain.ShortProfile)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -176,8 +372,23 @@ func (mr *MockProfileStoreMockRecorder) GetShortProfileByUserIDs(ctx, userIDs in
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortProfileByUserIDs", reflect.TypeOf((*MockProfileStore)(nil).GetShortProfileByUserIDs), ctx, userIDs)
 }
 
+// GetShortProfileMapByUserIDs mocks base method.
+func (m *MockProfileStore) GetShortProfileMapByUserIDs(ctx context.Context, userIDs []int32) (map[int32]domain.ShortProfile, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetShortProfileMapByUserIDs", ctx, userIDs)
+	ret0, _ := ret[0].(map[int32]domain.ShortProfile)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetShortProfileMapByUserIDs indicates an expected call of GetShortProfileMapByUserIDs.
+func (mr *MockProfileStoreMockRecorder) GetShortProfileMapByUserIDs(ctx, userIDs interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetShortProfileMapByUserIDs", reflect.TypeOf((*MockProfileStore)(nil).GetShortProfileMapByUserIDs), ctx, userIDs)
+}
+
 // UpdateAvatar mocks base method.
-func (m *MockProfileStore) UpdateAvatar(ctx context.Context, avatarPath string, userID int) error {
+func (m *MockProfileStore) UpdateAvatar(ctx context.Context, avatarPath string, userID int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateAvatar", ctx, avatarPath, userID)
 	ret0, _ := ret[0].(error)
@@ -191,7 +402,7 @@ func (mr *MockProfileStoreMockRecorder) UpdateAvatar(ctx, avatarPath, userID int
 }
 
 // UpdateHeader mocks base method.
-func (m *MockProfileStore) UpdateHeader(ctx context.Context, avatarPath string, UserID int) error {
+func (m *MockProfileStore) UpdateHeader(ctx context.Context, avatarPath string, UserID int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateHeader", ctx, avatarPath, UserID)
 	ret0, _ := ret[0].(error)
@@ -205,7 +416,7 @@ func (mr *MockProfileStoreMockRecorder) UpdateHeader(ctx, avatarPath, UserID int
 }
 
 // UpdateProfile mocks base method.
-func (m *MockProfileStore) UpdateProfile(ctx context.Context, profile domain.Profile, userID int) error {
+func (m *MockProfileStore) UpdateProfile(ctx context.Context, profile domain.Profile, userID int32) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "UpdateProfile", ctx, profile, userID)
 	ret0, _ := ret[0].(error)

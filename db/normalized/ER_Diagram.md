@@ -1,6 +1,6 @@
 erDiagram
     PROFILE {
-        int id PK
+        int32 id PK
         text full_name
         text email
         text avatar
@@ -11,15 +11,15 @@ erDiagram
     }
 
     FRIEND_RELATIONSHIP {
-        int first_profile_id FK
-        int second_profile_id FK
+        int32 first_profile_id FK
+        int32 second_profile_id FK
         friendship_status_enum status
         timestamp created_at
         timestamp updated_at
     }
 
     COMMUNITY {
-        int id PK
+        int32 id PK
         text name
         community_status_enum status
         text avatar
@@ -29,32 +29,32 @@ erDiagram
     }
 
     COMMUNITY_AUTHOR {
-        int community_id FK
-        int author_id FK
+        int32 community_id FK
+        int32 author_id FK
         role_enum role
         timestamp created_at
         timestamp updated_at
     }
 
     COMMUNITY_SUBSCRIBER {
-        int community_id FK
-        int subscriber_id FK
+        int32 community_id FK
+        int32 subscriber_id FK
         timestamp created_at
     }
 
     POST {
-        int id PK
-        int community_id FK
-        int author_id FK
+        int32 id PK
+        int32 community_id FK
+        int32 author_id FK
         text text
         timestamp created_at
         timestamp updated_at
     }
 
     COMMENT {
-        int id PK
-        int author_id FK
-        int obj_id
+        int32 id PK
+        int32 author_id FK
+        int32 obj_id
         comment_obj_type_enum obj_type
         text text
         timestamp created_at
@@ -62,7 +62,7 @@ erDiagram
     }
 
     CHAT {
-        int id PK
+        int32 id PK
         text name
         text avatar
         timestamp created_at
@@ -70,33 +70,33 @@ erDiagram
     }
 
     CHAT_MEMBER {
-        int chat_id FK
-        int member_id FK
+        int32 chat_id FK
+        int32 member_id FK
         role_enum role
         timestamp created_at
         timestamp updated_at
     }
 
     MESSAGE {
-        int id PK
-        int author_id FK
-        int chat_id FK
-        int replayed_message_id FK
+        int32 id PK
+        int32 author_id FK
+        int32 chat_id FK
+        int32 replayed_message_id FK
         text text
         timestamp created_at
         timestamp updated_at
     }
 
     FORWARD_MESSAGE {
-        int main_message_id FK
-        int minor_message_id FK
+        int32 main_message_id FK
+        int32 minor_message_id FK
         timestamp created_at
         timestamp updated_at
     }
 
     ATTACHMENT {
-        int id PK
-        int obj_id
+        int32 id PK
+        int32 obj_id
         attachment_obj_type_enum obj_type
         text file_path
         timestamp created_at
@@ -104,8 +104,8 @@ erDiagram
     }
 
     REACTION {
-        int author_id FK
-        int obj_id
+        int32 author_id FK
+        int32 obj_id
         reaction_obj_type_enum obj_type
         timestamp created_at
         timestamp updated_at

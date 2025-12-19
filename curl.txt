@@ -4,7 +4,10 @@ curl -X PUT http://localhost:8080/api/profile \
   -H "Content-Type: multipart/form-data" \
   -b cookies.txt
 
-  curl -i -X POST http://localhost:8080/api/auth/register     -H "Content-Type: application/json"     -d '{
+curl -X GET https://unitesm.ru/api/api/sticker-packs/1/stickers \
+  -H 'accept: application/json' \
+  -b cookies.txt
+  curl -i -X POST https://unitesm.ru/api/api/auth/register     -H "Content-Type: application/json"     -d '{
         "firstName": "Alice",
         "lastName": "Smith",
         "email": "alice@example.com",

@@ -36,10 +36,10 @@ func (m *MockMessageStore) EXPECT() *MockMessageStoreMockRecorder {
 }
 
 // CreateMessage mocks base method.
-func (m *MockMessageStore) CreateMessage(ctx context.Context, message domain.Message) (int, error) {
+func (m *MockMessageStore) CreateMessage(ctx context.Context, message domain.Message) (int32, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CreateMessage", ctx, message)
-	ret0, _ := ret[0].(int)
+	ret0, _ := ret[0].(int32)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
@@ -50,8 +50,23 @@ func (mr *MockMessageStoreMockRecorder) CreateMessage(ctx, message interface{}) 
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateMessage", reflect.TypeOf((*MockMessageStore)(nil).CreateMessage), ctx, message)
 }
 
+// GetMessageAttachments mocks base method.
+func (m *MockMessageStore) GetMessageAttachments(ctx context.Context, messageID int32) ([]string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetMessageAttachments", ctx, messageID)
+	ret0, _ := ret[0].([]string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetMessageAttachments indicates an expected call of GetMessageAttachments.
+func (mr *MockMessageStoreMockRecorder) GetMessageAttachments(ctx, messageID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMessageAttachments", reflect.TypeOf((*MockMessageStore)(nil).GetMessageAttachments), ctx, messageID)
+}
+
 // GetMessagesByChatId mocks base method.
-func (m *MockMessageStore) GetMessagesByChatId(ctx context.Context, chatID, limit, offset int) ([]domain.Message, error) {
+func (m *MockMessageStore) GetMessagesByChatId(ctx context.Context, chatID, limit, offset int32) ([]domain.Message, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetMessagesByChatId", ctx, chatID, limit, offset)
 	ret0, _ := ret[0].([]domain.Message)
@@ -63,4 +78,33 @@ func (m *MockMessageStore) GetMessagesByChatId(ctx context.Context, chatID, limi
 func (mr *MockMessageStoreMockRecorder) GetMessagesByChatId(ctx, chatID, limit, offset interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetMessagesByChatId", reflect.TypeOf((*MockMessageStore)(nil).GetMessagesByChatId), ctx, chatID, limit, offset)
+}
+
+// GetStickerPath mocks base method.
+func (m *MockMessageStore) GetStickerPath(ctx context.Context, stickerID int32) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStickerPath", ctx, stickerID)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetStickerPath indicates an expected call of GetStickerPath.
+func (mr *MockMessageStoreMockRecorder) GetStickerPath(ctx, stickerID interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStickerPath", reflect.TypeOf((*MockMessageStore)(nil).GetStickerPath), ctx, stickerID)
+}
+
+// SaveMessageAttachments mocks base method.
+func (m *MockMessageStore) SaveMessageAttachments(ctx context.Context, messageID int32, attachments []string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SaveMessageAttachments", ctx, messageID, attachments)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SaveMessageAttachments indicates an expected call of SaveMessageAttachments.
+func (mr *MockMessageStoreMockRecorder) SaveMessageAttachments(ctx, messageID, attachments interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SaveMessageAttachments", reflect.TypeOf((*MockMessageStore)(nil).SaveMessageAttachments), ctx, messageID, attachments)
 }

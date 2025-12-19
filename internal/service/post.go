@@ -3,44 +3,55 @@ package service
 import (
 	"context"
 	"errors"
-	"mime/multipart"
 	"project/domain"
+	"project/shared/pb"
 
 	"github.com/asaskevich/govalidator"
 	"go.uber.org/zap"
 )
 
 type PostService struct {
-	postStore domain.PostStore
-	userStore domain.UserStore
+	postStore      domain.PostStore
+	authService    pb.AuthServiceClient
+	communityStore domain.CommunityStore
+	profileService pb.ProfileServiceClient
 }
 
-func NewPostService(postStore domain.PostStore, userStore domain.UserStore) domain.PostService {
+func NewPostService(postStore domain.PostStore, authService pb.AuthServiceClient, communityStore domain.CommunityStore, profileService pb.ProfileServiceClient) domain.PostService {
 	return &PostService{
-		postStore: postStore,
-		userStore: userStore,
+		postStore:      postStore,
+		authService:    authService,
+		communityStore: communityStore,
+		profileService: profileService,
 	}
 }
 
-// PostsPaginate возвращает посты с пагинацией
-func (s *PostService) PostsPaginate(ctx context.Context, params domain.PaginateQueryParams) ([]domain.PostWithShortUser, error) {
+// PostsPaginate возвращает посты с пагинацией с обогащением данных профилей через gRPC
+func (s *PostService) PostsPaginate(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
-	domain.Info(ctx, "Getting paginated posts", zap.Int("offset", offset), zap.Int("limit", limit))
+	domain.Info(ctx, "Getting paginated posts", zap.Int32("offset", offset), zap.Int32("limit", limit))
 
-	postsWithAuthor, err := s.postStore.PostsPaginatedList(ctx, limit, offset)
+	// Получаем посты из БД без информации о профиле
+	postsDB, err := s.postStore.PostsPaginatedList(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get posts", err)
 		return nil, domain.ErrDB
 	}
 
-	return postsWithAuthor, nil
+	// Обогащаем данные профилями через gRPC
+	postsView, err := s.enrichPostsWithProfiles(ctx, postsDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return postsView, nil
 }
 
-// GetPost возвращает пост по ID
-func (s *PostService) GetPost(ctx context.Context, postID uint) (*domain.Post, error) {
+// GetPost возвращает пост по ID с обогащением данных профиля через gRPC
+func (s *PostService) GetPost(ctx context.Context, userID int32, postID uint) (*domain.PostView, error) {
 	domain.Info(ctx, "Getting post by ID", zap.Uint("postID", postID))
 
-	post, err := s.postStore.GetPostByID(ctx, postID)
+	postDB, err := s.postStore.GetPostByID(ctx, userID, postID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			domain.Warn(ctx, "Post not found", zap.Uint("postID", postID))
@@ -50,11 +61,17 @@ func (s *PostService) GetPost(ctx context.Context, postID uint) (*domain.Post, e
 		return nil, domain.ErrDB
 	}
 
-	return post, nil
+	// Обогащаем данные профилем через gRPC
+	postView, err := s.enrichPostWithProfile(ctx, postDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return postView, nil
 }
 
 // CreatePost создает новый пост
-func (s *PostService) CreatePost(ctx context.Context, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) (*domain.Post, error) {
+func (s *PostService) CreatePost(ctx context.Context, userID int32, text string, communityID *int32, attachmentFiles []*domain.File, photoFiles []*domain.File) (*domain.Post, error) {
 
 	// Создаем структуру для валидации
 	createRequest := domain.PostCreateRequest{
@@ -68,7 +85,7 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, a
 		return nil, domain.ErrInvalidInput
 	}
 
-	domain.Info(ctx, "Creating new post", zap.Int("userID", userID))
+	domain.Info(ctx, "Creating new post", zap.Int32("userID", userID))
 
 	// Обработка вложений
 	var attachmentPaths []string
@@ -95,12 +112,30 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, a
 		createRequest.Photos = photoPaths
 	}
 
+	// Если указан communityID, проверяем права
+	if communityID != nil {
+		community, err := s.communityStore.GetCommunityByID(ctx, *communityID)
+		if err != nil {
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", *communityID))
+			return nil, domain.ErrNotFound
+		}
+
+		// Проверяем, является ли пользователь создателем сообщества
+		if community.CreatorID != userID {
+			domain.Warn(ctx, "User is not community creator",
+				zap.Int32("userID", userID),
+				zap.Int32("creatorID", community.CreatorID))
+			return nil, domain.ErrAccessDenied
+		}
+	}
+
 	// Создаем объект поста
 	post := &domain.Post{
 		AuthorID:    uint(userID),
+		CommunityID: communityID,
 		Text:        createRequest.Text,
 		Attachments: createRequest.Attachments,
-		PhotosPath:  createRequest.Photos,
+		Photos:      createRequest.Photos,
 	}
 
 	// Сохраняем в БД
@@ -111,13 +146,13 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, a
 		if len(photoPaths) > 0 {
 			DeleteFiles(convertToPointerSlice(photoPaths))
 		}
-		domain.Error(ctx, "Failed to create post", err, zap.Int("userID", userID))
+		domain.Error(ctx, "Failed to create post", err, zap.Int32("userID", userID))
 		return nil, domain.ErrDB
 	}
 
 	domain.Info(ctx, "Post created successfully",
 		zap.Uint("postID", post.ID),
-		zap.Int("userID", userID),
+		zap.Int32("userID", userID),
 		zap.Int("attachmentsCount", len(attachmentPaths)),
 		zap.Int("photosCount", len(photoPaths)))
 
@@ -125,7 +160,7 @@ func (s *PostService) CreatePost(ctx context.Context, userID int, text string, a
 }
 
 // UpdatePost обновляет пост
-func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, text string, attachmentFiles []*multipart.FileHeader, photoFiles []*multipart.FileHeader) error {
+func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int32, text string, attachmentFiles []*domain.File, photoFiles []*domain.File) error {
 	// Создаем структуру для валидации
 	updateRequest := domain.PostUpdateRequest{
 		Text: text,
@@ -138,10 +173,10 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 		return domain.ErrInvalidInput
 	}
 
-	domain.Info(ctx, "Updating post", zap.Uint("postID", postID), zap.Int("userID", userID))
+	domain.Info(ctx, "Updating post", zap.Uint("postID", postID), zap.Int32("userID", userID))
 
 	// Получаем текущий пост
-	existingPost, err := s.postStore.GetPostByID(ctx, postID)
+	existingPost, err := s.postStore.GetPostByID(ctx, userID, postID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			domain.Warn(ctx, "Post not found for update", zap.Uint("postID", postID))
@@ -155,7 +190,7 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 	if existingPost.AuthorID != uint(userID) {
 		domain.Warn(ctx, "Access denied: user is not post author",
 			zap.Uint("postID", postID),
-			zap.Int("userID", userID),
+			zap.Int32("userID", userID),
 			zap.Uint("authorID", existingPost.AuthorID))
 		return domain.ErrAccessDenied
 	}
@@ -186,8 +221,8 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 	var newPhotoPaths []string
 	if len(photoFiles) > 0 {
 		// Сохраняем старые пути
-		for i := range existingPost.PhotosPath {
-			oldPhotos = append(oldPhotos, &existingPost.PhotosPath[i])
+		for i := range existingPost.Photos {
+			oldPhotos = append(oldPhotos, &existingPost.Photos[i])
 		}
 
 		newPhotoPaths, err = UploadFiles(photoFiles)
@@ -201,8 +236,8 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 		}
 		updateRequest.Photos = newPhotoPaths
 	} else {
-		newPhotoPaths = existingPost.PhotosPath
-		updateRequest.Photos = existingPost.PhotosPath
+		newPhotoPaths = existingPost.Photos
+		updateRequest.Photos = existingPost.Photos
 	}
 
 	// Обновляем данные поста
@@ -212,7 +247,7 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 		Text:        updateRequest.Text,
 		CreatedAt:   existingPost.CreatedAt,
 		Attachments: updateRequest.Attachments,
-		PhotosPath:  updateRequest.Photos,
+		Photos:      updateRequest.Photos,
 	}
 
 	if err := s.postStore.UpdatePost(ctx, updatedPost); err != nil {
@@ -220,8 +255,8 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 			newFiles := newAttachmentPaths[len(existingPost.Attachments):]
 			DeleteFiles(convertToPointerSlice(newFiles))
 		}
-		if len(newPhotoPaths) > len(existingPost.PhotosPath) {
-			newFiles := newPhotoPaths[len(existingPost.PhotosPath):]
+		if len(newPhotoPaths) > len(existingPost.Photos) {
+			newFiles := newPhotoPaths[len(existingPost.Photos):]
 			DeleteFiles(convertToPointerSlice(newFiles))
 		}
 		domain.Error(ctx, "Failed to update post", err, zap.Uint("postID", postID))
@@ -245,11 +280,11 @@ func (s *PostService) UpdatePost(ctx context.Context, postID uint, userID int, t
 }
 
 // DeletePost удаляет пост
-func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) error {
-	domain.Info(ctx, "Deleting post", zap.Uint("postID", postID), zap.Int("userID", userID))
+func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int32) error {
+	domain.Info(ctx, "Deleting post", zap.Uint("postID", postID), zap.Int32("userID", userID))
 
 	// Получаем пост для проверки прав и получения путей файлов
-	existingPost, err := s.postStore.GetPostByID(ctx, postID)
+	existingPost, err := s.postStore.GetPostByID(ctx, userID, postID)
 	if err != nil {
 		if errors.Is(err, domain.ErrPostNotFound) {
 			domain.Warn(ctx, "Post not found for deletion", zap.Uint("postID", postID))
@@ -263,7 +298,7 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 	if existingPost.AuthorID != uint(userID) {
 		domain.Warn(ctx, "Access denied: user is not post author",
 			zap.Uint("postID", postID),
-			zap.Int("userID", userID),
+			zap.Int32("userID", userID),
 			zap.Uint("authorID", existingPost.AuthorID))
 		return domain.ErrAccessDenied
 	}
@@ -279,8 +314,8 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 	for i := range existingPost.Attachments {
 		filesToDelete = append(filesToDelete, &existingPost.Attachments[i])
 	}
-	for i := range existingPost.PhotosPath {
-		filesToDelete = append(filesToDelete, &existingPost.PhotosPath[i])
+	for i := range existingPost.Photos {
+		filesToDelete = append(filesToDelete, &existingPost.Photos[i])
 	}
 
 	// Удаляем файлы
@@ -297,36 +332,86 @@ func (s *PostService) DeletePost(ctx context.Context, postID uint, userID int) e
 	return nil
 }
 
-// GetUserPosts возвращает посты пользователя
-func (s *PostService) GetUserPosts(ctx context.Context, userID uint, params domain.PaginateQueryParams) ([]domain.Post, error) {
-	// Валидация параметров
+// GetUserPosts возвращает посты пользователя с обогащением данных профилей через gRPC
+func (s *PostService) GetUserPosts(ctx context.Context, selfUserID int32, userID uint, params domain.PaginateQueryParams) ([]domain.PostView, error) {
 	offset, limit := domain.ValidatePaginationParams(params)
 
-	domain.Info(ctx, "Getting user posts",
-		zap.Uint("userID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
+	domain.Info(ctx, "Getting user posts", zap.Uint("userID", userID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, int(userID))
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: int32(userID)})
 	if err != nil {
-		if errors.Is(err, domain.ErrUserNotFound) {
-			domain.Warn(ctx, "User not found", zap.Uint("userID", userID))
-			return nil, domain.ErrUserNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err, zap.Uint("userID", userID))
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return nil, domain.ErrDB
 	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return nil, domain.ErrNotExist
+	}
 
-	// Получаем посты
-	posts, err := s.postStore.GetPostsByUser(ctx, userID, limit, offset)
+	// Получаем посты из БД без информации о профиле
+	postsDB, err := s.postStore.GetPostsByUser(ctx, selfUserID, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user posts", err, zap.Uint("userID", userID))
 		return nil, domain.ErrDB
 	}
 
-	return posts, nil
+	// Обогащаем данные профилями через gRPC
+	postsView, err := s.enrichPostsWithProfiles(ctx, postsDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return postsView, nil
 }
+
+// GetCommunityPosts возвращает посты сообщества с обогащением данных профилей через gRPC
+func (s *PostService) GetCommunityPosts(ctx context.Context, userID int32, communityID int32, params domain.PaginateQueryParams) ([]domain.PostView, error) {
+	offset, limit := domain.ValidatePaginationParams(params)
+	domain.Info(ctx, "Getting community posts", zap.Int32("communityID", communityID))
+
+	// Проверяем существование сообщества
+	_, err := s.communityStore.GetCommunityByID(ctx, communityID)
+	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			domain.Warn(ctx, "Community not found", zap.Int32("communityID", communityID))
+			return nil, domain.ErrNotFound
+		}
+		domain.Error(ctx, "Failed to get community", err)
+		return nil, domain.ErrDB
+	}
+
+	// Получаем посты из БД без информации о профиле
+	postsDB, err := s.postStore.GetCommunityPosts(ctx, userID, communityID, limit, offset)
+	if err != nil {
+		domain.Error(ctx, "Failed to get community posts", err)
+		return nil, domain.ErrDB
+	}
+
+	// Обогащаем данные профилями через gRPC
+	postsView, err := s.enrichPostsWithProfiles(ctx, postsDB)
+	if err != nil {
+		return nil, err
+	}
+
+	return postsView, nil
+}
+
+func (s *PostService) UpdateLikeOnPostByUserID(ctx context.Context, userID, postID int32) error {
+	err := s.postStore.UpdateLikeOnPostByUserID(ctx, userID, postID)
+	if err != nil {
+
+		domain.FromContext(ctx).Error("Failed update like on post", zap.Error(err))
+		return domain.ErrDB
+
+	}
+
+	domain.FromContext(ctx).Info("like on post updated")
+	return nil
+}
+
+//Вспомогательные методы
 
 // convertToPointerSlice вспомогательная функция для конвертации
 func convertToPointerSlice(slice []string) []*string {
@@ -335,4 +420,109 @@ func convertToPointerSlice(slice []string) []*string {
 		result[i] = &slice[i]
 	}
 	return result
+}
+
+// enrichPostsWithProfiles обогащает список постов данными профилей через gRPC
+func (s *PostService) enrichPostsWithProfiles(ctx context.Context, postsDB []domain.PostDB) ([]domain.PostView, error) {
+	if len(postsDB) == 0 {
+		return []domain.PostView{}, nil
+	}
+
+	// Собираем ID авторов для запроса профилей
+	authorIDs := make([]int32, 0, len(postsDB))
+	for _, post := range postsDB {
+		authorIDs = append(authorIDs, int32(post.AuthorID))
+	}
+
+	// Получаем профили через gRPC
+	profilesResp, err := s.profileService.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
+		UserIDs: authorIDs,
+	})
+	if err != nil {
+		domain.Error(ctx, "Failed to get profiles via gRPC", err)
+		return nil, domain.ErrService
+	}
+
+	// Преобразуем в доменную структуру
+	profilesMap := make(map[int32]domain.ShortProfile)
+	for userID, pbProfile := range profilesResp.Profiles {
+		profilesMap[userID] = domain.ShortProfile{
+			UserID:     pbProfile.UserID,
+			FullName:   pbProfile.FullName,
+			AvatarPath: pbProfile.AvatarPath,
+			Dob:        pbProfile.Dob.AsTime(),
+		}
+	}
+
+	// Собираем результат
+	postsView := make([]domain.PostView, 0, len(postsDB))
+	for _, postDB := range postsDB {
+		postView := domain.PostView{
+			ID:              postDB.ID,
+			AuthorID:        postDB.AuthorID,
+			CommunityID:     postDB.CommunityID,
+			Text:            postDB.Text,
+			Attachments:     postDB.Attachments,
+			Photos:          postDB.Photos,
+			LikeCount:       postDB.LikeCount,
+			CommentsCount:   postDB.CommentsCount,
+			IsLiked:         postDB.IsLiked,
+			CreatedAt:       postDB.CreatedAt,
+			IsCommunityPost: postDB.CommunityID != nil,
+			CommunityName:   postDB.CommunityName,
+			CommunityAvatar: postDB.CommunityAvatar,
+		}
+		// Заполняем данные автора из профиля
+		if profile, exists := profilesMap[int32(postDB.AuthorID)]; exists {
+			postView.AuthorName = profile.FullName
+			postView.AuthorAvatar = profile.AvatarPath
+		} else {
+			domain.Warn(ctx, "Profile not found for user", zap.Uint("authorID", postDB.AuthorID))
+			// Устанавливаем значения по умолчанию
+			postView.AuthorName = "Пользователь"
+		}
+
+		postsView = append(postsView, postView)
+	}
+
+	return postsView, nil
+}
+
+// enrichPostWithProfile обогащает один пост данными профиля через gRPC
+func (s *PostService) enrichPostWithProfile(ctx context.Context, postDB *domain.PostDB) (*domain.PostView, error) {
+	// Получаем профиль автора через gRPC
+	profilesResp, err := s.profileService.GetShortProfileMapByUserIDs(ctx, &pb.GetShortProfileMapByUserIDsRequest{
+		UserIDs: []int32{int32(postDB.AuthorID)},
+	})
+	if err != nil {
+		domain.Error(ctx, "Failed to get profile via gRPC", err)
+		return nil, domain.ErrService
+	}
+
+	postView := &domain.PostView{
+		ID:              postDB.ID,
+		AuthorID:        postDB.AuthorID,
+		CommunityID:     postDB.CommunityID,
+		Text:            postDB.Text,
+		Attachments:     postDB.Attachments,
+		Photos:          postDB.Photos,
+		LikeCount:       postDB.LikeCount,
+		CommentsCount:   postDB.CommentsCount,
+		IsLiked:         postDB.IsLiked,
+		CreatedAt:       postDB.CreatedAt,
+		IsCommunityPost: postDB.CommunityID != nil,
+		CommunityName:   postDB.CommunityName,
+		CommunityAvatar: postDB.CommunityAvatar,
+	}
+
+	// Заполняем данные автора из профиля
+	if profile, exists := profilesResp.Profiles[int32(postDB.AuthorID)]; exists {
+		postView.AuthorName = profile.FullName
+		postView.AuthorAvatar = profile.AvatarPath
+	} else {
+		domain.Warn(ctx, "Profile not found for user", zap.Uint("authorID", postDB.AuthorID))
+		postView.AuthorName = "Пользователь"
+	}
+
+	return postView, nil
 }

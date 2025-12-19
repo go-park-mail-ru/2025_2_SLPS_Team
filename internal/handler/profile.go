@@ -4,18 +4,18 @@ import (
 	"encoding/json"
 	"net/http"
 	"project/domain"
-	"strconv"
+	"project/shared/mapper/generated"
+	"project/shared/pb"
 	"strings"
 
-	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
 type ProfileHandler struct {
-	profileService domain.ProfileService
+	profileService pb.ProfileServiceClient
 }
 
-func NewProfileHandler(profileService domain.ProfileService) *ProfileHandler {
+func NewProfileHandler(profileService pb.ProfileServiceClient) *ProfileHandler {
 	return &ProfileHandler{
 		profileService: profileService,
 	}
@@ -36,10 +36,9 @@ func NewProfileHandler(profileService domain.ProfileService) *ProfileHandler {
 // @Security ApiKeyAuth
 // @Router /profile [put]
 func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(50 << 20) // 50MB
+	err := ParseMultipart(r)
 	if err != nil {
-		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse multipart form", zap.Error(err))
+		sendJSONError(w, err)
 		return
 	}
 
@@ -57,17 +56,22 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-	files := r.MultipartForm.File["avatar"]
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 
-	err = api.profileService.UpdateProfile(r.Context(), req, userID, files)
+	files, err := domain.MultipartFiles(r, "avatar")
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, "Profile updated", http.StatusOK)
-	domain.FromContext(r.Context()).Info("Profile updated successfully")
+	_, err = api.profileService.UpdateProfile(r.Context(), &pb.UpdateProfileRequest{Profile: generated.ToProtoProfile(req), UserID: userID, Files: generated.FilesToProto(files)})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONSuccess(w, r, "Profile updated")
 }
 
 // UpdateAvatar обновляет аватар пользователя.
@@ -84,26 +88,27 @@ func (api *ProfileHandler) UpdateProfile(w http.ResponseWriter, r *http.Request)
 // @Security ApiKeyAuth
 // @Router /profile/avatar [put]
 func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) {
-
-	err := r.ParseMultipartForm(50 << 20) // 50MB
-	if err != nil {
-		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse multipart form", zap.Error(err))
-		return
-	}
-
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-
-	files := r.MultipartForm.File["avatar"]
-
-	err = api.profileService.UpdateAvatar(r.Context(), userID, files)
+	err := ParseMultipart(r)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, "Avatar updated", http.StatusOK)
-	domain.FromContext(r.Context()).Info("Avatar updated successfully")
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	files, err := domain.MultipartFiles(r, "avatar")
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+	_, err = api.profileService.UpdateAvatar(r.Context(), &pb.UpdateAvatarRequest{Avatar: generated.FilesToProto(files), UserID: userID})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONSuccess(w, r, "Avatar updated")
 }
 
 // UpdateHeader обновляет header пользователя.
@@ -120,24 +125,27 @@ func (api *ProfileHandler) UpdateAvatar(w http.ResponseWriter, r *http.Request) 
 // @Security ApiKeyAuth
 // @Router /profile/header [put]
 func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(50 << 20) // 50MB
-	if err != nil {
-		http.Error(w, "Can't parse multipart form", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse multipart form", zap.Error(err))
-		return
-	}
-
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
-	files := r.MultipartForm.File["header"]
-
-	err = api.profileService.UpdateHeader(r.Context(), userID, files)
+	err := ParseMultipart(r)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
-	sendJSONResponse(w, "Header updated", http.StatusOK)
-	domain.FromContext(r.Context()).Info("Header updated successfully")
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	files, err := domain.MultipartFiles(r, "header")
+	if err != nil {
+		sendJSONError(w, err)
+		return
+	}
+	_, err = api.profileService.UpdateAvatar(r.Context(), &pb.UpdateAvatarRequest{Avatar: generated.FilesToProto(files), UserID: userID})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		sendJSONError(w, err)
+		return
+	}
+
+	sendJSONSuccess(w, r, "Header updated")
 }
 
 // GetProfileByUserID получает профиль пользователя по ID.
@@ -146,29 +154,52 @@ func (api *ProfileHandler) UpdateHeader(w http.ResponseWriter, r *http.Request) 
 // @Description Возвращает профиль пользователя по его ID.
 // @Tags profile
 // @Produce json
-// @Param id path int true "ID пользователя"
+// @Param id path int32 true "ID пользователя"
 // @Success 200 {object} domain.Profile "Профиль пользователя"
 // @Failure 400 {string} string "Invalid user ID / User does not exist"
 // @Failure 500 {string} string "Server error"
 // @Security ApiKeyAuth
 // @Router /profile/{id} [get]
 func (api *ProfileHandler) GetProfileByUserID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	userIDStr := vars["id"]
-	userID, err := strconv.Atoi(userIDStr)
+	userID, err := PathInt32(r, "id")
 	if err != nil {
-		sendJSONResponse(w, "Invalid user ID", http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error("Failed to parse user ID", zap.Error(err))
+		sendJSONError(w, err)
 		return
 	}
 
-	profile, err := api.profileService.GetProfileByUserID(r.Context(), userID)
+	selfUserID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	resp, err := api.profileService.GetProfileByUserID(r.Context(), &pb.GetProfileByUserIDRequest{UserID: userID, SelfUserID: selfUserID})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
+		return
 	}
 
-	err = sendJSONData(r.Context(), w, profile)
-	if err == nil {
-		domain.FromContext(r.Context()).Info("Profile return successfully")
+	profile := generated.FromProtoProfile(resp.Profile)
+
+	sendJSONData(r.Context(), w, profile)
+}
+
+// DeleteAvatar Удаление аватара
+// @Summary      Удалить аватар пользователя
+// @Description  Очищает поле avatar_path в профиле текущего пользователя и возвращает сообщение об успешном удалении.
+// @Tags         profile
+// @Accept       json
+// @Produce      json
+// @Success      200 {object} JSONResponse "Avatar deleted"
+// @Failure      500 {object} JSONResponse "Internal Server Error"
+// @Security     BearerAuth
+// @Router       /profile/avatar [delete]
+func (api *ProfileHandler) DeleteAvatar(w http.ResponseWriter, r *http.Request) {
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
+
+	_, err := api.profileService.DeleteAvatarByUserID(r.Context(), &pb.DeleteAvatarRequest{UserID: userID})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		sendJSONError(w, err)
+		return
 	}
+
+	sendJSONSuccess(w, r, "Avatar deleted")
 }

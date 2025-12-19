@@ -13,8 +13,8 @@ type Envelope struct {
 }
 
 type WSHub interface {
-	RemoveClient(ctx context.Context, userID int)
-	SendJSON(ctx context.Context, userID int, eventType string, data interface{}) error
-	SendToUser(ctx context.Context, userID int, message []byte)
-	AddClient(ctx context.Context, userID int, conn *websocket.Conn)
+	RemoveClient(ctx context.Context, userID int32)
+	SendJSON(ctx context.Context, userID int32, eventType string, data interface{}) error
+	SendToUser(ctx context.Context, userID int32, message []byte)
+	AddClient(ctx context.Context, userID int32, conn *websocket.Conn)
 }

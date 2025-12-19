@@ -43,7 +43,7 @@ func (api *WSHandler) ServeWs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, _ := r.Context().Value(domain.UserIDKey).(int)
+	userID, _ := r.Context().Value(domain.UserIDKey).(int32)
 	api.wsHub.AddClient(r.Context(), userID, conn)
 
 }

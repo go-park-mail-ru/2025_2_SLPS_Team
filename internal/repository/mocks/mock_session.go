@@ -36,7 +36,7 @@ func (m *MockSessionStore) EXPECT() *MockSessionStoreMockRecorder {
 }
 
 // AddSession mocks base method.
-func (m *MockSessionStore) AddSession(ctx context.Context, userID int) (*domain.SIDAndSCRFToken, error) {
+func (m *MockSessionStore) AddSession(ctx context.Context, userID int32) (*domain.SIDAndSCRFToken, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddSession", ctx, userID)
 	ret0, _ := ret[0].(*domain.SIDAndSCRFToken)

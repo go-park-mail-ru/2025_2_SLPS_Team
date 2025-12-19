@@ -4,24 +4,30 @@ import (
 	"context"
 	"errors"
 	"project/domain"
+	"project/shared/mapper/generated"
+	"project/shared/pb"
 
 	"go.uber.org/zap"
 )
 
 type FriendService struct {
-	friendStore domain.FriendStore
-	userStore   domain.UserStore
+	friendStore         domain.FriendStore
+	authService         pb.AuthServiceClient
+	elasticProfileStore domain.ElasticProfileStore
+	profileService      pb.ProfileServiceClient
 }
 
-func NewFriendService(friendStore domain.FriendStore, userStore domain.UserStore) domain.FriendService {
+func NewFriendService(friendStore domain.FriendStore, authService pb.AuthServiceClient, elasticProfileStore domain.ElasticProfileStore, profileService pb.ProfileServiceClient) domain.FriendService {
 	return &FriendService{
-		friendStore: friendStore,
-		userStore:   userStore,
+		friendStore:         friendStore,
+		authService:         authService,
+		profileService:      profileService,
+		elasticProfileStore: elasticProfileStore,
 	}
 }
 
 // SendFriendRequest отправляет запрос в друзья
-func (s *FriendService) SendFriendRequest(ctx context.Context, actionUserID, targetUserID int) error {
+func (s *FriendService) SendFriendRequest(ctx context.Context, actionUserID, targetUserID int32) error {
 	// Нельзя отправить запрос самому себе
 	if actionUserID == targetUserID {
 		domain.Warn(ctx, "User tried to send friend request to themselves")
@@ -29,18 +35,19 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, actionUserID, tar
 	}
 
 	domain.Info(ctx, "Sending friend request",
-		zap.Int("actionUserID", actionUserID),
-		zap.Int("targetUserID", targetUserID))
+		zap.Int32("actionUserID", actionUserID),
+		zap.Int32("targetUserID", targetUserID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, targetUserID)
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: targetUserID})
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "Friend user not found", zap.Int("targetUserID", targetUserID))
-			return domain.ErrNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err, zap.Int("targetUserID", targetUserID))
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
 		return domain.ErrDB
+	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return domain.ErrNotExist
 	}
 
 	// Проверяем текущий статус дружбы
@@ -87,10 +94,10 @@ func (s *FriendService) SendFriendRequest(ctx context.Context, actionUserID, tar
 }
 
 // AcceptFriendRequest принимает запрос в друзья
-func (s *FriendService) AcceptFriendRequest(ctx context.Context, userID, friendID int) error {
+func (s *FriendService) AcceptFriendRequest(ctx context.Context, userID, friendID int32) error {
 	domain.Info(ctx, "Accepting friend request",
-		zap.Int("userID", userID),
-		zap.Int("friendID", friendID))
+		zap.Int32("userID", userID),
+		zap.Int32("friendID", friendID))
 
 	// Проверяем существование запроса
 	friendship, err := s.friendStore.GetFriendship(ctx, userID, friendID)
@@ -120,10 +127,10 @@ func (s *FriendService) AcceptFriendRequest(ctx context.Context, userID, friendI
 }
 
 // RejectFriendRequest отклоняет запрос в друзья
-func (s *FriendService) RejectFriendRequest(ctx context.Context, userID, friendID int) error {
+func (s *FriendService) RejectFriendRequest(ctx context.Context, userID, friendID int32) error {
 	domain.Info(ctx, "Rejecting friend request",
-		zap.Int("userID", userID),
-		zap.Int("friendID", friendID))
+		zap.Int32("userID", userID),
+		zap.Int32("friendID", friendID))
 
 	// Проверяем существование запроса
 	friendship, err := s.friendStore.GetFriendship(ctx, userID, friendID)
@@ -154,24 +161,12 @@ func (s *FriendService) RejectFriendRequest(ctx context.Context, userID, friendI
 }
 
 // RemoveFriend удаляет из друзей
-func (s *FriendService) RemoveFriend(ctx context.Context, userID, friendID int) error {
+func (s *FriendService) RemoveFriend(ctx context.Context, userID, friendID int32) error {
 	domain.Info(ctx, "Removing friend",
-		zap.Int("userID", userID),
-		zap.Int("friendID", friendID))
+		zap.Int32("userID", userID),
+		zap.Int32("friendID", friendID))
 
-	// Проверяем что пользователи действительно друзья
-	areFriends, err := s.friendStore.AreFriends(ctx, userID, friendID)
-	if err != nil {
-		domain.Error(ctx, "Failed to check friendship", err)
-		return domain.ErrDB
-	}
-
-	if !areFriends {
-		domain.Warn(ctx, "Attempt to remove non-friend")
-		return domain.ErrNotFound
-	}
-
-	err = s.friendStore.DeleteFriendship(ctx, userID, friendID)
+	err := s.friendStore.DeleteFriendship(ctx, userID, friendID)
 	if err != nil {
 		domain.Error(ctx, "Failed to remove friend", err)
 		return domain.ErrDB
@@ -182,86 +177,106 @@ func (s *FriendService) RemoveFriend(ctx context.Context, userID, friendID int) 
 }
 
 // GetFriends получает список друзей
-func (s *FriendService) GetFriends(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
+func (s *FriendService) GetFriends(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting user friends",
-		zap.Int("userID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
+		zap.Int32("userID", userID),
+		zap.Int32("offset", offset),
+		zap.Int32("limit", limit))
 
-	friends, err := s.friendStore.GetUserFriends(ctx, userID, limit, offset)
+	friendIDs, err := s.friendStore.GetUserFriends(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get user friends", err)
 		return nil, domain.ErrDB
 	}
 
-	return friends, nil
+	friends, err := s.profileService.GetShortProfileByUserIDs(ctx, &pb.GetShortProfileByUserIDsRequest{UserIDs: friendIDs})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", friendIDs))
+		return nil, domain.ErrDB
+	}
+	return generated.FromProtoShortProfileSlice(friends), nil
 }
 
 // GetAllUsers получает всех пользователей с пагинацией
-func (s *FriendService) GetAllUsers(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
+func (s *FriendService) GetAllUsers(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting all users except current",
-		zap.Int("currentUserID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
+		zap.Int32("currentUserID", userID),
+		zap.Int32("offset", offset),
+		zap.Int32("limit", limit))
 
-	users, err := s.friendStore.GetAllUsers(ctx, userID, limit, offset)
+	userIDs, err := s.friendStore.GetAllUsers(ctx, userID)
 	if err != nil {
 		domain.Error(ctx, "Failed to get all users", err)
 		return nil, domain.ErrDB
 	}
-
-	return users, nil
+	userIDs = append(userIDs, userID)
+	friends, err := s.profileService.GetOtherShortProfileByUserIDs(ctx, &pb.GetOtherShortProfileByUserIDsRequest{UserIDs: userIDs, Limit: limit, Offset: offset})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", userIDs))
+		return nil, domain.ErrDB
+	}
+	return generated.FromProtoOtherShortProfileSlice(friends), nil
 }
 
 // GetFriendRequests получает входящие запросы в друзья
-func (s *FriendService) GetFriendRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
+func (s *FriendService) GetFriendRequests(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting friendship requests",
-		zap.Int("userID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
+		zap.Int32("userID", userID),
+		zap.Int32("offset", offset),
+		zap.Int32("limit", limit))
 
-	requests, err := s.friendStore.GetFriendshipRequests(ctx, userID, limit, offset)
+	requestIDs, err := s.friendStore.GetFriendshipRequests(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get friendship requests", err)
 		return nil, domain.ErrDB
 	}
 
-	return requests, nil
+	friends, err := s.profileService.GetShortProfileByUserIDs(ctx, &pb.GetShortProfileByUserIDsRequest{UserIDs: requestIDs})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", requestIDs))
+		return nil, domain.ErrDB
+	}
+	return generated.FromProtoShortProfileSlice(friends), nil
 }
 
 // GetSentRequests получает отправленные запросы в друзья
-func (s *FriendService) GetSentRequests(ctx context.Context, userID int, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
+func (s *FriendService) GetSentRequests(ctx context.Context, userID int32, params domain.PaginateQueryParams) ([]domain.ShortProfile, error) {
 	// Валидация параметров
 	offset, limit := domain.ValidatePaginationParams(params)
 
 	domain.Info(ctx, "Getting sent friend requests",
-		zap.Int("userID", userID),
-		zap.Int("offset", offset),
-		zap.Int("limit", limit))
+		zap.Int32("userID", userID),
+		zap.Int32("offset", offset),
+		zap.Int32("limit", limit))
 
-	requests, err := s.friendStore.GetSentRequests(ctx, userID, limit, offset)
+	requestIDs, err := s.friendStore.GetSentRequests(ctx, userID, limit, offset)
 	if err != nil {
 		domain.Error(ctx, "Failed to get sent requests", err)
 		return nil, domain.ErrDB
 	}
 
-	return requests, nil
+	friends, err := s.profileService.GetShortProfileByUserIDs(ctx, &pb.GetShortProfileByUserIDsRequest{UserIDs: requestIDs})
+	if err != nil {
+		domain.FromContext(ctx).Error("Failed to get profiles", zap.Error(err), zap.Int32s("authorIDs", requestIDs))
+		return nil, domain.ErrDB
+	}
+	return generated.FromProtoShortProfileSlice(friends), nil
 }
 
 // GetFriendshipStatus получает статус дружбы с пользователем
-func (s *FriendService) GetFriendshipStatus(ctx context.Context, userID, friendID int) (domain.FriendshipStatus, error) {
+func (s *FriendService) GetFriendshipStatus(ctx context.Context, userID, friendID int32) (domain.FriendshipStatus, error) {
 	domain.Info(ctx, "Getting friendship status",
-		zap.Int("userID", userID),
-		zap.Int("friendID", friendID))
+		zap.Int32("userID", userID),
+		zap.Int32("friendID", friendID))
 
 	status, err := s.friendStore.GetFriendshipStatus(ctx, userID, friendID)
 	if err != nil && !errors.Is(err, domain.ErrNotFound) {
@@ -274,38 +289,30 @@ func (s *FriendService) GetFriendshipStatus(ctx context.Context, userID, friendI
 }
 
 // CountUserRelations подсчитывает количество отношений пользователя по типу
-func (s *FriendService) CountUserRelations(ctx context.Context, userID int, countType domain.FriendshipCountType) (int, error) {
+func (s *FriendService) CountUserRelations(ctx context.Context, userID int32) (*domain.UserRelationsCounts, error) {
 	domain.Info(ctx, "Counting user relations",
-		zap.Int("userID", userID),
-		zap.String("countType", string(countType)))
-
-	//Валидация типа чтобы был только разрешенный
-	if !s.isValidCountType(countType) {
-		domain.Warn(ctx, "Invalid count type", zap.String("countType", string(countType)))
-		return 0, domain.ErrInvalidInput
-	}
+		zap.Int32("userID", userID))
 
 	// Проверяем существование пользователя
-	_, err := s.userStore.GetUserByID(ctx, userID)
+	resp, err := s.authService.IsUserExists(ctx, &pb.UserIDRequest{UserId: userID})
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			domain.Warn(ctx, "User not found", zap.Int("userID", userID))
-			return 0, domain.ErrNotFound
-		}
-		domain.Error(ctx, "Failed to get user", err, zap.Int("userID", userID))
-		return 0, domain.ErrDB
+		domain.FromContext(ctx).Error("Failed to check user existence", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+	isUserExist := resp.Exists
+	if !isUserExist {
+		domain.FromContext(ctx).Warn("User not found")
+		return nil, domain.ErrNotExist
 	}
 
-	count, err := s.friendStore.CountUserRelations(ctx, userID, countType)
+	count, err := s.friendStore.CountUserRelations(ctx, userID)
 	if err != nil {
 		domain.Error(ctx, "Failed to count user relations", err)
-		return 0, domain.ErrDB
+		return nil, domain.ErrDB
 	}
 
 	domain.Info(ctx, "User relations counted successfully",
-		zap.Int("userID", userID),
-		zap.String("countType", string(countType)),
-		zap.Int("count", count))
+		zap.Int32("userID", userID))
 	return count, nil
 }
 
@@ -319,4 +326,30 @@ func (s *FriendService) isValidCountType(countType domain.FriendshipCountType) b
 		domain.CountRejected: true,
 	}
 	return validTypes[countType]
+}
+
+func (s *FriendService) SearchShortProfilesByFullNameAndRelationType(ctx context.Context, userID int32, params domain.PaginateQueryParams, fullName string, fType domain.FriendshipCountType) ([]domain.ShortProfile, error) {
+
+	offset, limit := domain.ValidatePaginationParams(params)
+	isTerms := true
+	if fType == domain.CountNotFriends {
+		isTerms = false
+	}
+	filterIDs, err := s.friendStore.GetUserIDsByFriendType(ctx, userID, fType)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail find user relations by type", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+	foundIDs, err := s.elasticProfileStore.SearchUserIDsByFullNameWithFilter(ctx, fullName, filterIDs, isTerms, limit, offset)
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail find user IDs by FullName", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+	resp, err := s.profileService.GetShortProfileByUserIDs(ctx, &pb.GetShortProfileByUserIDsRequest{UserIDs: foundIDs})
+	if err != nil {
+		domain.FromContext(ctx).Error("Fail get short Profiles by user IDs", zap.Error(err))
+		return nil, domain.ErrDB
+	}
+
+	return generated.FromProtoShortProfileSlice(resp), nil
 }

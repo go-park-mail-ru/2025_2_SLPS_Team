@@ -1,21 +1,22 @@
 package handler
 
 import (
-	"encoding/json"
 	"net/http"
 	"project/config"
 	"project/domain"
+	"project/shared/mapper/generated"
+	"project/shared/pb"
 	"time"
 
 	"go.uber.org/zap"
 )
 
 type AuthHandler struct {
-	authService domain.AuthService
+	authService pb.AuthServiceClient
 	config      *config.Config
 }
 
-func NewAuthHandler(authService domain.AuthService, config *config.Config) *AuthHandler {
+func NewAuthHandler(authService pb.AuthServiceClient, config *config.Config) *AuthHandler {
 	return &AuthHandler{
 		authService: authService,
 		config:      config,
@@ -28,13 +29,13 @@ func (api *AuthHandler) IsLoggedIn(r *http.Request) (*domain.Session, error) {
 		domain.FromContext(r.Context()).Info("Cookie session_id not found:", zap.Error(err))
 		return nil, domain.ErrNotFound
 	}
-	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)
+	resp, err := api.authService.IsLoggedIn(r.Context(), &pb.SessionCookieRequest{SessionCookie: sessionCookie.Value})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		return nil, err
+	}
 
-	return session, err
-}
-
-type IsLoggedInResponse struct {
-	UserID int `json:"userID"`
+	return &domain.Session{UserID: resp.UserId, CSRFToken: resp.CsrfToken}, err
 }
 
 // IsLoggedInHandler проверяет, авторизован ли пользователь по cookie сессии.
@@ -47,33 +48,46 @@ type IsLoggedInResponse struct {
 // @Failure 500 {object} JSONResponse
 // @Router /auth/isloggedin [get]
 func (api *AuthHandler) IsLoggedInHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	sessionCookie, err := r.Cookie("session_id")
 	if err != nil {
 		sendJSONError(w, domain.ErrNotFound)
 		return
 	}
-	session, err := api.authService.IsLoggedIn(r.Context(), sessionCookie)
+
+	resp, err := api.authService.IsLoggedIn(r.Context(), &pb.SessionCookieRequest{SessionCookie: sessionCookie.Value})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
 
-	res := IsLoggedInResponse{
-		UserID: session.UserID,
+	resp2, err := api.authService.GetUserRole(r.Context(), &pb.UserIDRequest{UserId: resp.UserId})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		sendJSONError(w, err)
+		return
 	}
 
-	if err := json.NewEncoder(w).Encode(res); err != nil {
-		domain.FromContext(r.Context()).Error(domain.FailToEncode, zap.Error(err), zap.String("struct", domain.StructName(res)))
+	res := domain.IsLoggedInResponse{
+		UserID: resp.UserId,
+		Role:   resp2.Role,
 	}
-	domain.FromContext(r.Context()).Info("registration success")
+
+	sendJSONData(r.Context(), w, res)
 }
 
-func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userID int) error {
-	tokens, err := api.authService.AddSession(r.Context(), userID)
+func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userID int32) error {
+	resp, err := api.authService.AddSession(r.Context(), &pb.UserIDRequest{UserId: userID})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		return err
+	}
+
+	tokens := domain.SIDAndSCRFToken{SID: resp.Sid, CSRFToken: resp.CsrfToken}
 	if err != nil {
 		return err
 	}
+
 	sessionCookie := &http.Cookie{
 		Name:     "session_id",
 		Value:    tokens.SID,
@@ -91,6 +105,7 @@ func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userI
 		HttpOnly: false,
 	}
 	http.SetCookie(w, CSRFCookie)
+
 	return nil
 }
 
@@ -106,26 +121,26 @@ func (api *AuthHandler) AddSession(w http.ResponseWriter, r *http.Request, userI
 // @Failure 500 {object} JSONResponse
 // @Router /auth/login [post]
 func (api *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var req domain.User
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
-		return
-	}
-	userID, err := api.authService.Login(r.Context(), req)
+	req, err := DecodeJSONBody[domain.User](r)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
 
+	resp, err := api.authService.Login(r.Context(), &pb.LoginRequest{Email: req.Email, Password: req.Password})
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		sendJSONError(w, err)
+		return
+	}
+
+	userID := resp.UserId
 	err = api.AddSession(w, r, userID)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
-
-	sendJSONResponse(w, "User logged in", http.StatusOK)
-	domain.FromContext(r.Context()).Info("User logged in", zap.Int("userID", userID))
+	sendJSONSuccess(w, r, "User logged in")
 }
 
 // Logout удаляет текущую сессию пользователя.
@@ -145,8 +160,10 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		domain.FromContext(r.Context()).Error("Failed to logout", zap.Error(err))
 		return
 	}
-	err = api.authService.Logout(r.Context(), session)
+
+	_, err = api.authService.Logout(r.Context(), &pb.SessionCookieRequest{SessionCookie: session.Value})
 	if err != nil {
+		err = domain.FromGrpcError(err)
 		sendJSONError(w, err)
 		return
 	}
@@ -169,9 +186,7 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		HttpOnly: false,
 	}
 	http.SetCookie(w, CSRFToken)
-
-	sendJSONResponse(w, "User logged out", http.StatusOK)
-	domain.FromContext(r.Context()).Info("User loggged out")
+	sendJSONSuccess(w, r, "User logged out")
 }
 
 // Register регистрирует нового пользователя.
@@ -187,17 +202,20 @@ func (api *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Failure 403 {object} JSONResponse
 // @Router /auth/register [post]
 func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	var req domain.RegisterRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		sendJSONResponse(w, domain.InvalidJSON, http.StatusBadRequest)
-		domain.FromContext(r.Context()).Error(domain.InvalidJSON, zap.Error(err), zap.String("struct", domain.StructName(req)))
-		return
-	}
-	userID, err := api.authService.Register(r.Context(), req)
+	req, err := DecodeJSONBody[domain.RegisterRequest](r)
 	if err != nil {
 		sendJSONError(w, err)
 		return
 	}
+
+	resp, err := api.authService.Register(r.Context(), generated.RegisterRequestToProto(*req))
+	if err != nil {
+		err = domain.FromGrpcError(err)
+		sendJSONError(w, err)
+		return
+	}
+
+	userID := resp.UserId
 
 	err = api.AddSession(w, r, userID)
 	if err != nil {
@@ -205,6 +223,5 @@ func (api *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sendJSONResponse(w, "User created", http.StatusOK)
-	domain.FromContext(r.Context()).Info("User created, registration complete", zap.Int("userID", userID))
+	sendJSONSuccess(w, r, "User created, registration complete")
 }

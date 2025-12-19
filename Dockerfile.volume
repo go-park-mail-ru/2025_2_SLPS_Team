@@ -1,0 +1,17 @@
+# Используем минимальный образ
+FROM alpine:latest
+
+# Создаем целевую директорию внутри контейнера
+RUN mkdir -p /preload/stickers
+
+# Копируем содержимое папки stickers, включая подпапки
+# Слэш в конце гарантирует копирование именно содержимого
+COPY uploads/stickers/ /preload/stickers/
+
+# Копируем скрипт и даем права на выполнение
+COPY init-shared-volume.sh /init.sh
+RUN chmod +x /init.sh
+
+# Точка входа
+ENTRYPOINT ["/bin/sh", "/init.sh"]
+

@@ -16,6 +16,206 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/applications": {
+            "get": {
+                "description": "Returns paginated list of applications. Admins see all, normal users see only theirs.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "List support applications",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Application"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Creates a new support application. Can be created by a registered user or a temp session.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Create a new support application",
+                "parameters": [
+                    {
+                        "description": "Application payload",
+                        "name": "application",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.Application"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handler.ApplicationIDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid JSON or missing fields",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/applications/{id}/status": {
+            "put": {
+                "description": "Updates the status of an existing support application by ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Update the status of an application",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "Application ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New status",
+                        "name": "status",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.updateStatusRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Invalid ID or request body",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/applications/{id}/text": {
+            "put": {
+                "description": "Updates the text of an existing support application by ID.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Applications"
+                ],
+                "summary": "Update the text of an application",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "Application ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New text",
+                        "name": "text",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handler.updateTextRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Invalid ID or request body",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/isloggedin": {
             "get": {
                 "description": "Возвращает ID пользователя, если сессия валидна",
@@ -194,6 +394,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество чатов для возврата",
                         "name": "limit",
@@ -201,6 +402,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 0,
                         "description": "Номер страницы для пагинации",
                         "name": "page",
@@ -248,6 +450,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -276,9 +479,9 @@ const docTemplate = `{
                 }
             }
         },
-        "/chats/{chatID}/message": {
-            "post": {
-                "description": "Создает новое сообщение в указанном чате",
+        "/chats/{id}/last-read": {
+            "put": {
+                "description": "Обновляет значение lastReadMessageID для текущего (аутентифицированного) пользователя в указанном чате.",
                 "consumes": [
                     "application/json"
                 ],
@@ -286,42 +489,134 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "messages"
+                    "chats"
                 ],
-                "summary": "Создать сообщение",
+                "summary": "Обновить последнее прочитанное сообщение",
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID чата",
-                        "name": "chatID",
+                        "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Тело сообщения",
-                        "name": "message",
+                        "description": "Новый ID последнего прочитанного сообщения",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/domain.Message"
+                            "$ref": "#/definitions/handler.UpdateLastReadRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Информация об успешном обновлении или отсутствии изменений",
                         "schema": {
-                            "$ref": "#/definitions/handler.MessageIDResponse"
+                            "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Некорректные параметры запроса",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/chats/{id}/message": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Создает новое сообщение в указанном чате. Можно отправить:",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "messages"
+                ],
+                "summary": "Создать сообщение (текст, файлы или стикер)",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID чата",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Текст сообщения (обязателен, если нет вложений и стикера)",
+                        "name": "text",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "file"
+                        },
+                        "collectionFormat": "multi",
+                        "description": "Вложения к сообщению",
+                        "name": "attachments",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID стикера (если отправляется стикер, то нельзя отправлять текст и вложения)",
+                        "name": "sticker_id",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Сообщение успешно создано",
+                        "schema": {
+                            "$ref": "#/definitions/handler.MessageIDResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен (не участник чата)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Чат или стикер не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -342,6 +637,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID чата",
                         "name": "id",
                         "in": "path",
@@ -349,6 +645,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Лимит количества сообщений",
                         "name": "limit",
@@ -356,6 +653,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "integer",
+                        "format": "int32",
                         "default": 0,
                         "description": "страница для пагинации",
                         "name": "page",
@@ -390,6 +688,1122 @@ const docTemplate = `{
                 }
             }
         },
+        "/comments": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Создает новый комментарий к посту",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Создать комментарий",
+                "parameters": [
+                    {
+                        "description": "Данные для создания комментария",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Комментарий успешно создан",
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentView"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пост не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/comments/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о комментарии по его идентификатору",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Получить комментарий по ID",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID комментария",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Комментарий найден",
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentView"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID комментария",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Комментарий не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Обновляет существующий комментарий (только автор)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Обновить комментарий",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID комментария",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Новые данные комментария",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommentUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Комментарий успешно обновлен",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен (не автор комментария)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Комментарий не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Удаляет комментарий (только автор)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Удалить комментарий",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID комментария",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Комментарий успешно удален",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID комментария",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен (не автор комментария)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Комментарий не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Создает новое сообщество с возможностью загрузки аватара и обложки",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Создать сообщество",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Название сообщества (3-48 символов)",
+                        "name": "name",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Описание сообщества (до 512 символов)",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Аватар сообщества",
+                        "name": "avatar",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Обложка сообщества",
+                        "name": "cover",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Сообщество успешно создано",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/created": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список сообществ, созданных текущим пользователем (только ID, название и аватар)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить созданные сообщества",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Количество сообществ на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список созданных сообществ",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.CommunityForMyCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры пагинации",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/my": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список сообществ, на которые подписан пользователь",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить сообщества пользователя",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Количество сообществ на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список сообществ пользователя",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры пагинации",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/other": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список сообществ, на которые пользователь не подписан (рекомендации)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить другие сообщества",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Количество сообществ на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список рекомендуемых сообществ",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры пагинации",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/search": {
+            "get": {
+                "description": "Возвращает список сообществ, имя которых соответствует поисковому запросу.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Поиск сообществ по имени",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Полное или частичное имя сообщества",
+                        "name": "name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "subscriber",
+                            "recommended"
+                        ],
+                        "type": "string",
+                        "default": "recommended",
+                        "description": "Тип подписки: subscriber, notSubscriber",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Лимит количества сообществ",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы для пагинации",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Найденные сообщества",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing name query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/users/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список сообществ, на которые подписан указанный пользователь",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить сообщества пользователя по ID",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID пользователя",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Количество сообществ на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список сообществ пользователя",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortCommunity"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/users/{userID}/subscribed-ids": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список ID сообществ, на которые подписан указанный пользователь",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить ID подписанных сообществ пользователя",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID пользователя",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список ID подписанных сообществ",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "format": "int32"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID пользователя",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пользователь не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает информацию о сообществе включая количество подписчиков, статус подписки текущего пользователя, создателя",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить информацию о сообществе",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация о сообществе",
+                        "schema": {
+                            "$ref": "#/definitions/domain.CommunityForView"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID сообщества",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Сообщество не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Обновляет информацию о сообществе (только создатель)",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Обновить сообщество",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Название сообщества (3-48 символов)",
+                        "name": "name",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Описание сообщества (до 512 символов)",
+                        "name": "description",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Новый аватар сообщества",
+                        "name": "avatar",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "file",
+                        "description": "Новая обложка сообщества",
+                        "name": "cover",
+                        "in": "formData"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Сообщество успешно обновлено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные данные запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен (не создатель)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Сообщество не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Удаляет сообщество (только создатель)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Удалить сообщество",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Сообщество успешно удалено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID сообщества",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Пользователь не авторизован",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Доступ запрещен (не создатель)",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Сообщество не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/{id}/subscribe": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Подписывает текущего пользователя на указанное сообщество",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Подписаться на сообщество",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешная подписка",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID сообщества",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Сообщество не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/{id}/subscribers": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Возвращает список подписчиков указанного сообщества",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Получить подписчиков сообщества",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Количество подписчиков на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Список подписчиков",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.CommunitySubscriber"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Сообщество не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/communities/{id}/unsubscribe": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Отписывает текущего пользователя от указанного сообщества",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "communities"
+                ],
+                "summary": "Отписаться от сообщества",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешная отписка",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID сообщества",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Подписка не найдена",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/friends": {
             "get": {
                 "security": [
@@ -409,6 +1823,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -418,6 +1833,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество друзей на странице",
                         "name": "limit",
@@ -468,6 +1884,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -477,6 +1894,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество запросов на странице",
                         "name": "limit",
@@ -489,7 +1907,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.FriendshipWithProfile"
+                                "$ref": "#/definitions/domain.ShortProfile"
                             }
                         }
                     },
@@ -503,6 +1921,80 @@ const docTemplate = `{
                         "description": "Внутренняя ошибка сервера",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/friends/search": {
+            "get": {
+                "description": "Возвращает список профилей, имя которых соответствует поисковому запросу.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "friends"
+                ],
+                "summary": "Поиск профилей по имени",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Полное или частичное имя пользователя",
+                        "name": "full_name",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "enum": [
+                            "accepted",
+                            "pending",
+                            "sent",
+                            "blocked",
+                            "notFriends"
+                        ],
+                        "type": "string",
+                        "default": "notFriends",
+                        "description": "Тип дружбы: accepted, pending, sent, blocked, notFriends",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Лимит количества профилей",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "страница для пагинации",
+                        "name": "page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "198": {
+                        "description": "Найденные профили",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.ShortProfile"
+                            }
+                        }
+                    },
+                    "398": {
+                        "description": "Missing full_name query parameter",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "498": {
+                        "description": "Server error",
+                        "schema": {
+                            "type": "string"
                         }
                     }
                 }
@@ -527,6 +2019,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -536,6 +2029,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество запросов на странице",
                         "name": "limit",
@@ -548,7 +2042,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/domain.FriendshipWithProfile"
+                                "$ref": "#/definitions/domain.ShortProfile"
                             }
                         }
                     },
@@ -586,6 +2080,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -595,6 +2090,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество пользователей на странице",
                         "name": "limit",
@@ -648,6 +2144,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя, которому отправляется запрос",
                         "name": "id",
                         "in": "path",
@@ -708,6 +2205,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -764,6 +2262,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя (отправителя запроса)",
                         "name": "id",
                         "in": "path",
@@ -817,30 +2316,18 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "enum": [
-                            "accepted",
-                            "pending",
-                            "sent",
-                            "blocked"
-                        ],
-                        "type": "string",
-                        "default": "accepted",
-                        "description": "Тип подсчета: accepted, pending, sent, blocked",
-                        "name": "type",
-                        "in": "query"
                     }
                 ],
                 "responses": {
                     "200": {
                         "description": "Успешный ответ с количеством отношений",
                         "schema": {
-                            "$ref": "#/definitions/domain.FriendsCountResponse"
+                            "$ref": "#/definitions/domain.UserRelationsCounts"
                         }
                     },
                     "400": {
@@ -886,6 +2373,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя (отправителя запроса)",
                         "name": "id",
                         "in": "path",
@@ -939,6 +2427,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -969,7 +2458,7 @@ const docTemplate = `{
         },
         "/posts": {
             "get": {
-                "description": "Возвращает список постов с поддержкой пагинации",
+                "description": "Возвращает список постов с поддержкой пагинации (включая посты из сообществ)",
                 "consumes": [
                     "application/json"
                 ],
@@ -984,6 +2473,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -993,6 +2483,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество постов на странице",
                         "name": "limit",
@@ -1003,7 +2494,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Успешный ответ с постами",
                         "schema": {
-                            "$ref": "#/definitions/handler.PostsResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.PostView"
+                            }
                         }
                     },
                     "400": {
@@ -1042,8 +2536,14 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Текст поста",
                         "name": "text",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
+                    },
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID сообщества (если пост в сообществе)",
+                        "name": "communityID",
+                        "in": "formData"
                     },
                     {
                         "type": "array",
@@ -1094,6 +2594,80 @@ const docTemplate = `{
                 }
             }
         },
+        "/posts/communities/{id}": {
+            "get": {
+                "description": "Возвращает посты конкретного сообщества с пагинацией",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Получить посты сообщества",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID сообщества",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Количество постов на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешный ответ с постами сообщества",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.PostView"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Сообщество не найдено",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/posts/{id}": {
             "get": {
                 "description": "Возвращает пост по его идентификатору",
@@ -1111,6 +2685,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID поста",
                         "name": "id",
                         "in": "path",
@@ -1121,7 +2696,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Пост найден",
                         "schema": {
-                            "$ref": "#/definitions/domain.Post"
+                            "$ref": "#/definitions/domain.PostView"
                         }
                     },
                     "400": {
@@ -1165,6 +2740,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID поста",
                         "name": "id",
                         "in": "path",
@@ -1174,8 +2750,7 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Текст поста",
                         "name": "text",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "array",
@@ -1258,6 +2833,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID поста",
                         "name": "id",
                         "in": "path",
@@ -1291,6 +2867,175 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Пост не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{id}/like": {
+            "put": {
+                "description": "Переключает лайк текущего (аутентифицированного) пользователя на указанном посте.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Поставить или убрать лайк на посте",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID поста",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Информация о результате операции: лайк поставлен или снят",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный ID поста",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{postID}/comments": {
+            "get": {
+                "description": "Возвращает список комментариев к указанному посту с пагинацией",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Получить комментарии поста",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID поста",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 1,
+                        "description": "Номер страницы",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "maximum": 100,
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "default": 20,
+                        "description": "Количество комментариев на странице",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Успешный ответ с комментариями",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.CommentView"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверные параметры запроса",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Пост не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка сервера",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{postID}/comments/count": {
+            "get": {
+                "description": "Возвращает общее количество комментариев к указанному посту",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "comments"
+                ],
+                "summary": "Получить количество комментариев поста",
+                "parameters": [
+                    {
+                        "minimum": 1,
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID поста",
+                        "name": "postID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Количество комментариев",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "integer",
+                                "format": "int32"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID поста",
                         "schema": {
                             "$ref": "#/definitions/handler.JSONResponse"
                         }
@@ -1406,6 +3151,38 @@ const docTemplate = `{
                         }
                     }
                 }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Очищает поле avatar_path в профиле текущего пользователя и возвращает сообщение об успешном удалении.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "profile"
+                ],
+                "summary": "Удалить аватар пользователя",
+                "responses": {
+                    "200": {
+                        "description": "Avatar deleted",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
             }
         },
         "/profile/header": {
@@ -1475,6 +3252,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "id",
                         "in": "path",
@@ -1503,6 +3281,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/sticker-packs": {
+            "get": {
+                "description": "Возвращает список всех доступных стикерпаков",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stickers"
+                ],
+                "summary": "Получить список стикерпаков",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.StickerPack"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/sticker-packs/{packID}/stickers": {
+            "get": {
+                "description": "Возвращает все стикеры из указанного стикерпака",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "stickers"
+                ],
+                "summary": "Получить стикеры из пака",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "format": "int32",
+                        "description": "ID стикерпака",
+                        "name": "packID",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.Sticker"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/handler.JSONResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/users/{userID}/posts": {
             "get": {
                 "description": "Возвращает посты конкретного пользователя с пагинацией",
@@ -1520,6 +3378,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "description": "ID пользователя",
                         "name": "userID",
                         "in": "path",
@@ -1528,6 +3387,7 @@ const docTemplate = `{
                     {
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 1,
                         "description": "Номер страницы",
                         "name": "page",
@@ -1537,6 +3397,7 @@ const docTemplate = `{
                         "maximum": 100,
                         "minimum": 1,
                         "type": "integer",
+                        "format": "int32",
                         "default": 20,
                         "description": "Количество постов на странице",
                         "name": "limit",
@@ -1547,7 +3408,10 @@ const docTemplate = `{
                     "200": {
                         "description": "Успешный ответ с постами пользователя",
                         "schema": {
-                            "$ref": "#/definitions/handler.PostsResponse"
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/domain.PostView"
+                            }
                         }
                     },
                     "400": {
@@ -1605,36 +3469,155 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "domain.FriendsCountResponse": {
+        "domain.Application": {
             "type": "object",
             "properties": {
-                "count": {
+                "authorID": {
+                    "type": "string"
+                },
+                "category": {
+                    "type": "string",
+                    "example": "app_freezing"
+                },
+                "createdAt": {
+                    "type": "string",
+                    "example": "1990-01-01T00:00:00Z"
+                },
+                "emailFeedBack": {
+                    "type": "string"
+                },
+                "emailReg": {
+                    "type": "string"
+                },
+                "fullName": {
+                    "type": "string"
+                },
+                "id": {
                     "type": "integer"
                 },
-                "countType": {
-                    "$ref": "#/definitions/domain.FriendshipCountType"
+                "status": {
+                    "type": "string",
+                    "example": "open"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string",
+                    "example": "1990-01-01T00:00:00Z"
+                }
+            }
+        },
+        "domain.CommentCreateRequest": {
+            "type": "object",
+            "properties": {
+                "postID": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CommentUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CommentView": {
+            "type": "object",
+            "properties": {
+                "authorAvatar": {
+                    "type": "string"
+                },
+                "authorID": {
+                    "type": "integer"
+                },
+                "authorName": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "parentID": {
+                    "type": "integer"
+                },
+                "postID": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CommunityForMyCommunity": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.CommunityForView": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "coverPath": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "creatorID": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "isSubscribed": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "subscribersCount": {
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.CommunitySubscriber": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "fullName": {
+                    "type": "string"
                 },
                 "userID": {
                     "type": "integer"
                 }
             }
-        },
-        "domain.FriendshipCountType": {
-            "type": "string",
-            "enum": [
-                "pending",
-                "accepted",
-                "rejected",
-                "blocked",
-                "sent"
-            ],
-            "x-enum-varnames": [
-                "CountPending",
-                "CountAccepted",
-                "CountRejected",
-                "CountBlocked",
-                "CountSent"
-            ]
         },
         "domain.FriendshipStatus": {
             "type": "string",
@@ -1642,44 +3625,16 @@ const docTemplate = `{
                 "pending",
                 "accepted",
                 "rejected",
-                "blocked"
+                "blocked",
+                "none"
             ],
             "x-enum-varnames": [
                 "FriendshipPending",
                 "FriendshipAccepted",
                 "FriendshipRejected",
-                "FriendshipBlocked"
+                "FriendshipBlocked",
+                "FriendshipNone"
             ]
-        },
-        "domain.FriendshipWithProfile": {
-            "type": "object",
-            "properties": {
-                "actionUserID": {
-                    "description": "Кто отправил запрос",
-                    "type": "integer"
-                },
-                "createdAt": {
-                    "type": "string"
-                },
-                "firstUserID": {
-                    "type": "integer"
-                },
-                "friend": {
-                    "$ref": "#/definitions/domain.ShortProfile"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "secondUserID": {
-                    "type": "integer"
-                },
-                "status": {
-                    "$ref": "#/definitions/domain.FriendshipStatus"
-                },
-                "updatedAt": {
-                    "type": "string"
-                }
-            }
         },
         "domain.FullChat": {
             "type": "object",
@@ -1699,14 +3654,26 @@ const docTemplate = `{
                 "lastMessageAuthor": {
                     "$ref": "#/definitions/domain.ShortProfile"
                 },
+                "lastReadMessageID": {
+                    "type": "integer"
+                },
                 "name": {
                     "type": "string"
+                },
+                "unReadCounts": {
+                    "type": "integer"
                 }
             }
         },
         "domain.Message": {
             "type": "object",
             "properties": {
+                "attachments": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "authorID": {
                     "type": "integer"
                 },
@@ -1717,6 +3684,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "id": {
+                    "type": "integer"
+                },
+                "stickerID": {
                     "type": "integer"
                 },
                 "text": {
@@ -1741,41 +3711,59 @@ const docTemplate = `{
                 }
             }
         },
-        "domain.Post": {
+        "domain.PostView": {
             "type": "object",
             "properties": {
                 "attachments": {
-                    "description": "в БД табличка post_attachments называется",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
+                "authorAvatar": {
+                    "type": "string"
+                },
                 "authorID": {
-                    "description": "в БД табличка posts называется",
+                    "description": "ID пользователя-создателя",
                     "type": "integer"
                 },
-                "created_at": {
-                    "description": "в БД табличка posts называется",
+                "authorName": {
+                    "type": "string"
+                },
+                "commentsCount": {
+                    "type": "integer"
+                },
+                "communityAvatar": {
+                    "type": "string"
+                },
+                "communityID": {
+                    "type": "integer"
+                },
+                "communityName": {
+                    "type": "string"
+                },
+                "createdAt": {
                     "type": "string"
                 },
                 "id": {
-                    "description": "в БД табличка posts называется",
+                    "type": "integer"
+                },
+                "isCommunityPost": {
+                    "type": "boolean"
+                },
+                "isLiked": {
+                    "type": "boolean"
+                },
+                "likeCount": {
                     "type": "integer"
                 },
                 "photos": {
-                    "description": "в БД табличка post_photos называется",
                     "type": "array",
                     "items": {
                         "type": "string"
                     }
                 },
                 "text": {
-                    "description": "в БД табличка posts называется",
-                    "type": "string"
-                },
-                "updated_at": {
-                    "description": "в БД табличка posts называется",
                     "type": "string"
                 }
             }
@@ -1803,6 +3791,12 @@ const docTemplate = `{
                 },
                 "lastName": {
                     "type": "string"
+                },
+                "relationStatus": {
+                    "$ref": "#/definitions/domain.FriendshipStatus"
+                },
+                "relationsCount": {
+                    "$ref": "#/definitions/domain.UserRelationsCounts"
                 },
                 "userID": {
                     "type": "integer"
@@ -1839,10 +3833,33 @@ const docTemplate = `{
                 }
             }
         },
+        "domain.ShortCommunity": {
+            "type": "object",
+            "properties": {
+                "avatarPath": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "subscribersCount": {
+                    "type": "integer"
+                }
+            }
+        },
         "domain.ShortProfile": {
             "type": "object",
             "properties": {
                 "avatarPath": {
+                    "type": "string"
+                },
+                "dob": {
                     "type": "string"
                 },
                 "fullName": {
@@ -1850,6 +3867,40 @@ const docTemplate = `{
                 },
                 "userID": {
                     "type": "integer"
+                }
+            }
+        },
+        "domain.Sticker": {
+            "type": "object",
+            "properties": {
+                "filePath": {
+                    "description": "путь к картинке стикера",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "packID": {
+                    "type": "integer"
+                },
+                "position": {
+                    "description": "порядковый номер в пачке",
+                    "type": "integer"
+                }
+            }
+        },
+        "domain.StickerPack": {
+            "type": "object",
+            "properties": {
+                "coverPath": {
+                    "description": "путь к обложке (первый стикер в пачке)",
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -1864,6 +3915,34 @@ const docTemplate = `{
                 },
                 "password": {
                     "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                }
+            }
+        },
+        "domain.UserRelationsCounts": {
+            "type": "object",
+            "properties": {
+                "CountBlocked": {
+                    "type": "integer"
+                },
+                "countAccepted": {
+                    "type": "integer"
+                },
+                "countPending": {
+                    "type": "integer"
+                },
+                "countSent": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.ApplicationIDResponse": {
+            "type": "object",
+            "properties": {
+                "applicationID": {
+                    "type": "integer"
                 }
             }
         },
@@ -1899,6 +3978,9 @@ const docTemplate = `{
         "handler.IsLoggedInResponse": {
             "type": "object",
             "properties": {
+                "role": {
+                    "type": "string"
+                },
                 "userID": {
                     "type": "integer"
                 }
@@ -1923,16 +4005,27 @@ const docTemplate = `{
                 }
             }
         },
-        "handler.PostsResponse": {
-            "description": "Ответ с пагинированным списком постов",
+        "handler.UpdateLastReadRequest": {
             "type": "object",
             "properties": {
-                "posts": {
-                    "description": "Список постов",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.Post"
-                    }
+                "lastReadMessageID": {
+                    "type": "integer"
+                }
+            }
+        },
+        "handler.updateStatusRequest": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "handler.updateTextRequest": {
+            "type": "object",
+            "properties": {
+                "text": {
+                    "type": "string"
                 }
             }
         }

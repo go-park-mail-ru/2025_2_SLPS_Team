@@ -2,17 +2,19 @@ package domain
 
 import "context"
 
+//easyjson:json
 type Session struct {
-	UserID    int    `json:"userID"`
+	UserID    int32  `json:"userID"`
 	CSRFToken string `json:"CSRFToken"`
 }
 
+//easyjson:json
 type SIDAndSCRFToken struct {
 	CSRFToken string `json:"CSRFToken"`
 	SID       string `json:"SID"`
 }
 type SessionStore interface {
-	AddSession(ctx context.Context, userID int) (*SIDAndSCRFToken, error)
+	AddSession(ctx context.Context, userID int32) (*SIDAndSCRFToken, error)
 	GetSessionBySessionID(ctx context.Context, sessionID string) (*Session, error)
 	DeleteSession(ctx context.Context, sessionID string) error
 }
